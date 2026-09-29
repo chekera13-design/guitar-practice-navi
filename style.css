@@ -160,4 +160,17 @@ body {
 .contact-submit-btn:hover { background-color: #1d4ed8; }
 
 .trophy-icon { font-size: 52px; margin-bottom: 4px; }
-.modal-stars { font-size: 32px; color: #f59e0b; margin: 6px 0; letter-spacing: 4px; }
+/* モーダルの星マークのスタイリング */
+.modal-stars { 
+    font-size: 32px; 
+    color: #f59e0b; 
+    margin: 6px 0;
+    letter-spacing: 4px; 
+}
+
+/* ボタンの長押しメニューや文字選択を禁止してスマホの反応を良くする */
+#startChallengeBtn {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}

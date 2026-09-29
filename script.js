@@ -309,32 +309,20 @@ function selectStage(index) {
 }
 
 // --- 4. チャレンジ開始 & 音声判定 ---
-startChallengeBtn.addEventListener('click', async () => {
-    if (isChallenging) return;
-    await initAudio();
-    isChallenging = true;
-    currentIndex = 0;
-    isWaitingForNewAttack = false;
-    hudCard.classList.remove('hidden');
-    startChallengeBtn.disabled = true;
-    startChallengeBtn.innerText = "判定中...";
 
-    startTime = Date.now();
-    timerInterval = setInterval(() => {
-        const sec = ((Date.now() - startTime) / 1000).toFixed(1);
-        timerDisplay.innerText = sec;
-    }, 100);
-
-    renderQueue();
-    updateTargetUI();
-    detectPitchLoop();
-});
-
-async function initAudio() {
+// ユーザー操作の直後にWeb Audio APIを即座に有効化する関数
+function unlockAudioContext() {
     if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContext();
     }
-    if (audioContext.state === 'suspended') await audioContext.resume();
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+}
+
+// マイクストリームとアナライザーの初期化（非同期処理のみに限定）
+async function setupMicrophoneStream() {
     const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
     });
@@ -344,6 +332,54 @@ async function initAudio() {
     source.connect(analyser);
     audioBuffer = new Float32Array(analyser.fftSize);
 }
+
+// PC（click）とスマホ（touchstart）両方のイベントを登録
+['click', 'touchstart'].forEach(eventType => {
+    startChallengeBtn.addEventListener(eventType, async (e) => {
+        // 💡【重要】スマホの二重発動（touchstartとclickが両方走る現象）を完全に防止
+        if (e.type === 'click' && 'ontouchstart' in window) {
+            return; 
+        }
+        
+        // 多重動作やスマホのスクロールブレを防ぐ
+        if (e.type === 'touchstart') {
+            e.preventDefault();
+        }
+        
+        if (isChallenging) return;
+
+        // 【超重要】タップされた「その瞬間（最優先）」にオーディオコンテキストを生成・解放！
+        unlockAudioContext();
+
+        try {
+            // その後、マイクの接続（非同期処理）を安全に行う
+            await setupMicrophoneStream();
+            
+            isChallenging = true;
+            currentIndex = 0;
+            isWaitingForNewAttack = false;
+            hudCard.classList.remove('hidden');
+            startChallengeBtn.disabled = true;
+            startChallengeBtn.innerText = "判定中...";
+
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const sec = ((Date.now() - startTime) / 1000).toFixed(1);
+                timerDisplay.innerText = sec;
+            }, 100);
+
+            renderQueue();
+            updateTargetUI();
+            detectPitchLoop();
+            
+        } catch (err) {
+            console.error("マイクの初期化に失敗しました:", err);
+            alert("マイクへのアクセスが拒否されたか、利用できません。ブラウザの設定でマイクを許可してください。");
+        }
+    }, { passive: false });
+});
+
+
 
 function detectPitchLoop() {
     if (!isChallenging) return;
