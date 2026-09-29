@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ギター練習ナビ - 難易度1 (EX 1〜10)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <!-- [広告枠: トップバナー] -->
+    <div class="ad-container top-ad">
+        <div class="ad-placeholder">広告スペース (728x90 / レスポンシブ)</div>
+    </div>
+
+    <!-- ヘッダー & 全体進捗 -->
+    <header class="header card">
+        <div class="header-top">
+            <h1>🎸 難易度 1 : 初心者入門編</h1>
+            <button id="resetProgressBtn" class="sub-btn">進捗リセット</button>
+        </div>
+        <p>ステージをクリアして★3評価コンプリートを目指そう！</p>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar-label">
+                <span>全体のクリア進捗</span>
+                <span id="progressPercent">0% (0 / 10)</span>
+            </div>
+            <div class="progress-bar-track">
+                <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ステージ選択グリッド -->
+    <section class="card">
+        <h2 class="section-title">ステージ選択</h2>
+        <div id="stagesGrid" class="stages-grid"></div>
+    </section>
+
+    <!-- 演奏・判定エリア -->
+    <section id="activeStageCard" class="card active-stage-card">
+        <div class="stage-info-header">
+            <div>
+                <span id="currentStageBadge" class="badge">EX 1</span>
+                <h2 id="currentStageTitle" class="stage-title">ステージタイトル</h2>
+                <p id="currentStageDesc" class="stage-desc">説明文</p>
+            </div>
+            <div class="stage-actions">
+                <label class="file-btn sub-file-btn" title="作成したMusicXMLファイルを差し替え">
+                    📁 XML差し替え
+                    <input type="file" id="fileInput" accept=".xml,.musicxml,.mxl">
+                </label>
+                <button id="startChallengeBtn" class="action-btn">🎤 チャレンジ開始</button>
+            </div>
+        </div>
+
+        <!-- 判定HUD（演奏中） -->
+        <div id="hudCard" class="hud-box hidden">
+            <div class="hud-timer">⏱️ タイム: <span id="timerDisplay">0.0</span>秒</div>
+            <div class="hud-main">
+                <div class="target-box">
+                    <span class="hud-label">目標の音</span>
+                    <div id="targetNote" class="big-note">--</div>
+                    <div id="targetInfo" class="sub-info">--弦 --フレット</div>
+                </div>
+                <div class="vs-arrow">➔</div>
+                <div class="detected-box">
+                    <span class="hud-label">あなたの音</span>
+                    <div id="detectedNote" class="big-note">--</div>
+                    <div id="detectedHz" class="sub-info">0.0 Hz</div>
+                </div>
+            </div>
+            <div class="notes-queue" id="notesQueue"></div>
+        </div>
+
+        <!-- TAB譜描画エリア -->
+        <div class="score-wrapper">
+            <div id="alphaTab"></div>
+        </div>
+    </section>
+
+    <!-- ステージ連動 練習のコツ・解説カード -->
+    <section class="card guide-card">
+        <div class="guide-header">
+            <span class="guide-badge">💡 攻略ポイント</span>
+            <h3 id="guideTitle">EX 1 の練習のコツ & 解説</h3>
+        </div>
+        <div id="guideContent" class="guide-body"></div>
+    </section>
+
+    <!-- [広告枠: コンテンツ間バナー] -->
+    <div class="ad-container bottom-ad">
+        <div class="ad-placeholder">広告スペース (コンテンツ間バナー)</div>
+    </div>
+
+    <!-- ギター初心者のための共通ガイド & よくある質問 -->
+    <section class="card extra-knowledge-card">
+        <h2>🎸 初心者が最初に覚えるべきピッキングの3大原則</h2>
+        <div class="knowledge-grid">
+            <div class="knowledge-item">
+                <h4>1. ピックは先端2〜3mmだけ出す</h4>
+                <p>ピックを深く持ちすぎると指が弦に当たり、浅く持ちすぎると弦の抵抗でピックがズレてしまいます。親指と人差し指でしっかり挟み、先端をほんの少しだけ出しましょう。</p>
+            </div>
+            <div class="knowledge-item">
+                <h4>2. 手首のスナップで軽く振り抜く</h4>
+                <p>腕全体でピッキングしようとするとすぐに疲れて力が入ります。うちわを仰ぐように手首をやわらかく使い、弦の上を滑らせるイメージで弾きます。</p>
+            </div>
+            <div class="knowledge-item">
+                <h4>3. ピックの角度は平行〜やや斜め</h4>
+                <p>弦に対してピックが垂直に刺さると引っかかってしまいます。弦に対して軽く30度ほど傾けて当てると、弦離れがよくなりスムーズにピッキングできます。</p>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <h3>❓ 音がうまく判定されないときのチェック</h3>
+        <ul class="faq-list">
+            <li><b>チューニングは合っていますか？</b>：開放弦のピッチがズレていると、正しく弾いても合格になりません。練習前に必ずチューナーで合わせてください。</li>
+            <li><b>マイクとの距離</b>：スマホやPCの内蔵マイクから約30cm〜50cmほど離れた位置で鳴らすと最も綺麗に音を拾えます。</li>
+            <li><b>生音・アンプの音量</b>：音が小さすぎるとノイズ判定で無視されます。しっかり芯のある音でポロンと鳴らしてみましょう。</li>
+        </ul>
+    </section>
+
+    <!-- [フッター: 運営情報・規約リンク] -->
+    <footer class="footer">
+        <div class="footer-links">
+            <button id="openAboutBtn" class="footer-link">運営者情報</button>
+            <span class="footer-sep">|</span>
+            <button id="openPrivacyBtn" class="footer-link">プライバシーポリシー</button>
+            <span class="footer-sep">|</span>
+            <button id="openContactBtn" class="footer-link">お問い合わせ</button>
+        </div>
+        <p class="copyright">© 2025 ギター練習ナビ - 無料ギター練習Webアプリ</p>
+    </footer>
+
+    <!-- [新規追加: 汎用インフォモーダル (運営者情報 / 規約 / 問い合わせ)] -->
+    <div id="infoModal" class="modal hidden">
+        <div class="modal-content info-modal-content">
+            <button id="closeInfoModalBtn" class="close-x-btn">✕</button>
+            <h2 id="infoModalTitle" class="info-title">タイトル</h2>
+            <div id="infoModalBody" class="info-body"></div>
+        </div>
+    </div>
+
+    <!-- 合格モーダル -->
+    <div id="clearModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="trophy-icon">🏆</div>
+            <h2 id="modalTitle">🎉 STAGE CLEAR!</h2>
+            <div id="modalStars" class="modal-stars">★★★</div>
+            <p id="modalDesc">クリアタイム: <b id="clearTimeText">0.0秒</b></p>
+            <div class="ad-placeholder modal-ad">おすすめギター弦・アクセサリ</div>
+            <div class="modal-buttons">
+                <button id="nextStageBtn" class="action-btn">次のステージへ ➔</button>
+                <button id="retryBtn" class="sub-btn">もう一度練習する</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
