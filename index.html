@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ギター練習ナビ - 難易度1 (EX 1〜10)</title>
+    <title>ギター練習ナビ - 難易度1 & 難易度2</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -18,14 +18,14 @@
     <!-- ヘッダー & 全体進捗 -->
     <header class="header card">
         <div class="header-top">
-            <h1>🎸 難易度 1 : 初心者入門編</h1>
+            <h1 id="headerLevelTitle">🎸 難易度 1 : 初心者入門編</h1>
             <button id="resetProgressBtn" class="sub-btn">進捗リセット</button>
         </div>
-        <p>ステージをクリアして★3評価コンプリートを目指そう！</p>
+        <p id="headerLevelDesc">全ステージ合格を目指して、焦らず自分のペースでピッキングを身につけよう！</p>
         
         <div class="progress-bar-container">
             <div class="progress-bar-label">
-                <span>全体のクリア進捗</span>
+                <span id="progressLabelText">難易度1のクリア進捗</span>
                 <span id="progressPercent">0% (0 / 10)</span>
             </div>
             <div class="progress-bar-track">
@@ -34,9 +34,51 @@
         </div>
     </header>
 
-    <!-- ステージ選択グリッド -->
+    <!-- 🎸 簡易チューナー機能 -->
+    <div class="card tuner-card">
+        <h3 class="section-title">⚖️ 簡易チューナー</h3>
+        <p class="stage-desc" style="margin-bottom: 12px;">開放弦をポロンと鳴らして、メーターの針が中央（緑色）にくるようにペグを回して合わせましょう。</p>
+        
+        <!-- 弦選択ボタン -->
+        <div style="display: flex; gap: 6px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(6, 40, 'E2')">6弦 (E)</button>
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(5, 45, 'A2')">5弦 (A)</button>
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(4, 50, 'D3')">4弦 (D)</button>
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(3, 55, 'G3')">3弦 (G)</button>
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(2, 59, 'B3')">2弦 (B)</button>
+            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(1, 64, 'E4')">1弦 (E)</button>
+        </div>
+
+        <!-- チューナーHUD -->
+        <div id="tunerHud" class="hud-box hidden" style="border-color: #10b981; background: #0f172a;">
+            <div style="text-align: center;">
+                <div id="tunerTargetLabel" style="font-size: 14px; color: #94a3b8; font-weight: bold;">6弦 (E2) に合わせ中...</div>
+                <div id="tunerStatusText" style="font-size: 22px; font-weight: bold; color: #fbbf24; margin: 8px 0;">音をポロンと鳴らしてください</div>
+                
+                <!-- 視覚的なメーターバー -->
+                <div style="background: #334155; height: 16px; border-radius: 8px; position: relative; overflow: hidden; max-width: 320px; margin: 10px auto;">
+                    <div id="tunerMeterPointer" style="background: #10b981; width: 6px; height: 100%; position: absolute; left: 50%; transform: translateX(-50%); transition: left 0.1s ease;"></div>
+                    <div style="border-left: 2px dashed #ffffff; height: 100%; position: absolute; left: 50%; transform: translateX(-1%); opacity: 0.5;"></div>
+                </div>
+                <div id="tunerHzDisplay" style="font-size: 13px; color: #94a3b8;">0.0 Hz</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ステージ選択グリッド（右横に難易度切り替えタブを配置） -->
     <section class="card">
-        <h2 class="section-title">ステージ選択</h2>
+        <div class="stages-header">
+            <h2 class="section-title">ステージ選択</h2>
+            <!-- 難易度切り替えタブ -->
+            <div class="level-tabs-container">
+                <button id="levelTab1" class="level-tab active" onclick="switchLevel(1)">
+                    🎸 難易度 1 : 音程入門
+                </button>
+                <button id="levelTab2" class="level-tab" onclick="switchLevel(2)">
+                    ⏱️ 難易度 2 : リズム基礎
+                </button>
+            </div>
+        </div>
         <div id="stagesGrid" class="stages-grid"></div>
     </section>
 
@@ -44,7 +86,10 @@
     <section id="activeStageCard" class="card active-stage-card">
         <div class="stage-info-header">
             <div>
-                <span id="currentStageBadge" class="badge">EX 1</span>
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap;">
+                    <span id="currentStageBadge" class="badge">EX 1</span>
+                    <span id="bpmBadge" class="badge bpm-badge hidden">BPM 60</span>
+                </div>
                 <h2 id="currentStageTitle" class="stage-title">ステージタイトル</h2>
                 <p id="currentStageDesc" class="stage-desc">説明文</p>
             </div>
@@ -59,14 +104,25 @@
 
         <!-- 判定HUD（演奏中） -->
         <div id="hudCard" class="hud-box hidden">
-            <div class="hud-timer">⏱️ タイム: <span id="timerDisplay">0.0</span>秒</div>
+            <!-- カウントイン表示エリア（難易度2で使用） -->
+            <div id="countInOverlay" class="count-in-overlay hidden">
+                <div id="countInNumber" class="count-in-number">4</div>
+                <div class="count-in-text">カウントに合わせて準備！</div>
+            </div>
+
             <div class="hud-main">
                 <div class="target-box">
                     <span class="hud-label">目標の音</span>
                     <div id="targetNote" class="big-note">--</div>
                     <div id="targetInfo" class="sub-info">--弦 --フレット</div>
                 </div>
-                <div class="vs-arrow">➔</div>
+
+                <!-- 難易度2用: リズム判定バッジ -->
+                <div class="center-judge-box">
+                    <div class="vs-arrow">➔</div>
+                    <div id="rhythmJudgeBadge" class="rhythm-judge hidden">READY</div>
+                </div>
+
                 <div class="detected-box">
                     <span class="hud-label">あなたの音</span>
                     <div id="detectedNote" class="big-note">--</div>
@@ -102,15 +158,15 @@
         <div class="knowledge-grid">
             <div class="knowledge-item">
                 <h4>1. ピックは先端2〜3mmだけ出す</h4>
-                <p>ピックを深く持ちすぎると指が弦に当たり、浅く持ちすぎると弦の抵抗でピックがズレてしまいます。親指と人差し指でしっかり挟み、先端をほんの少しだけ出しましょう。</p>
+                <p>深く持ちすぎると指が弦に当たり、浅すぎると弦の抵抗でブレます。親指と人差し指でしっかり挟み、先端をほんの少しだけ出しましょう。</p>
             </div>
             <div class="knowledge-item">
                 <h4>2. 手首のスナップで軽く振り抜く</h4>
-                <p>腕全体でピッキングしようとするとすぐに疲れて力が入ります。うちわを仰ぐように手首をやわらかく使い、弦の上を滑らせるイメージで弾きます。</p>
+                <p>腕全体でピッキングすると力みます。うちわを仰ぐように手首をやわらかく使い、弦の上を滑らせるイメージで弾きます。</p>
             </div>
             <div class="knowledge-item">
                 <h4>3. ピックの角度は平行〜やや斜め</h4>
-                <p>弦に対してピックが垂直に刺さると引っかかってしまいます。弦に対して軽く30度ほど傾けて当てると、弦離れがよくなりスムーズにピッキングできます。</p>
+                <p>弦に対して垂直に当たると引っかかります。軽く30度ほど傾けて当てると、弦離れがよくなりスムーズにピッキングできます。</p>
             </div>
         </div>
 
@@ -118,13 +174,13 @@
 
         <h3>❓ 音がうまく判定されないときのチェック</h3>
         <ul class="faq-list">
-            <li><b>チューニングは合っていますか？</b>：開放弦のピッチがズレていると、正しく弾いても合格になりません。練習前に必ずチューナーで合わせてください。</li>
-            <li><b>マイクとの距離</b>：スマホやPCの内蔵マイクから約30cm〜50cmほど離れた位置で鳴らすと最も綺麗に音を拾えます。</li>
+            <li><b>チューニングは合っていますか？</b>：ピッチがズレていると合格になりません。練習前に上の簡易チューナーで合わせてみましょう。</li>
+            <li><b>マイクとの距離</b>：スマホやPCの内蔵マイクから約30cm〜50cmほど離れた位置で鳴らすと綺麗に音を拾えます。</li>
             <li><b>生音・アンプの音量</b>：音が小さすぎるとノイズ判定で無視されます。しっかり芯のある音でポロンと鳴らしてみましょう。</li>
         </ul>
     </section>
 
-    <!-- [フッター: 運営情報・規約リンク] -->
+    <!-- [フッター] -->
     <footer class="footer">
         <div class="footer-links">
             <button id="openAboutBtn" class="footer-link">運営者情報</button>
@@ -136,7 +192,7 @@
         <p class="copyright">© 2025 ギター練習ナビ - 無料ギター練習Webアプリ</p>
     </footer>
 
-    <!-- [新規追加: 汎用インフォモーダル (運営者情報 / 規約 / 問い合わせ)] -->
+    <!-- 汎用インフォモーダル -->
     <div id="infoModal" class="modal hidden">
         <div class="modal-content info-modal-content">
             <button id="closeInfoModalBtn" class="close-x-btn">✕</button>
@@ -145,13 +201,23 @@
         </div>
     </div>
 
-    <!-- 合格モーダル -->
+    <!-- 合格・リトライモーダル -->
     <div id="clearModal" class="modal hidden">
         <div class="modal-content">
-            <div class="trophy-icon">🏆</div>
+            <div class="hanamaru-container">
+                <div class="hanamaru-icon">💮</div>
+                <div class="hanamaru-text">たいへんよくできました！</div>
+            </div>
             <h2 id="modalTitle">🎉 STAGE CLEAR!</h2>
-            <div id="modalStars" class="modal-stars">★★★</div>
-            <p id="modalDesc">クリアタイム: <b id="clearTimeText">0.0秒</b></p>
+            <p id="modalDesc">ナイスピッキング！基礎がしっかり身についています。</p>
+            
+            <!-- リズム成績詳細（難易度2用） -->
+            <div id="modalScoreStats" class="modal-score-stats hidden">
+                <div>PERFECT: <span id="statPerfect" class="stat-perfect">0</span></div>
+                <div>GOOD: <span id="statGood" class="stat-good">0</span></div>
+                <div>MISS: <span id="statMiss" class="stat-miss">0</span></div>
+            </div>
+
             <div class="ad-placeholder modal-ad">おすすめギター弦・アクセサリ</div>
             <div class="modal-buttons">
                 <button id="nextStageBtn" class="action-btn">次のステージへ ➔</button>
