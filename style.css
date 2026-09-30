@@ -43,7 +43,7 @@ body {
 .progress-bar-track { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; }
 .progress-bar-fill { background: #10b981; height: 100%; transition: width 0.4s ease; }
 
-/* ステージヘッダー & 難易度切り替えタブ（ステージ選択の右横） */
+/* ステージヘッダー & 難易度切り替えタブ */
 .stages-header {
     display: flex;
     justify-content: space-between;
@@ -143,7 +143,7 @@ body {
 .sub-info { font-size: 13px; color: #cbd5e1; }
 .vs-arrow { font-size: 24px; color: #64748b; }
 
-/* カウントイン・オーバーレイ（難易度2） */
+/* カウントイン・オーバーレイ */
 .count-in-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -176,7 +176,7 @@ body {
     100% { transform: scale(1.0); opacity: 1; }
 }
 
-/* リズム判定表示（難易度2） */
+/* リズム判定表示 */
 .center-judge-box {
     display: flex;
     flex-direction: column;
@@ -208,6 +208,11 @@ body {
     background: #ef4444;
     color: #ffffff;
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+}
+.rhythm-judge.strum {
+    background: #8b5cf6;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
 }
 @keyframes judgePop {
     0% { transform: scale(0.5); }
@@ -368,4 +373,28 @@ body {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+}
+
+/* 録音再生プレイヤー（結果モーダル内） */
+.modal-audio-section {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 14px 0;
+    text-align: left;
+}
+.modal-audio-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #334155;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#recordedPlayer {
+    width: 100%;
+    height: 38px;
+    border-radius: 6px;
 }

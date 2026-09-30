@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ギター練習ナビ - 難易度1 & 難易度2</title>
+    <title>ギター練習ナビ - 初心者からコード入門までマスター</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -39,14 +39,14 @@
         <h3 class="section-title">⚖️ 簡易チューナー</h3>
         <p class="stage-desc" style="margin-bottom: 12px;">開放弦をポロンと鳴らして、メーターの針が中央（緑色）にくるようにペグを回して合わせましょう。</p>
         
-        <!-- 弦選択ボタン -->
-        <div style="display: flex; gap: 6px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(6, 40, 'E2')">6弦 (E)</button>
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(5, 45, 'A2')">5弦 (A)</button>
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(4, 50, 'D3')">4弦 (D)</button>
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(3, 55, 'G3')">3弦 (G)</button>
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(2, 59, 'B3')">2弦 (B)</button>
-            <button class="sub-btn tuner-string-btn" onclick="selectTunerString(1, 64, 'E4')">1弦 (E)</button>
+        <!-- 弦選択ボタン（data属性で安全に管理） -->
+        <div class="tuner-buttons-container" style="display: flex; gap: 6px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <button class="sub-btn tuner-string-btn" data-string="6" data-midi="40" data-note="E2">6弦 (E)</button>
+            <button class="sub-btn tuner-string-btn" data-string="5" data-midi="45" data-note="A2">5弦 (A)</button>
+            <button class="sub-btn tuner-string-btn" data-string="4" data-midi="50" data-note="D3">4弦 (D)</button>
+            <button class="sub-btn tuner-string-btn" data-string="3" data-midi="55" data-note="G3">3弦 (G)</button>
+            <button class="sub-btn tuner-string-btn" data-string="2" data-midi="59" data-note="B3">2弦 (B)</button>
+            <button class="sub-btn tuner-string-btn" data-string="1" data-midi="64" data-note="E4">1弦 (E)</button>
         </div>
 
         <!-- チューナーHUD -->
@@ -71,11 +71,14 @@
             <h2 class="section-title">ステージ選択</h2>
             <!-- 難易度切り替えタブ -->
             <div class="level-tabs-container">
-                <button id="levelTab1" class="level-tab active" onclick="switchLevel(1)">
+                <button id="levelTab1" class="level-tab active" data-level="1">
                     🎸 難易度 1 : 音程入門
                 </button>
-                <button id="levelTab2" class="level-tab" onclick="switchLevel(2)">
+                <button id="levelTab2" class="level-tab" data-level="2">
                     ⏱️ 難易度 2 : リズム基礎
+                </button>
+                <button id="levelTab3" class="level-tab" data-level="3">
+                    🎼 難易度 3 : コード入門
                 </button>
             </div>
         </div>
@@ -104,7 +107,7 @@
 
         <!-- 判定HUD（演奏中） -->
         <div id="hudCard" class="hud-box hidden">
-            <!-- カウントイン表示エリア（難易度2で使用） -->
+            <!-- カウントイン表示エリア（難易度2・3で使用） -->
             <div id="countInOverlay" class="count-in-overlay hidden">
                 <div id="countInNumber" class="count-in-number">4</div>
                 <div class="count-in-text">カウントに合わせて準備！</div>
@@ -117,7 +120,7 @@
                     <div id="targetInfo" class="sub-info">--弦 --フレット</div>
                 </div>
 
-                <!-- 難易度2用: リズム判定バッジ -->
+                <!-- リズム・演奏判定バッジ -->
                 <div class="center-judge-box">
                     <div class="vs-arrow">➔</div>
                     <div id="rhythmJudgeBadge" class="rhythm-judge hidden">READY</div>
@@ -218,6 +221,12 @@
                 <div>MISS: <span id="statMiss" class="stat-miss">0</span></div>
             </div>
 
+            <!-- 録音再生エリア -->
+            <div id="modalAudioSection" class="modal-audio-section hidden">
+                <div class="modal-audio-title">🎧 あなたの演奏をチェック</div>
+                <audio id="recordedPlayer" controls preload="auto"></audio>
+            </div>
+
             <div class="ad-placeholder modal-ad">おすすめギター弦・アクセサリ</div>
             <div class="modal-buttons">
                 <button id="nextStageBtn" class="action-btn">次のステージへ ➔</button>
@@ -226,6 +235,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
