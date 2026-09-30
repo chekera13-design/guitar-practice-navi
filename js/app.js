@@ -8,9 +8,17 @@ import {
     playVictoryFanfare, playDrumroll, playCymbalCrash, autoCorrelate, midiToFrequency,
     evaluateRecordedChordData, requestWakeLock, releaseWakeLock,
     audioContext, analyser, audioBuffer, prevRms, isWaitingForNewAttack, lastNoteClearedTime,
-    setPrevRms, setIsWaitingForNewAttack, setLastNoteClearedTime
+    setPrevRms, setIsWaitingForNewAttack, setLastNoteClearedTime,
+    startPcmCapture, stopPcmCapture,
+    evaluateProgressionPcmData,
+    playTunerPing,
+    setMetronomeVolume
 } from './audioEngine.js';
-import { renderQueue, updateTargetUI, showRhythmJudge, renderStagesUI, updateTunerUI } from './ui.js';
+import { 
+    renderQueue, updateTargetUI, showRhythmJudge, renderStagesUI, 
+    updateTunerUI, resetTunerSmoothing,
+    triggerCountInPulse
+} from './ui.js';
 
 // --- 状態管理 & セーブデータ ---
 let rawSave = localStorage.getItem(SAVE_KEY) || localStorage.getItem("guitar_app_save_data");
@@ -58,20 +66,35 @@ const currentStageDesc = document.getElementById('currentStageDesc');
 const fileInput = document.getElementById('fileInput');
 const startChallengeBtn = document.getElementById('startChallengeBtn');
 
+// ポップアップモーダル関連DOM
+const playModal = document.getElementById('playModal');
+const playModalContent = document.getElementById('playModalContent');
+const closePlayModalBtn = document.getElementById('closePlayModalBtn');
+const guideToggleBtn = document.getElementById('guideToggleBtn');
+const guideArrow = document.getElementById('guideArrow');
+const guideTitle = document.getElementById('guideTitle');
+const guideContent = document.getElementById('guideContent');
+
+// メトロノーム音量スライダー DOM
+const metroVolSlider = document.getElementById('metroVolSlider');
+const metroVolVal = document.getElementById('metroVolVal');
+
+// 判定HUD DOM
 const hudCard = document.getElementById('hudCard');
 const countInOverlay = document.getElementById('countInOverlay');
 const countInNumber = document.getElementById('countInNumber');
 const targetNoteEl = document.getElementById('targetNote');
 const targetInfoEl = document.getElementById('targetInfo');
 const rhythmJudgeBadge = document.getElementById('rhythmJudgeBadge');
-const detectedBox = document.querySelector('.detected-box');
+const detectedPill = document.querySelector('.detected-pill');
 const detectedNoteEl = document.getElementById('detectedNote');
 const detectedHzEl = document.getElementById('detectedHz');
 const notesQueueEl = document.getElementById('notesQueue');
 
-const guideTitle = document.getElementById('guideTitle');
-const guideContent = document.getElementById('guideContent');
+// 動くTABカーソル
+const scoreCursor = document.getElementById('scoreCursor');
 
+// クリアモーダル DOM
 const clearModal = document.getElementById('clearModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalDesc = document.getElementById('modalDesc');
@@ -104,6 +127,24 @@ const openAboutBtn = document.getElementById('openAboutBtn');
 const openPrivacyBtn = document.getElementById('openPrivacyBtn');
 const openContactBtn = document.getElementById('openContactBtn');
 
+// --- メトロノーム音量初期化 (LocalStorage連動) ---
+const savedVol = localStorage.getItem("guitar_metro_volume");
+if (savedVol !== null) {
+    const volNum = parseFloat(savedVol);
+    setMetronomeVolume(volNum);
+    if (metroVolSlider) metroVolSlider.value = volNum;
+    if (metroVolVal) metroVolVal.innerText = `${Math.round(volNum * 100)}%`;
+}
+
+if (metroVolSlider) {
+    metroVolSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        setMetronomeVolume(val);
+        if (metroVolVal) metroVolVal.innerText = `${Math.round(val * 100)}%`;
+        localStorage.setItem("guitar_metro_volume", val);
+    });
+}
+
 // --- alphaTab 設定 ---
 const api = new alphaTab.AlphaTabApi(document.getElementById('alphaTab'), {
     core: { engine: 'svg' },
@@ -121,6 +162,12 @@ api.scoreLoaded.on((score) => {
             alert(`MusicXMLから ${extracted.length} 音を読み込みました！`);
         }
         isUserUploadedXml = false;
+    }
+});
+
+api.renderFinished.on(() => {
+    if (isChallenging) {
+        updateTabCursor(currentIndex);
     }
 });
 
@@ -157,6 +204,7 @@ function extractNotesFromScore(score) {
 }
 
 function renderStageTab(stage) {
+    if (!stage) return;
     if (stage.tex) {
         api.tex(stage.tex);
     } else {
@@ -174,7 +222,7 @@ fileInput.addEventListener('change', (e) => {
     reader.readAsArrayBuffer(file);
 });
 
-// --- 難易度切り替え (switchLevel) ---
+// --- 難易度切り替え ---
 function getCurrentStages() {
     if (currentLevel === 1) return STAGES_LEVEL1;
     if (currentLevel === 2) return STAGES_LEVEL2;
@@ -191,7 +239,7 @@ function switchLevel(level) {
     if (currentLevel === level) return;
     currentLevel = level;
 
-    stopChallenge();
+    closePlayModal();
     stopTuner();
 
     levelTabs.forEach(tab => {
@@ -224,7 +272,6 @@ function switchLevel(level) {
     selectStage(0);
 }
 
-// 難易度タブのイベント登録
 levelTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         const lvl = Number(tab.dataset.level);
@@ -240,7 +287,7 @@ function renderStages() {
         stagesGrid,
         progressPercentEl,
         progressBarFill,
-        onSelectStage: selectStage
+        onSelectStage: openPlayModal
     });
 }
 
@@ -248,9 +295,9 @@ function selectStage(index) {
     currentStageIndex = index;
     const stages = getCurrentStages();
     const stage = stages[index];
+    if (!stage) return;
 
     stopChallenge();
-    stopTuner();
 
     currentStageBadge.innerText = `EX ${stage.id}`;
     currentStageTitle.innerText = stage.title;
@@ -263,18 +310,23 @@ function selectStage(index) {
         bpmBadge.classList.add('hidden');
     }
 
-    guideTitle.innerText = stage.guide.title;
+    guideTitle.innerText = `${stage.title.split(': ')[0]} の練習のコツ & 攻略ポイント`;
     guideContent.innerHTML = `
-        <p>${stage.guide.content}</p>
+        <p style="margin-top: 0;">${stage.guide.content}</p>
         <div class="guide-point-box">
             <div class="guide-point-title">目標クリア基準</div>
-            <div>${stage.type === 'chord_strum'
-                ? `4カウントに合わせて、1拍目で『ジャラーン』！4拍間しっかり余韻を響かせましょう。`
+            <div>${currentLevel === 3
+                ? (stage.mode === 'patternA' 
+                    ? `4カウントに合わせて、1拍目で『ジャラーン』！4拍間しっかり余韻を響かせましょう。`
+                    : `メトロノームのビートに合わせて小節ごとにコードチェンジ！全小節綺麗にストロークしよう。`)
                 : (currentLevel === 2 
                     ? `メトロノームのリズムに合わせて正確にヒット！PERFECT & GOOD判定をたくさん出してクリアしよう。`
                     : `全音を落ち着いて正確に鳴らすと合格！指をしっかり立てて綺麗な音を出しましょう。`)}</div>
         </div>
     `;
+
+    guideContent.classList.add('hidden');
+    guideArrow.innerText = "▼";
 
     currentNotes = [...stage.defaultNotes];
     currentIndex = 0;
@@ -284,7 +336,113 @@ function selectStage(index) {
     renderStageTab(stage);
 }
 
-// --- 録音開始・停止処理 (iOS Safari フォールバック対応) ---
+// ==========================================
+// ★ 動くTAB譜面カーソル制御 ★
+// ==========================================
+function updateTabCursor(noteIndex) {
+    if (!scoreCursor || !isChallenging) {
+        if (scoreCursor) scoreCursor.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const track = api.score?.tracks?.[0];
+        if (track && api.renderer && api.renderer.boundsLookup) {
+            const allBeats = [];
+            for (const staff of track.staves) {
+                for (const bar of staff.bars) {
+                    for (const voice of bar.voices) {
+                        for (const beat of voice.beats) {
+                            if (!beat.isRest && beat.notes.length > 0) {
+                                allBeats.push(beat);
+                            }
+                        }
+                    }
+                }
+            }
+
+            const targetBeat = allBeats[noteIndex];
+            if (targetBeat) {
+                const bounds = api.renderer.boundsLookup.getBeatBounds(targetBeat);
+                if (bounds && bounds.visualBounds) {
+                    const vb = bounds.visualBounds;
+                    const scoreWrapper = document.querySelector('.score-wrapper');
+                    const wrapperRect = scoreWrapper.getBoundingClientRect();
+                    const alphaTabEl = document.getElementById('alphaTab');
+                    const alphaRect = alphaTabEl.getBoundingClientRect();
+
+                    const offsetX = alphaRect.left - wrapperRect.left;
+                    const offsetY = alphaRect.top - wrapperRect.top;
+
+                    scoreCursor.style.left = `${vb.x + offsetX - 6}px`;
+                    scoreCursor.style.top = `${vb.y + offsetY - 4}px`;
+                    scoreCursor.style.width = `${Math.max(26, vb.w + 12)}px`;
+                    scoreCursor.style.height = `${Math.max(28, vb.h + 8)}px`;
+                    scoreCursor.classList.remove('hidden');
+                    return;
+                }
+            }
+        }
+    } catch (e) {}
+
+    try {
+        const texts = document.querySelectorAll('#alphaTab svg text');
+        const fretTexts = Array.from(texts).filter(t => /^[0-9]+$/.test(t.textContent.trim()));
+        if (fretTexts[noteIndex]) {
+            const el = fretTexts[noteIndex];
+            const rect = el.getBoundingClientRect();
+            const wrapperRect = document.querySelector('.score-wrapper').getBoundingClientRect();
+
+            scoreCursor.style.left = `${rect.left - wrapperRect.left - 6}px`;
+            scoreCursor.style.top = `${rect.top - wrapperRect.top - 4}px`;
+            scoreCursor.style.width = `${Math.max(24, rect.width + 12)}px`;
+            scoreCursor.style.height = `${Math.max(26, rect.height + 8)}px`;
+            scoreCursor.classList.remove('hidden');
+            return;
+        }
+    } catch (err) {}
+}
+
+function triggerCursorHit() {
+    if (!scoreCursor) return;
+    scoreCursor.classList.add('hit');
+    setTimeout(() => scoreCursor.classList.remove('hit'), 180);
+}
+
+// ==========================================
+// ★ 演奏ポップアップモーダル開閉 ★
+// ==========================================
+function openPlayModal(index) {
+    stopTuner();
+    selectStage(index);
+    playModal.classList.remove('hidden');
+
+    setTimeout(() => {
+        const stage = getCurrentStages()[index];
+        renderStageTab(stage);
+    }, 60);
+}
+
+function closePlayModal() {
+    stopChallenge();
+    playModal.classList.add('hidden');
+    if (recordedPlayer) recordedPlayer.pause();
+}
+
+closePlayModalBtn.addEventListener('click', closePlayModal);
+
+playModal.addEventListener('click', (e) => {
+    if (e.target === playModal && !isChallenging) {
+        closePlayModal();
+    }
+});
+
+guideToggleBtn.addEventListener('click', () => {
+    const isClosed = guideContent.classList.toggle('hidden');
+    guideArrow.innerText = isClosed ? "▼" : "▲";
+});
+
+// --- 録音開始・停止処理 ---
 function startRecording(stream) {
     if (!window.MediaRecorder || !stream) return;
     recordedChunks = [];
@@ -341,9 +499,13 @@ function stopChallenge() {
 
     releaseWakeLock();
     stopRecording();
+    stopPcmCapture();
 
     rhythmTimerIds.forEach(id => clearTimeout(id));
     rhythmTimerIds = [];
+
+    if (playModalContent) playModalContent.classList.remove('playing');
+    if (scoreCursor) scoreCursor.classList.add('hidden');
 
     hudCard.classList.add('hidden');
     countInOverlay.classList.add('hidden');
@@ -353,7 +515,6 @@ function stopChallenge() {
     renderQueue(currentNotes, currentIndex, notesQueueEl);
 }
 
-// チューナーの停止
 function stopTuner() {
     isTuning = false;
     currentTunerStringNum = null;
@@ -388,19 +549,26 @@ function stopTuner() {
             currentIndex = 0;
             setIsWaitingForNewAttack(false);
 
+            if (playModalContent) playModalContent.classList.add('playing');
+
             hudCard.classList.remove('hidden');
             startChallengeBtn.innerText = "⏹️ チャレンジ中止";
             startChallengeBtn.classList.add('btn-stop');
 
             renderQueue(currentNotes, currentIndex, notesQueueEl);
             updateTargetUI(currentNotes, currentIndex, targetNoteEl, targetInfoEl);
+            updateTabCursor(currentIndex);
 
             startRecording(microphoneStream);
 
             const stage = getCurrentStages()[currentStageIndex];
 
-            if (stage.type === 'chord_strum') {
-                startChordStrumChallenge(stage);
+            if (currentLevel === 3) {
+                if (stage.mode === 'patternA') {
+                    startPatternAChallenge(stage);
+                } else {
+                    startPatternBChallenge(stage);
+                }
             } else if (currentLevel === 2) {
                 startLevel2RhythmChallenge();
             } else {
@@ -417,28 +585,34 @@ function stopTuner() {
 });
 
 // ==========================================
-// 難易度3用：和音ストローク判定ロジック
+// 難易度3 パターンA：1コードずつ丁寧にクリア
 // ==========================================
-function startChordStrumChallenge(stage) {
+let patternAChordIndex = 0;
+
+function runSingleChordStep(stage) {
+    if (!isChallenging) return;
+
+    const chordName = stage.chords[patternAChordIndex];
     const bpm = stage.bpm || 60;
     const beatSec = 60 / bpm;
     const beatMs = beatSec * 1000;
 
-    rhythmStats = { perfect: 0, good: 0, miss: 0 };
     isCountingIn = true;
     countInOverlay.classList.remove('hidden');
 
-    targetNoteEl.innerText = stage.chordName || "Chord";
-    targetInfoEl.innerText = "1拍目でジャラーン！";
+    targetNoteEl.innerText = chordName;
+    targetInfoEl.innerText = `1拍目でジャラーン！ (${patternAChordIndex + 1} / ${stage.chords.length})`;
 
     rhythmJudgeBadge.classList.remove('hidden');
     rhythmJudgeBadge.innerText = "READY";
     rhythmJudgeBadge.className = "rhythm-judge";
 
-    let count = 4;
-    countInNumber.innerText = count;
+    renderQueue(currentNotes, patternAChordIndex, notesQueueEl);
+    updateTabCursor(patternAChordIndex);
 
-    // 先行スケジューリングで正確な拍を打診
+    let count = 4;
+    triggerCountInPulse(countInNumber, count);
+
     const startTime = audioContext.currentTime + 0.05;
     for (let i = 0; i < 4; i++) {
         scheduleTick(startTime + i * beatSec, i === 0);
@@ -448,28 +622,28 @@ function startChordStrumChallenge(stage) {
         if (!isChallenging) { clearInterval(countInterval); return; }
         count--;
         if (count > 0) {
-            countInNumber.innerText = count;
+            triggerCountInPulse(countInNumber, count);
         } else {
             clearInterval(countInterval);
             countInOverlay.classList.add('hidden');
             isCountingIn = false;
 
-            // 1拍目「ジャラーン」
+            startPcmCapture();
+
             scheduleTick(audioContext.currentTime, true);
             showRhythmJudge("STRUM!", rhythmJudgeBadge);
+            triggerCursorHit();
 
-            // 残り3拍のクリック音を先行予約
             const strumStart = audioContext.currentTime;
             for (let b = 1; b < 4; b++) {
                 scheduleTick(strumStart + b * beatSec, false);
             }
 
-            // 4拍＋余韻待機後に総合判定へ
             const endTimer = setTimeout(() => {
                 if (isChallenging) {
-                    finishChordStrumChallenge(stage);
+                    finishSingleChordStep(stage, chordName);
                 }
-            }, 4 * beatMs + 1500);
+            }, 4 * beatMs + 1000);
             rhythmTimerIds.push(endTimer);
         }
     }, beatMs);
@@ -477,10 +651,121 @@ function startChordStrumChallenge(stage) {
     rhythmTimerIds.push(countInterval);
 }
 
-// ストローク演奏終了 ➔ 録音解析 ➔ 合否
-async function finishChordStrumChallenge(stage) {
+function startPatternAChallenge(stage) {
+    patternAChordIndex = 0;
+    runSingleChordStep(stage);
+}
+
+// ★ 難易度3 パターンA：ドラムロール演出を追加 ★
+function finishSingleChordStep(stage, chordName) {
+    const pcmData = stopPcmCapture();
+
+    rhythmJudgeBadge.classList.remove('hidden');
+    rhythmJudgeBadge.innerText = "JUDGING... 🥁";
+    rhythmJudgeBadge.className = "rhythm-judge judging";
+    playDrumroll(1.1);
+
+    setTimeout(() => {
+        playCymbalCrash();
+        const evalResult = evaluateRecordedChordData(pcmData, { chordName });
+
+        if (evalResult.isPass) {
+            patternAChordIndex++;
+            if (patternAChordIndex < stage.chords.length) {
+                playSuccessSound();
+                triggerCursorHit();
+                showRhythmJudge("GOOD!", rhythmJudgeBadge);
+                targetInfoEl.innerText = `ナイス！次は ${stage.chords[patternAChordIndex]} をセットしよう...`;
+                
+                const waitTimer = setTimeout(() => {
+                    if (isChallenging) runSingleChordStep(stage);
+                }, 2500);
+                rhythmTimerIds.push(waitTimer);
+            } else {
+                handleChordStageClear(evalResult, stage);
+            }
+        } else {
+            handleChordStageClear(evalResult, stage);
+        }
+    }, 1100);
+}
+
+// ==========================================
+// 難易度3 パターンB：小節ごとのストローク進行
+// ==========================================
+function startPatternBChallenge(stage) {
+    const bpm = stage.bpm || 60;
+    const beatSec = 60 / bpm;
+    const beatMs = beatSec * 1000;
+    const progression = stage.progression;
+    const totalBeats = progression.length * 4;
+
+    isCountingIn = true;
+    countInOverlay.classList.remove('hidden');
+
+    targetNoteEl.innerText = progression[0].chord;
+    targetInfoEl.innerText = `1小節目: ${progression[0].chord}`;
+
+    rhythmJudgeBadge.classList.remove('hidden');
+    rhythmJudgeBadge.innerText = "READY";
+    rhythmJudgeBadge.className = "rhythm-judge";
+
+    let count = 4;
+    triggerCountInPulse(countInNumber, count);
+
+    const startTime = audioContext.currentTime + 0.05;
+    for (let i = 0; i < 4; i++) {
+        scheduleTick(startTime + i * beatSec, i === 0);
+    }
+
+    const countInterval = setInterval(() => {
+        if (!isChallenging) { clearInterval(countInterval); return; }
+        count--;
+        if (count > 0) {
+            triggerCountInPulse(countInNumber, count);
+        } else {
+            clearInterval(countInterval);
+            countInOverlay.classList.add('hidden');
+            isCountingIn = false;
+
+            startPcmCapture();
+
+            const songStart = audioContext.currentTime;
+
+            for (let b = 0; b < totalBeats; b++) {
+                const isBarStart = (b % 4 === 0);
+                scheduleTick(songStart + b * beatSec, isBarStart);
+            }
+
+            progression.forEach((item, idx) => {
+                const changeTimer = setTimeout(() => {
+                    if (!isChallenging) return;
+                    targetNoteEl.innerText = item.chord;
+                    targetInfoEl.innerText = `${item.bar}小節目: ${item.chord}`;
+                    showRhythmJudge("STRUM!", rhythmJudgeBadge);
+                    renderQueue(currentNotes, idx, notesQueueEl);
+                    updateTabCursor(idx);
+                    triggerCursorHit();
+                }, idx * 4 * beatMs);
+                rhythmTimerIds.push(changeTimer);
+            });
+
+            const endTimer = setTimeout(() => {
+                if (isChallenging) {
+                    finishPatternBChallenge(stage);
+                }
+            }, totalBeats * beatMs + 1200);
+            rhythmTimerIds.push(endTimer);
+        }
+    }, beatMs);
+
+    rhythmTimerIds.push(countInterval);
+}
+
+function finishPatternBChallenge(stage) {
     isChallenging = false;
     stopRecording();
+    const pcmData = stopPcmCapture();
 
     rhythmJudgeBadge.classList.remove('hidden');
     rhythmJudgeBadge.innerText = "JUDGING... 🥁";
@@ -488,47 +773,13 @@ async function finishChordStrumChallenge(stage) {
 
     playDrumroll(1.3);
 
-    setTimeout(async () => {
+    setTimeout(() => {
         playCymbalCrash();
-        const evalResult = await evaluateRecordedChord(stage);
+        const evalResult = evaluateProgressionPcmData(pcmData, stage);
         handleChordStageClear(evalResult, stage);
     }, 1300);
 }
 
-// 録音データの本格解析（Safari対応 decodeAudioData ラップ）
-async function evaluateRecordedChord(stage) {
-    // 録音データがない場合は無音と判定して0点！
-    if (!recordedChunks || recordedChunks.length === 0) {
-        return { 
-            score: 0, 
-            isPass: false, 
-            detail: "音が検知されませんでした。マイクに向かってストロークしてください。" 
-        };
-    }
-
-    try {
-        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-        const arrayBuffer = await blob.arrayBuffer();
-
-        // iOS Safari互換のPromiseラップ
-        const decodedBuffer = await new Promise((resolve, reject) => {
-            audioContext.decodeAudioData(arrayBuffer, resolve, reject);
-        });
-
-        // 本格周波数・クロマベクトル解析を実行
-        return evaluateRecordedChordData(decodedBuffer, stage);
-    } catch (e) {
-        console.warn("録音解析エラー:", e);
-        // エラー時も安易に合格にせず、再試行を促す
-        return { 
-            score: 0, 
-            isPass: false, 
-            detail: "音声の解析に失敗しました。もう一度鳴らしてください。" 
-        };
-    }
-}
-
-// ストローク専用クリアモーダル表示
 function handleChordStageClear(evalResult, stage) {
     stopChallenge();
 
@@ -555,7 +806,9 @@ function handleChordStageClear(evalResult, stage) {
         if (hanamaruIcon) hanamaruIcon.innerText = "💮";
         if (hanamaruText) hanamaruText.innerText = "たいへんよくできました！";
 
-        modalTitle.innerText = `🎉 ${stage.chordName || 'コード'} 習得完了！（スコア: ${score}点）`;
+        // 修正後（ステージ名がキレイに入るよう改善）
+const stageName = stage.title.split(': ')[1] || stage.title;
+modalTitle.innerText = `🎉 ${stageName} 習得完了！（スコア: ${score}点）`;
         modalDesc.innerText = detail;
 
         const isLast = currentStageIndex === getCurrentStages().length - 1;
@@ -576,6 +829,8 @@ function handleChordStageClear(evalResult, stage) {
 }
 
 // --- 難易度1 ピッチ判定ループ ---
+// js/app.js 内の detectPitchLoopLevel1
+
 function detectPitchLoopLevel1() {
     if (!isChallenging || (currentLevel !== 1 && currentLevel !== 3)) return;
 
@@ -585,8 +840,9 @@ function detectPitchLoopLevel1() {
     for (let i = 0; i < audioBuffer.length; i++) sum += audioBuffer[i] * audioBuffer[i];
     const currentRms = Math.sqrt(sum / audioBuffer.length);
 
-    const isAttack = (currentRms - prevRms > 0.015) && (currentRms > 0.02);
-    if (currentRms < 0.015) setIsWaitingForNewAttack(false);
+    // ★ 4弦〜1弦のやさしいタッチでもアタックと判定できるよう感度調整
+    const isAttack = (currentRms - prevRms > 0.005) && (currentRms > 0.008);
+    if (currentRms < 0.007) setIsWaitingForNewAttack(false);
 
     const freq = autoCorrelate(audioBuffer, audioContext.sampleRate, currentRms);
 
@@ -602,13 +858,13 @@ function detectPitchLoopLevel1() {
         const target = currentNotes[currentIndex];
         const now = Date.now();
 
-        // 6弦(40)・5弦(45)の1オクターブ上への共振にも柔軟に対応
         const isOctaveMatch = (target.midi === 40 && roundedMidi === 52) || (target.midi === 45 && roundedMidi === 57);
 
         if (roundedMidi === target.midi || isOctaveMatch) {
             if (now - lastNoteClearedTime > 150) {
                 if (!isWaitingForNewAttack || isAttack) {
                     playSuccessSound();
+                    triggerCursorHit();
                     setLastNoteClearedTime(now);
                     setIsWaitingForNewAttack(true);
                     nextNoteLevel1();
@@ -622,8 +878,10 @@ function detectPitchLoopLevel1() {
 }
 
 function nextNoteLevel1() {
-    detectedBox.classList.add('match');
-    setTimeout(() => detectedBox.classList.remove('match'), 150);
+    if (detectedPill) {
+        detectedPill.classList.add('match');
+        setTimeout(() => detectedPill.classList.remove('match'), 150);
+    }
 
     currentIndex++;
 
@@ -631,14 +889,16 @@ function nextNoteLevel1() {
         isChallenging = false;
         renderQueue(currentNotes, currentIndex, notesQueueEl);
         targetNoteEl.innerText = "✨";
-        targetInfoEl.innerText = "ナイス！そのまま余韻を響かせよう...";
+        targetInfoEl.innerText = "ナイス！";
+        if (scoreCursor) scoreCursor.classList.add('hidden');
 
         setTimeout(() => {
             handleFinishSequence();
-        }, 2000);
+        }, 1800);
     } else {
         renderQueue(currentNotes, currentIndex, notesQueueEl);
         updateTargetUI(currentNotes, currentIndex, targetNoteEl, targetInfoEl);
+        updateTabCursor(currentIndex);
     }
 }
 
@@ -657,9 +917,8 @@ function startLevel2RhythmChallenge() {
     rhythmJudgeBadge.className = "rhythm-judge";
 
     let count = 4;
-    countInNumber.innerText = count;
+    triggerCountInPulse(countInNumber, count);
 
-    // カウントインクリック音の先行スケジューリング
     const startTime = audioContext.currentTime + 0.05;
     for (let i = 0; i < 4; i++) {
         scheduleTick(startTime + i * beatSec, i === 0);
@@ -669,11 +928,12 @@ function startLevel2RhythmChallenge() {
         if (!isChallenging) { clearInterval(countInterval); return; }
         count--;
         if (count > 0) {
-            countInNumber.innerText = count;
+            triggerCountInPulse(countInNumber, count);
         } else {
             clearInterval(countInterval);
             countInOverlay.classList.add('hidden');
             isCountingIn = false;
+            updateTabCursor(currentIndex);
             startRhythmPlayback(bpm, beatSec);
         }
     }, beatSec * 1000);
@@ -693,6 +953,8 @@ function startRhythmPlayback(bpm, beatSec) {
     scheduleMissCheck(beatSec);
 }
 
+// js/app.js 内の detectPitchLoopLevel2
+
 function detectPitchLoopLevel2(beatSec) {
     if (!isChallenging || currentLevel !== 2 || isCountingIn) return;
 
@@ -702,8 +964,9 @@ function detectPitchLoopLevel2(beatSec) {
     for (let i = 0; i < audioBuffer.length; i++) sum += audioBuffer[i] * audioBuffer[i];
     const currentRms = Math.sqrt(sum / audioBuffer.length);
 
-    const isAttack = (currentRms - prevRms > 0.015) && (currentRms > 0.02);
-    if (currentRms < 0.015) setIsWaitingForNewAttack(false);
+    // ★ 感度向上
+    const isAttack = (currentRms - prevRms > 0.005) && (currentRms > 0.008);
+    if (currentRms < 0.007) setIsWaitingForNewAttack(false);
 
     const freq = autoCorrelate(audioBuffer, audioContext.sampleRate, currentRms);
 
@@ -736,6 +999,7 @@ function detectPitchLoopLevel2(beatSec) {
                     }
 
                     playSuccessSound();
+                    triggerCursorHit();
                     advanceNoteLevel2();
                 }
             }
@@ -772,8 +1036,10 @@ function scheduleMissCheck(beatSec) {
 }
 
 function advanceNoteLevel2() {
-    detectedBox.classList.add('match');
-    setTimeout(() => detectedBox.classList.remove('match'), 150);
+    if (detectedPill) {
+        detectedPill.classList.add('match');
+        setTimeout(() => detectedPill.classList.remove('match'), 150);
+    }
 
     currentIndex++;
 
@@ -781,7 +1047,8 @@ function advanceNoteLevel2() {
         isChallenging = false;
         renderQueue(currentNotes, currentIndex, notesQueueEl);
         targetNoteEl.innerText = "✨";
-        targetInfoEl.innerText = "演奏終了！余韻を響かせよう...";
+        targetInfoEl.innerText = "演奏終了！";
+        if (scoreCursor) scoreCursor.classList.add('hidden');
 
         setTimeout(() => {
             handleFinishSequence();
@@ -789,10 +1056,11 @@ function advanceNoteLevel2() {
     } else {
         renderQueue(currentNotes, currentIndex, notesQueueEl);
         updateTargetUI(currentNotes, currentIndex, targetNoteEl, targetInfoEl);
+        updateTabCursor(currentIndex);
     }
 }
 
-// 演奏終了判定シーケンス（難易度1・2用）
+// 演奏終了判定シーケンス
 function handleFinishSequence() {
     isChallenging = false;
     isCountingIn = false;
@@ -884,10 +1152,11 @@ function handleStageClear() {
     clearModal.classList.remove('hidden');
 }
 
+// クリアモーダル操作
 nextStageBtn.addEventListener('click', () => {
     if (recordedPlayer) recordedPlayer.pause();
     clearModal.classList.add('hidden');
-    selectStage(currentStageIndex + 1);
+    openPlayModal(currentStageIndex + 1);
 });
 
 retryBtn.addEventListener('click', () => {
@@ -904,18 +1173,20 @@ resetProgressBtn.addEventListener('click', () => {
         else if (currentLevel === 2) saveData.level2 = [];
         else saveData.level3 = [];
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        closePlayModal();
         selectStage(0);
     }
 });
 
-// --- 簡易チューナー機能 (モダンイベントハンドリング) ---
+// --- 簡易チューナー機能 ---
 async function selectTunerString(stringNum, midi, noteName) {
     if (isTuning && currentTunerStringNum === stringNum) {
         stopTuner();
         return;
     }
 
-    stopChallenge();
+    closePlayModal();
+    resetTunerSmoothing();
 
     currentTunerStringNum = stringNum;
     tunerTargetFreq = midiToFrequency(midi);
@@ -958,6 +1229,10 @@ tunerStringBtns.forEach(btn => {
     });
 });
 
+// js/app.js 内の tunePitchLoop
+
+// js/app.js 内の tunePitchLoop を修正
+
 function tunePitchLoop() {
     if (!isTuning) return;
 
@@ -967,7 +1242,8 @@ function tunePitchLoop() {
     for (let i = 0; i < audioBuffer.length; i++) sum += audioBuffer[i] * audioBuffer[i];
     const rms = Math.sqrt(sum / audioBuffer.length);
 
-    if (rms > 0.02) {
+    // ★ 0.007 -> 0.003 に引き下げて、1弦〜2弦の小さな生音でも即座にメーターが反応するように改善
+    if (rms > 0.003) {
         const freq = autoCorrelate(audioBuffer, audioContext.sampleRate, rms);
 
         if (freq > 50 && freq < 1000) {
@@ -976,7 +1252,8 @@ function tunePitchLoop() {
                 tunerTargetFreq,
                 tunerHzDisplay,
                 tunerMeterPointer,
-                tunerStatusText
+                tunerStatusText,
+                onInTunePing: playTunerPing
             });
         }
     }
@@ -1042,5 +1319,5 @@ infoModal.addEventListener('click', (e) => {
     }
 });
 
-// 初期実行: 難易度1のステージ1を選択
+// 初期実行: 難易度1のステージデータを準備
 selectStage(0);

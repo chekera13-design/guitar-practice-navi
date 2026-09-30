@@ -18,7 +18,7 @@
     <!-- ヘッダー & 全体進捗 -->
     <header class="header card">
         <div class="header-top">
-            <h1 id="headerLevelTitle">🎸 難易度 1 : 初心者入門編</h1>
+            <h1 id="headerLevelTitle">🎸 難易度 1 : 音程入門編</h1>
             <button id="resetProgressBtn" class="sub-btn">進捗リセット</button>
         </div>
         <p id="headerLevelDesc">全ステージ合格を目指して、焦らず自分のペースでピッキングを身につけよう！</p>
@@ -39,7 +39,6 @@
         <h3 class="section-title">⚖️ 簡易チューナー</h3>
         <p class="stage-desc" style="margin-bottom: 12px;">開放弦をポロンと鳴らして、メーターの針が中央（緑色）にくるようにペグを回して合わせましょう。</p>
         
-        <!-- 弦選択ボタン（data属性で安全に管理） -->
         <div class="tuner-buttons-container" style="display: flex; gap: 6px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
             <button class="sub-btn tuner-string-btn" data-string="6" data-midi="40" data-note="E2">6弦 (E)</button>
             <button class="sub-btn tuner-string-btn" data-string="5" data-midi="45" data-note="A2">5弦 (A)</button>
@@ -49,13 +48,11 @@
             <button class="sub-btn tuner-string-btn" data-string="1" data-midi="64" data-note="E4">1弦 (E)</button>
         </div>
 
-        <!-- チューナーHUD -->
         <div id="tunerHud" class="hud-box hidden" style="border-color: #10b981; background: #0f172a;">
             <div style="text-align: center;">
                 <div id="tunerTargetLabel" style="font-size: 14px; color: #94a3b8; font-weight: bold;">6弦 (E2) に合わせ中...</div>
                 <div id="tunerStatusText" style="font-size: 22px; font-weight: bold; color: #fbbf24; margin: 8px 0;">音をポロンと鳴らしてください</div>
                 
-                <!-- 視覚的なメーターバー -->
                 <div style="background: #334155; height: 16px; border-radius: 8px; position: relative; overflow: hidden; max-width: 320px; margin: 10px auto;">
                     <div id="tunerMeterPointer" style="background: #10b981; width: 6px; height: 100%; position: absolute; left: 50%; transform: translateX(-50%); transition: left 0.1s ease;"></div>
                     <div style="border-left: 2px dashed #ffffff; height: 100%; position: absolute; left: 50%; transform: translateX(-1%); opacity: 0.5;"></div>
@@ -65,11 +62,10 @@
         </div>
     </div>
 
-    <!-- ステージ選択グリッド（右横に難易度切り替えタブを配置） -->
+    <!-- ステージ選択グリッド -->
     <section class="card">
         <div class="stages-header">
-            <h2 class="section-title">ステージ選択</h2>
-            <!-- 難易度切り替えタブ -->
+            <h2 class="section-title">ステージ選択（タップして挑戦）</h2>
             <div class="level-tabs-container">
                 <button id="levelTab1" class="level-tab active" data-level="1">
                     🎸 難易度 1 : 音程入門
@@ -83,71 +79,6 @@
             </div>
         </div>
         <div id="stagesGrid" class="stages-grid"></div>
-    </section>
-
-    <!-- 演奏・判定エリア -->
-    <section id="activeStageCard" class="card active-stage-card">
-        <div class="stage-info-header">
-            <div>
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap;">
-                    <span id="currentStageBadge" class="badge">EX 1</span>
-                    <span id="bpmBadge" class="badge bpm-badge hidden">BPM 60</span>
-                </div>
-                <h2 id="currentStageTitle" class="stage-title">ステージタイトル</h2>
-                <p id="currentStageDesc" class="stage-desc">説明文</p>
-            </div>
-            <div class="stage-actions">
-                <label class="file-btn sub-file-btn" title="作成したMusicXMLファイルを差し替え">
-                    📁 XML差し替え
-                    <input type="file" id="fileInput" accept=".xml,.musicxml,.mxl">
-                </label>
-                <button id="startChallengeBtn" class="action-btn">🎤 チャレンジ開始</button>
-            </div>
-        </div>
-
-        <!-- 判定HUD（演奏中） -->
-        <div id="hudCard" class="hud-box hidden">
-            <!-- カウントイン表示エリア（難易度2・3で使用） -->
-            <div id="countInOverlay" class="count-in-overlay hidden">
-                <div id="countInNumber" class="count-in-number">4</div>
-                <div class="count-in-text">カウントに合わせて準備！</div>
-            </div>
-
-            <div class="hud-main">
-                <div class="target-box">
-                    <span class="hud-label">目標の音</span>
-                    <div id="targetNote" class="big-note">--</div>
-                    <div id="targetInfo" class="sub-info">--弦 --フレット</div>
-                </div>
-
-                <!-- リズム・演奏判定バッジ -->
-                <div class="center-judge-box">
-                    <div class="vs-arrow">➔</div>
-                    <div id="rhythmJudgeBadge" class="rhythm-judge hidden">READY</div>
-                </div>
-
-                <div class="detected-box">
-                    <span class="hud-label">あなたの音</span>
-                    <div id="detectedNote" class="big-note">--</div>
-                    <div id="detectedHz" class="sub-info">0.0 Hz</div>
-                </div>
-            </div>
-            <div class="notes-queue" id="notesQueue"></div>
-        </div>
-
-        <!-- TAB譜描画エリア -->
-        <div class="score-wrapper">
-            <div id="alphaTab"></div>
-        </div>
-    </section>
-
-    <!-- ステージ連動 練習のコツ・解説カード -->
-    <section class="card guide-card">
-        <div class="guide-header">
-            <span class="guide-badge">💡 攻略ポイント</span>
-            <h3 id="guideTitle">EX 1 の練習のコツ & 解説</h3>
-        </div>
-        <div id="guideContent" class="guide-body"></div>
     </section>
 
     <!-- [広告枠: コンテンツ間バナー] -->
@@ -195,6 +126,94 @@
         <p class="copyright">© 2025 ギター練習ナビ - 無料ギター練習Webアプリ</p>
     </footer>
 
+    <!-- ========================================== -->
+    <!-- ★ ステージ演奏ポップアップモーダル ★ -->
+    <!-- ========================================== -->
+    <div id="playModal" class="modal play-modal hidden">
+        <div id="playModalContent" class="modal-content play-modal-content">
+            <!-- モーダルヘッダー -->
+            <div class="play-modal-header">
+                <div class="play-title-group">
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 2px;">
+                        <span id="currentStageBadge" class="badge">EX 1</span>
+                        <span id="bpmBadge" class="badge bpm-badge hidden">BPM 60</span>
+                    </div>
+                    <h2 id="currentStageTitle" class="stage-title">ステージタイトル</h2>
+                    <p id="currentStageDesc" class="stage-desc">説明文</p>
+                </div>
+                <div class="play-header-actions">
+                    <label class="file-btn sub-file-btn" title="作成したMusicXMLファイルを差し替え">
+                        📁 XML
+                        <input type="file" id="fileInput" accept=".xml,.musicxml,.mxl">
+                    </label>
+                    <button id="closePlayModalBtn" class="close-x-btn" title="閉じる">✕</button>
+                </div>
+            </div>
+
+            <!-- 折りたたみ式 攻略ポイントアコーディオン -->
+            <div id="guideAccordion" class="guide-accordion">
+                <button id="guideToggleBtn" class="guide-toggle-btn" type="button">
+                    <span>💡 <span id="guideTitle">練習のコツ & 攻略ポイント</span></span>
+                    <span id="guideArrow" class="guide-arrow">▼</span>
+                </button>
+                <div id="guideContent" class="guide-content-body hidden"></div>
+            </div>
+
+            <!-- サブコントロール：🔊 メトロノーム音量調節 -->
+            <div class="stage-sub-controls">
+                <div class="metronome-vol-control">
+                    <label for="metroVolSlider" class="vol-label">🔊 クリック音量</label>
+                    <input type="range" id="metroVolSlider" min="0" max="1" step="0.05" value="0.5" class="vol-slider">
+                    <span id="metroVolVal" class="vol-val">50%</span>
+                </div>
+            </div>
+
+            <!-- ★ スリム化された判定HUD（演奏中） ★ -->
+            <div id="hudCard" class="hud-box compact-hud hidden">
+                <!-- カウントイン（横並びでぴったり収まるよう調整） -->
+                <div id="countInOverlay" class="count-in-overlay compact-count-in hidden">
+                    <div id="countInNumber" class="count-in-number">4</div>
+                    <div class="count-in-text">カウントに合わせて準備！</div>
+                </div>
+
+                <div class="compact-hud-main">
+                    <!-- 目標の音 -->
+                    <div class="hud-pill target-pill">
+                        <span class="pill-label">目標</span>
+                        <span id="targetNote" class="pill-note">--</span>
+                        <span id="targetInfo" class="pill-info">--弦</span>
+                    </div>
+
+                    <!-- 判定バッジ -->
+                    <div class="hud-pill-center">
+                        <div id="rhythmJudgeBadge" class="rhythm-judge hidden">READY</div>
+                    </div>
+
+                    <!-- あなたの音 -->
+                    <div class="hud-pill detected-pill">
+                        <span class="pill-label">判定音</span>
+                        <span id="detectedNote" class="pill-note">--</span>
+                        <span id="detectedHz" class="pill-hz">0.0 Hz</span>
+                    </div>
+                </div>
+
+                <div class="notes-queue compact-queue" id="notesQueue"></div>
+            </div>
+
+            <!-- TAB譜面エリア（中心の主役） -->
+            <div class="score-wrapper">
+                <!-- ★ 動くTAB譜面カーソル ★ -->
+                <div id="scoreCursor" class="score-cursor hidden"></div>
+                <div id="alphaTab"></div>
+            </div>
+
+            <!-- TAB譜のすぐ真下に配置された特大開始ボタン -->
+            <div class="play-bottom-action">
+                <button id="startChallengeBtn" class="action-btn wide-start-btn">🎤 チャレンジ開始</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 汎用インフォモーダル -->
     <div id="infoModal" class="modal hidden">
         <div class="modal-content info-modal-content">
@@ -214,14 +233,12 @@
             <h2 id="modalTitle">🎉 STAGE CLEAR!</h2>
             <p id="modalDesc">ナイスピッキング！基礎がしっかり身についています。</p>
             
-            <!-- リズム成績詳細（難易度2用） -->
             <div id="modalScoreStats" class="modal-score-stats hidden">
                 <div>PERFECT: <span id="statPerfect" class="stat-perfect">0</span></div>
                 <div>GOOD: <span id="statGood" class="stat-good">0</span></div>
                 <div>MISS: <span id="statMiss" class="stat-miss">0</span></div>
             </div>
 
-            <!-- 録音再生エリア -->
             <div id="modalAudioSection" class="modal-audio-section hidden">
                 <div class="modal-audio-title">🎧 あなたの演奏をチェック</div>
                 <audio id="recordedPlayer" controls preload="auto"></audio>

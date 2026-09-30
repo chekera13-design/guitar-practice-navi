@@ -12,6 +12,23 @@ export let lastNoteClearedTime = 0;
 
 let wakeLockSentinel = null;
 
+// --- 生PCMキャプチャ用ステート ---
+let pcmCaptureNode = null;
+let pcmSilentGain = null;
+let pcmChunks = [];
+let isCapturingPcm = false;
+
+// --- メトロノーム音量ステート (0.0 〜 1.0) ---
+let metronomeVolume = 0.5;
+
+export function setMetronomeVolume(val) {
+    metronomeVolume = Math.max(0, Math.min(1, val));
+}
+
+export function getMetronomeVolume() {
+    return metronomeVolume;
+}
+
 export function setPrevRms(val) { prevRms = val; }
 export function setIsWaitingForNewAttack(val) { isWaitingForNewAttack = val; }
 export function setLastNoteClearedTime(val) { lastNoteClearedTime = val; }
@@ -44,8 +61,10 @@ export function unlockAudioContext() {
     source.start(0);
 }
 
+let micSourceNode = null;
+
 export async function setupMicrophoneStream(existingStream = null) {
-    if (analyser) return;
+    if (analyser && micSourceNode) return;
 
     const stream = existingStream || await navigator.mediaDevices.getUserMedia({
         audio: { 
@@ -55,30 +74,80 @@ export async function setupMicrophoneStream(existingStream = null) {
         }
     });
 
-    const source = audioContext.createMediaStreamSource(stream);
+    micSourceNode = audioContext.createMediaStreamSource(stream);
 
-    // ギターの音域（70Hz〜1200Hz）を通すバンドパス特性
+    // ★ 4弦〜1弦の微弱な高域をクリアに通すフィルター設定（遮断周波数を2000Hzへ引き上げ）
     const lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.setValueAtTime(1000, audioContext.currentTime);
+    lowpass.frequency.setValueAtTime(2200, audioContext.currentTime);
+
+    // 低域のボワつき（エアコンや机の振動ノイズ）をカットして高音弦の抜けを良くするハイパス
+    const highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.setValueAtTime(65, audioContext.currentTime);
 
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
 
-    source.connect(lowpass);
+    micSourceNode.connect(highpass);
+    highpass.connect(lowpass);
     lowpass.connect(analyser);
 
     audioBuffer = new Float32Array(analyser.fftSize);
 }
 
+// --- 生PCMキャプチャ ---
+export function startPcmCapture() {
+    if (!audioContext || !micSourceNode) return;
+    pcmChunks = [];
+    isCapturingPcm = true;
+
+    if (!pcmCaptureNode) {
+        pcmCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
+        pcmSilentGain = audioContext.createGain();
+        pcmSilentGain.gain.setValueAtTime(0, audioContext.currentTime);
+
+        pcmCaptureNode.onaudioprocess = (e) => {
+            if (!isCapturingPcm) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            pcmChunks.push(new Float32Array(inputData));
+        };
+
+        micSourceNode.connect(pcmCaptureNode);
+        pcmCaptureNode.connect(pcmSilentGain);
+        pcmSilentGain.connect(audioContext.destination);
+    }
+}
+
+export function stopPcmCapture() {
+    isCapturingPcm = false;
+    if (pcmChunks.length === 0) return null;
+
+    const totalLength = pcmChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of pcmChunks) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+    }
+    pcmChunks = [];
+    return {
+        channelData: merged,
+        sampleRate: audioContext.sampleRate
+    };
+}
+
+// --- メトロノーム音生成（音量スライダー連動） ---
 export function scheduleTick(time, isAccent = false) {
-    if (!audioContext) return;
+    if (!audioContext || metronomeVolume <= 0) return;
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
+    const targetGain = (isAccent ? 0.28 : 0.18) * metronomeVolume;
+
     osc.frequency.setValueAtTime(isAccent ? 1200 : 800, time);
-    gain.gain.setValueAtTime(0.2, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    gain.gain.setValueAtTime(targetGain, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
 
     osc.connect(gain);
     gain.connect(audioContext.destination);
@@ -207,60 +276,73 @@ export function playCymbalCrash() {
     kick.stop(now + 0.2);
 }
 
-/**
- * 改良型自己相関法 (Autocorrelation) ピッチ検出
- */
+// ==========================================
+// ★ 高速版 自己相関ピッチ検出エンジン ★
+// ==========================================
+const MAX_CORR_BUFFER_SIZE = 2048;
+const corrBuffer = new Float32Array(MAX_CORR_BUFFER_SIZE);
+
+// js/audioEngine.js 内の autoCorrelate 関数を以下に差し替え
+
 export function autoCorrelate(buf, sampleRate, rms) {
-    let SIZE = buf.length;
-    if (rms < 0.018) return -1;
+    const SIZE = buf.length;
+    // ★ 1弦〜2弦の繊細な生音も確実に拾えるよう感度を 0.003 に向上
+    if (rms < 0.003) return -1;
 
-    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-    for (let i = 0; i < SIZE / 2; i++) {
-        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-    }
-    for (let i = 1; i < SIZE / 2; i++) {
-        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-    }
-    buf = buf.slice(r1, r2);
-    SIZE = buf.length;
+    const minPeriod = Math.floor(sampleRate / 1300); // 約33 (1300Hz)
+    const maxPeriod = Math.ceil(sampleRate / 65);    // 約679 (65Hz)
 
-    let c = new Float32Array(SIZE);
-    for (let i = 0; i < SIZE; i++) {
-        for (let j = 0; j < SIZE - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
-    }
+    if (maxPeriod >= SIZE) return -1;
 
-    let d = 0;
-    while (c[d] > c[d + 1]) d++;
+    const L = SIZE - maxPeriod;
 
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < SIZE; i++) {
-        if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    // 相関値を計算
+    for (let i = minPeriod; i <= maxPeriod; i++) {
+        let sum = 0;
+        for (let j = 0; j < L; j++) {
+            sum += buf[j] * buf[j + i];
+        }
+        corrBuffer[i] = sum;
     }
 
-    let T0 = maxpos;
-    if (T0 <= 0 || T0 >= SIZE - 1) return -1;
-
-    // 低音弦（E2/A2等）の第2倍音トラップを回避するサブハーモニック検査
-    const subT = Math.round(T0 * 2);
-    if (subT < SIZE - 1) {
-        let localMax = -1;
-        let bestSub = subT;
-        for (let offset = -4; offset <= 4; offset++) {
-            const idx = subT + offset;
-            if (idx > 0 && idx < SIZE && c[idx] > localMax) {
-                localMax = c[idx];
-                bestSub = idx;
+    // すべての極大値（ピーク）と全体の最大値を収集
+    let globalMax = -1;
+    const peaks = [];
+    for (let i = minPeriod + 1; i < maxPeriod - 1; i++) {
+        const val = corrBuffer[i];
+        if (val > corrBuffer[i - 1] && val > corrBuffer[i + 1] && val > 0) {
+            peaks.push({ i, val });
+            if (val > globalMax) {
+                globalMax = val;
             }
         }
-        if (localMax > maxval * 0.72) {
-            T0 = bestSub;
-        }
     }
 
-    let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
-    let a = (x1 + x3 - 2 * x2) / 2;
-    let b = (x3 - x1) / 2;
-    if (a) T0 = T0 - b / (2 * a);
+    if (peaks.length === 0 || globalMax <= 0) return -1;
+
+    // ★ 改善：最大ピークの82%以上の高さを持つ「最初の山（最小周期＝真の基音）」を選択！
+    // これにより4弦〜1弦が2倍周期（オクターブ下）に誤認されるのを完全に防止
+    let bestPeak = null;
+    const threshold = globalMax * 0.82;
+    for (const p of peaks) {
+        if (p.val >= threshold) {
+            bestPeak = p;
+            break;
+        }
+    }
+    if (!bestPeak) bestPeak = peaks[0];
+
+    let T0 = bestPeak.i;
+
+    // 放物線補間（サブサンプル精度で周波数を割り出し）
+    const x1 = corrBuffer[T0 - 1];
+    const x2 = corrBuffer[T0];
+    const x3 = corrBuffer[T0 + 1];
+    const a = (x1 + x3 - 2 * x2) / 2;
+    const b = (x3 - x1) / 2;
+    if (a !== 0) {
+        T0 = T0 - b / (2 * a);
+    }
 
     return sampleRate / T0;
 }
@@ -270,32 +352,31 @@ export function midiToFrequency(midi) {
 }
 
 // ==========================================
-// ★ 本格コード解析（FFTクロマベクトル解析） ★
+// ★ コード解析エンジン ★
 // ==========================================
-
-/**
- * コード名から構成音（ピッチクラス 0:C, 1:C# ... 11:B）を定義
- */
-const CHORD_PITCH_CLASSES = {
-    "Em": [4, 7, 11], // E(4), G(7), B(11)
-    "Am": [9, 0, 4],  // A(9), C(0), E(4)
-    "E":  [4, 8, 11], // E(4), G#(8), B(11)
-    "C":  [0, 4, 7],  // C(0), E(4), G(7)
-    "G":  [7, 11, 2], // G(7), B(11), D(2)
-    "D":  [2, 6, 9]   // D(2), F#(6), A(9)
+export const CHORD_PITCH_CLASSES = {
+    "Em":    [4, 7, 11],
+    "Am":    [9, 0, 4],
+    "E":     [4, 8, 11],
+    "C":     [0, 4, 7],
+    "Cmaj7": [0, 4, 7, 11],
+    "G":     [7, 11, 2],
+    "D":     [2, 6, 9]
 };
 
-/**
- * 録音された波形データを本格周波数解析
- * @param {AudioBuffer} audioBufferObj 
- * @param {object} stage 
- */
-export function evaluateRecordedChordData(audioBufferObj, stage) {
-    const channelData = audioBufferObj.getChannelData(0);
-    const sampleRate = audioBufferObj.sampleRate;
+export function evaluateRecordedChordData(pcmData, stage) {
+    if (!pcmData || !pcmData.channelData || pcmData.channelData.length === 0) {
+        return { 
+            score: 0, 
+            isPass: false, 
+            detail: "音が検知されませんでした。マイクに向かってストロークしてください。" 
+        };
+    }
+
+    const channelData = pcmData.channelData;
+    const sampleRate = pcmData.sampleRate;
     const totalSamples = channelData.length;
 
-    // 1. RMS最大値（アタック検知）と暗騒音チェック
     let maxRms = 0;
     let maxIndex = 0;
     const windowSize = 2048;
@@ -313,9 +394,7 @@ export function evaluateRecordedChordData(audioBufferObj, stage) {
         }
     }
 
-    // ★ 何も弾いていない場合（マイクの部屋ノイズのみ）は即座に0点！
-    // ギターをストロークすると通常 0.08 〜 0.40 以上のRMSが出ます。
-    if (maxRms < 0.055) {
+    if (maxRms < 0.05) {
         return { 
             score: 0, 
             isPass: false, 
@@ -323,8 +402,6 @@ export function evaluateRecordedChordData(audioBufferObj, stage) {
         };
     }
 
-    // 2. 減衰チェック（ギターの生音・余韻が鳴り続いているか）
-    // 手拍子や咳なら100msで消えるが、ギター弦は0.8秒後も振動が残る
     const offsetAfter800ms = maxIndex + Math.floor(sampleRate * 0.8);
     let sustainRms = 0;
     if (offsetAfter800ms + windowSize < totalSamples) {
@@ -335,28 +412,22 @@ export function evaluateRecordedChordData(audioBufferObj, stage) {
         }
         sustainRms = Math.sqrt(sum / windowSize);
     }
+    const hasSustain = sustainRms > (maxRms * 0.12) && sustainRms > 0.012;
 
-    const hasSustain = sustainRms > (maxRms * 0.15) && sustainRms > 0.015;
-
-    // 3. FFT（クロマベクトル）による構成音の検出
-    // アタック直後（響きが安定した100ms後〜600ms後）の波形を切り出す
     const startAnalysis = Math.min(totalSamples - 4096, maxIndex + Math.floor(sampleRate * 0.1));
     const analysisWindow = channelData.slice(startAnalysis, startAnalysis + 4096);
 
-    // 12半音（C〜B）ごとのエネルギー蓄積バッファ
     const chroma = new Float32Array(12);
 
-    // ギターの音域（70Hz 〜 800Hz）の各音高エネルギーを計算
-    for (let midi = 40; midi <= 64; midi++) { // E2(40) 〜 E4(64)
+    for (let midi = 40; midi <= 64; midi++) {
         const freq = midiToFrequency(midi);
         const pitchClass = midi % 12;
         const mag = calculateDFTBin(analysisWindow, sampleRate, freq);
         chroma[pitchClass] += mag;
     }
 
-    // コード構成音の一致度スコアを計算
     const chordName = stage.chordName || "Em";
-    const targetPitches = CHORD_PITCH_CLASSES[chordName] || [4, 7, 11]; // デフォルト: Em(E,G,B)
+    const targetPitches = CHORD_PITCH_CLASSES[chordName] || [4, 7, 11];
 
     let targetEnergy = 0;
     let otherEnergy = 0;
@@ -370,43 +441,34 @@ export function evaluateRecordedChordData(audioBufferObj, stage) {
     }
 
     const totalEnergy = targetEnergy + otherEnergy;
-    let chordMatchRatio = totalEnergy > 0 ? (targetEnergy / totalEnergy) : 0;
+    const chordMatchRatio = totalEnergy > 0 ? (targetEnergy / totalEnergy) : 0;
 
-    // 4. 厳格なスコアリング
-    // 手拍子や環境音、無関係な音の場合、chordMatchRatioは0.3以下になります（12音中3音なので均等だと0.25）
-    // Emが綺麗に鳴っていると 0.50 〜 0.75 以上になります。
     let calculatedScore = 0;
-
-    if (chordMatchRatio < 0.35) {
-        // 構成音が合っていない（別のコードまたは雑音・手拍子）
-        calculatedScore = Math.floor(chordMatchRatio * 70); // 20〜25点程度
+    if (chordMatchRatio < 0.33) {
+        calculatedScore = Math.floor(chordMatchRatio * 70);
         return {
             score: calculatedScore,
             isPass: false,
-            detail: `${chordName}の構成音（E, G, B）が綺麗に響いていません。別の弦を押さえていないか確認しましょう！`
+            detail: `${chordName} の構成音が綺麗に響いていません。押さえる弦や指の位置を確認しましょう！`
         };
     }
 
-    // 構成音が合っている場合：一致率と音量・余韻から算出
-    calculatedScore = Math.floor(40 + (chordMatchRatio - 0.35) * 110); // 40〜85点
-    if (hasSustain) calculatedScore += 12; // 余韻ボーナス
-    if (maxRms > 0.12) calculatedScore += 5; // 音量ボーナス
+    calculatedScore = Math.floor(40 + (chordMatchRatio - 0.33) * 115);
+    if (hasSustain) calculatedScore += 12;
+    if (maxRms > 0.10) calculatedScore += 6;
 
-    calculatedScore = Math.min(96, Math.max(0, calculatedScore));
+    calculatedScore = Math.min(98, Math.max(0, calculatedScore));
     const isPass = calculatedScore >= 65;
 
     return {
         score: calculatedScore,
         isPass: isPass,
         detail: isPass 
-            ? `力強いストローク！${chordName}の構成音（E・G・B）が美しく響いています。` 
+            ? `力強いストローク！${chordName} の和音が美しく響いています。` 
             : `惜しい！音が少し小さかったか、一部の弦がミュートされています。もう一度しっかり鳴らしてみましょう。`
     };
 }
 
-/**
- * 指定周波数の強度（振幅）をピンポイント算出するDFT
- */
 function calculateDFTBin(samples, sampleRate, freq) {
     const N = samples.length;
     const k = (2 * Math.PI * freq) / sampleRate;
@@ -418,4 +480,108 @@ function calculateDFTBin(samples, sampleRate, freq) {
         imag -= samples[n] * Math.sin(angle);
     }
     return Math.sqrt(real * real + imag * imag) / N;
+}
+
+export function evaluateChordWindow(channelData, sampleRate, startSample, windowSize, chordName) {
+    const end = Math.min(channelData.length, startSample + windowSize);
+    const count = end - startSample;
+    if (count <= 0) return { score: 0, isPass: false };
+
+    let sum = 0;
+    for (let i = startSample; i < end; i++) {
+        sum += channelData[i] * channelData[i];
+    }
+    const rms = Math.sqrt(sum / count);
+    if (rms < 0.04) {
+        return { score: 0, isPass: false, chordName, detail: "音が弱すぎるか、弾かれていません" };
+    }
+
+    const analysisWindow = channelData.slice(startSample, startSample + Math.min(4096, count));
+    const chroma = new Float32Array(12);
+    for (let midi = 40; midi <= 64; midi++) {
+        const freq = midiToFrequency(midi);
+        const pitchClass = midi % 12;
+        chroma[pitchClass] += calculateDFTBin(analysisWindow, sampleRate, freq);
+    }
+
+    const targetPitches = CHORD_PITCH_CLASSES[chordName] || [4, 7, 11];
+    let targetEnergy = 0;
+    let otherEnergy = 0;
+    for (let i = 0; i < 12; i++) {
+        if (targetPitches.includes(i)) targetEnergy += chroma[i];
+        else otherEnergy += chroma[i];
+    }
+    const totalEnergy = targetEnergy + otherEnergy;
+    const ratio = totalEnergy > 0 ? (targetEnergy / totalEnergy) : 0;
+
+    let score = 0;
+    if (ratio < 0.33) {
+        score = Math.floor(ratio * 70);
+    } else {
+        score = Math.floor(40 + (ratio - 0.33) * 115);
+        if (rms > 0.10) score += 8;
+        score = Math.min(98, Math.max(0, score));
+    }
+    return {
+        score,
+        isPass: score >= 60,
+        chordName
+    };
+}
+
+export function evaluateProgressionPcmData(pcmData, stage) {
+    if (!pcmData || !pcmData.channelData) {
+        return { score: 0, isPass: false, detail: "音声が取得できませんでした。" };
+    }
+
+    const channelData = pcmData.channelData;
+    const sampleRate = pcmData.sampleRate;
+    const bpm = stage.bpm || 60;
+    const beatSec = 60 / bpm;
+    const progression = stage.progression;
+
+    let totalScore = 0;
+    let passCount = 0;
+    const details = [];
+
+    progression.forEach((item) => {
+        const strikeTimeSec = item.beat * beatSec;
+        const startSample = Math.floor((strikeTimeSec + 0.15) * sampleRate);
+        const windowSize = Math.floor(0.6 * sampleRate);
+
+        const result = evaluateChordWindow(channelData, sampleRate, startSample, windowSize, item.chord);
+        totalScore += result.score;
+        if (result.isPass) passCount++;
+        details.push(`${item.chord}: ${result.score}点`);
+    });
+
+    const avgScore = Math.round(totalScore / progression.length);
+    const isOverallPass = (avgScore >= 62) && (passCount >= Math.ceil(progression.length * 0.75));
+
+    return {
+        score: avgScore,
+        isPass: isOverallPass,
+        detail: isOverallPass 
+            ? `見事なコードチェンジ！全小節しっかり鳴らせています（${details.join(' / ')}）`
+            : `惜しい！一部のコードで指の移動が遅れたか音が詰まりました（${details.join(' / ')}）`
+    };
+}
+
+export function playTunerPing() {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const t = audioContext.currentTime;
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1046.5, t);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.5);
 }

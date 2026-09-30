@@ -13,7 +13,13 @@ export function renderQueue(currentNotes, currentIndex, notesQueueEl) {
         badge.className = 'note-badge';
         badge.innerText = `${idx + 1}. ${n.fullName}`;
         if (idx < currentIndex) badge.classList.add('cleared');
-        if (idx === currentIndex) badge.classList.add('current');
+        if (idx === currentIndex) {
+            badge.classList.add('current');
+            // ★ 現在のターゲットが画面中央に来るように自動スクロール
+            setTimeout(() => {
+                badge.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }, 10);
+        }
         notesQueueEl.appendChild(badge);
     });
 }
@@ -90,43 +96,104 @@ export function renderStagesUI({
     if (progressBarFill) progressBarFill.style.width = `${percent}%`;
 }
 
+// --- チューナー用スムージングステート ---
+let smoothedCents = 0;
+let lastInTuneSoundTime = 0;
+let inTuneHoldFrames = 0;
+
 /**
  * 簡易チューナー起動時、ピッチのズレ（セント）に合わせてメーターの針やテキストを動かす
+ * - 6弦・5弦の倍音自動補正
+ * - 針の滑らかな追従（EMAフィルタ）
+ * - ピッタリ合ったときの効果音・緑発光
  */
+// js/ui.js 内の updateTunerUI 関数内の冒頭を修正
+
 export function updateTunerUI({
     freq,
     tunerTargetFreq,
     tunerHzDisplay,
     tunerMeterPointer,
-    tunerStatusText
+    tunerStatusText,
+    onInTunePing
 }) {
-    if (tunerHzDisplay) tunerHzDisplay.innerText = `${freq.toFixed(1)} Hz`;
+    // 1. 【全弦対応オクターブ正規化】
+    // マイクの特性で第2倍音（オクターブ上）やサブハーモニクスを拾った場合でも、
+    // 目標弦の周波数帯（±600セント以内）に自動で引き寄せてピッチ比較を行う
+    let actualFreq = freq;
+    while (actualFreq < tunerTargetFreq * 0.7071) {
+        actualFreq *= 2;
+    }
+    while (actualFreq > tunerTargetFreq * 1.4142) {
+        actualFreq /= 2;
+    }
 
-    // 周波数からセント（音程のズレの単位）を計算
-    const cents = 1200 * Math.log2(freq / tunerTargetFreq);
+    if (tunerHzDisplay) {
+        tunerHzDisplay.innerText = `${actualFreq.toFixed(1)} Hz (生: ${freq.toFixed(1)} Hz)`;
+    }
 
-    // メーターの針（ポインター）の位置を計算 (5% 〜 95% の間に収める)
-    let pointerPos = 50 + (cents / 50) * 40;
-    pointerPos = Math.max(5, Math.min(95, pointerPos));
-    
+    // 周波数からセント（半音の1/100）のズレを計算
+    const rawCents = 1200 * Math.log2(actualFreq / tunerTargetFreq);
+
+    // 2. 【スムージング】急激なブレを抑えて滑らかに追従 (EMA)
+    smoothedCents = smoothedCents * 0.65 + rawCents * 0.35;
+
+    // メーターの針の位置（±50セントの範囲を 10% 〜 90% にマッピング）
+    let pointerPos = 50 + (smoothedCents / 50) * 40;
+    pointerPos = Math.max(8, Math.min(92, pointerPos));
+
     if (tunerMeterPointer) {
         tunerMeterPointer.style.left = `${pointerPos}%`;
     }
 
     if (!tunerStatusText || !tunerMeterPointer) return;
 
-    // ズレ具合に合わせたテキストと色のフィードバック
-    if (Math.abs(cents) <= 8) {
+    // 3. 【判定フィードバック】
+    const absCents = Math.abs(smoothedCents);
+
+    if (absCents <= 6) {
+        // ✨ ピッタリ（±6セント以内）
+        inTuneHoldFrames++;
         tunerStatusText.innerText = "✨ ピッタリ合っています！";
         tunerStatusText.style.color = "#10b981";
         tunerMeterPointer.style.background = "#10b981";
-    } else if (cents < -8) {
-        tunerStatusText.innerText = "少し低い ➔ ペグを巻く ⤴";
-        tunerStatusText.style.color = "#60a5fa";
-        tunerMeterPointer.style.background = "#60a5fa";
+        tunerMeterPointer.style.boxShadow = "0 0 12px #10b981";
+
+        const now = Date.now();
+        if (inTuneHoldFrames >= 3 && (now - lastInTuneSoundTime > 1500)) {
+            lastInTuneSoundTime = now;
+            if (onInTunePing) onInTunePing();
+        }
     } else {
-        tunerStatusText.innerText = "少し高い ➔ ペグを緩める ⤵";
-        tunerStatusText.style.color = "#f87171";
-        tunerMeterPointer.style.background = "#f87171";
+        inTuneHoldFrames = 0;
+        tunerMeterPointer.style.boxShadow = "none";
+
+        if (smoothedCents < -6) {
+            tunerStatusText.innerText = "少し低い ➔ ペグを巻く ⤴";
+            tunerStatusText.style.color = "#60a5fa";
+            tunerMeterPointer.style.background = "#60a5fa";
+        } else {
+            tunerStatusText.innerText = "少し高い ➔ ペグを緩める ⤵";
+            tunerStatusText.style.color = "#f87171";
+            tunerMeterPointer.style.background = "#f87171";
+        }
     }
+}
+
+/**
+ * チューナー停止時や弦変更時にスムージング値をリセット
+ */
+export function resetTunerSmoothing() {
+    smoothedCents = 0;
+    inTuneHoldFrames = 0;
+}
+/**
+ * カウントインの数字が切り替わったときに弾むアニメーションを再実行
+ */
+export function triggerCountInPulse(el, count) {
+    if (!el) return;
+    el.innerText = count;
+    el.classList.remove('pulse');
+    void el.offsetWidth; // リフローを強制してアニメーションをリセット
+    el.classList.add('pulse');
 }

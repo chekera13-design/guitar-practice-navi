@@ -295,155 +295,194 @@ export const STAGES_LEVEL2 = [
     }
 ];
 
-// 【難易度3 : はじめてのコード入門編】
+// 【難易度3 : コード入門編（ストローク主体）】
 export const STAGES_LEVEL3 = [
+    // --- パターンA: 1コードずつ丁寧に鳴らす（EX 1〜5） ---
     {
-        id: 1, 
-        title: "EX 1: Em コードストローク (全音符)", 
-        desc: "4カウント後、1拍目でEmを一気に『ジャラーン』！4拍伸ばそう",
-        type: "chord_strum",
-        chordName: "Em",
+        id: 1,
+        title: "EX 1: Em コードストローク",
+        desc: "ギターの基本！6本すべての弦を一気にジャラーンと響かせよう",
+        mode: "patternA",
+        chords: ["Em"],
         bpm: 60,
-        // Em構成音: E2(40), B2(47), E3(52), G3(55), B3(59), E4(64)
-        targetMidis: [40, 47, 52, 55, 59, 64],
         tex: '\\tempo 60 \\title "EX 1: Em ストローク" . :1 (0.6 2.5 2.4 0.3 0.2 0.1) |',
         guide: {
             title: "EX 1: 4拍伸ばすEmストロークのコツ",
             content: "4カウント（4・3・2・1）に合わせて準備し、1拍目で上から下へ一気にピックを振り抜きます！すべての弦が均一に鳴るように手首をやわらかく振り、4拍目まで音を響かせましょう。"
         },
+        defaultNotes: [{ midi: 40, name: "Em", fullName: "Em Chord", string: 0, fret: 0 }]
+    },
+    {
+        id: 2,
+        title: "EX 2: 哀愁の響き「Am」",
+        desc: "5弦から下を優しくストローク！人差し指をしっかり立てて鳴らそう",
+        mode: "patternA",
+        chords: ["Am"],
+        bpm: 60,
+        tex: '\\tempo 60 \\title "EX 2: Am ストローク" . :1 (0.5 2.4 2.3 1.2 0.1) |',
+        guide: {
+            title: "EX 2: Amコードのストロークのコツ",
+            content: "Amは5弦から1弦に向かって弾きます（6弦は鳴らしません）。人差し指の腹が1弦に当たると1弦がミュートされてしまうので、指の関節をしっかり曲げて立てましょう。"
+        },
+        defaultNotes: [{ midi: 45, name: "Am", fullName: "Am Chord", string: 0, fret: 0 }]
+    },
+    {
+        id: 3,
+        title: "EX 3: Em ⇄ Am コードチェンジ",
+        desc: "まずEmをストローク ➔ 落ち着いてAmを押さえ直してストローク！",
+        mode: "patternA",
+        chords: ["Em", "Am"],
+        bpm: 60,
+        tex: '\\tempo 60 \\title "EX 3: Em ⇄ Am チェンジ" . :1 (0.6 2.5 2.4 0.3 0.2 0.1) | :1 (0.5 2.4 2.3 1.2 0.1) |',
+        guide: {
+            title: "EX 3: 指のフォームを保った移動",
+            content: "Emを鳴らして合格したら、次のカウントに合わせてAmを押さえます。中指と薬指の幅をキープしたまま1段下へずらし、人差し指を足すイメージで移動しましょう。"
+        },
         defaultNotes: [
-            { midi: 40, name: "Em", fullName: "Em Chord", string: 0, fret: 0 }
+            { midi: 40, name: "Em", fullName: "1. Em", string: 0, fret: 0 },
+            { midi: 45, name: "Am", fullName: "2. Am", string: 0, fret: 0 }
         ]
     },
     {
-        id: 2, title: "EX 2: 哀愁の響き「Am」", desc: "Emの形を1段下へずらし、人差し指を足すAmコード",
-        tex: '\\title "EX 2: Am コード" . :4 0.5 2.4 2.3 1.2 |',
+        id: 4,
+        title: "EX 4: 明るく力強い「E (メジャー)」",
+        desc: "Amの指の形のまま1弦ずつ上へ！力強いメジャーコードを鳴らそう",
+        mode: "patternA",
+        chords: ["E"],
+        bpm: 60,
+        tex: '\\tempo 60 \\title "EX 4: E メジャー" . :1 (0.6 2.5 2.4 1.3 0.2 0.1) |',
         guide: {
-            title: "EX 2: Amコードの指立てと親指の位置",
-            content: "5弦は開放弦、4弦2f(中指)、3弦2f(薬指)、2弦1f(人差し指)です。人差し指の腹が1弦に当たらないように、ネック裏の親指を少し下げて手のひらに空間を作りましょう。"
+            title: "EX 4: Eメジャーコードの響き",
+            content: "Amを押さえた形のまま、すべての指を1本ずつ太い弦（6〜3弦側）へ平行移動するとEになります。全弦パワフルに振り抜きましょう！"
+        },
+        defaultNotes: [{ midi: 40, name: "E", fullName: "E Chord", string: 0, fret: 0 }]
+    },
+    {
+        id: 5,
+        title: "EX 5: ポップスの王道「Cmaj7」",
+        desc: "指2本だけ！都会的でおしゃれな響きのCmaj7ストローク",
+        mode: "patternA",
+        chords: ["Cmaj7"],
+        bpm: 60,
+        tex: '\\tempo 60 \\title "EX 5: Cmaj7" . :1 (3.5 2.4 0.3 0.2 0.1) |',
+        guide: {
+            title: "EX 5: 開放弦を活かすCmaj7",
+            content: "薬指（5弦3f）と中指（4弦2f）の2本だけで押さえます。3・2・1弦が綺麗な開放弦として鳴るよう、押さえた指が触れないように注意しましょう。"
+        },
+        defaultNotes: [{ midi: 48, name: "Cmaj7", fullName: "Cmaj7 Chord", string: 0, fret: 0 }]
+    },
+
+    // --- パターンB: リズムに合わせて進行を弾ききる（EX 6〜10） ---
+    {
+        id: 6,
+        title: "EX 6: 初心者の登竜門「C」2小節ストローク",
+        desc: "メトロノームに合わせて、2小節連続で1拍目に『ジャラーン』！",
+        mode: "patternB",
+        bpm: 60,
+        progression: [
+            { chord: "C", bar: 1, beat: 0 },
+            { chord: "C", bar: 2, beat: 4 }
+        ],
+        tex: '\\tempo 60 \\title "EX 6: C リズムストローク" . :1 (3.5 2.4 0.3 1.2 0.1) | :1 (3.5 2.4 0.3 1.2 0.1) |',
+        guide: {
+            title: "EX 6: リズムに乗せて鳴らすCコード",
+            content: "4カウントイン後、1小節目・2小節目の各1拍目でCコードをストロークします。2〜4拍目は音をしっかり伸ばしてビートを体感しましょう。"
         },
         defaultNotes: [
-            { midi: 45, name: "A", octave: 2, fullName: "A2", string: 5, fret: 0 },
-            { midi: 52, name: "E", octave: 3, fullName: "E3", string: 4, fret: 2 },
-            { midi: 57, name: "A", octave: 3, fullName: "A3", string: 3, fret: 2 },
-            { midi: 60, name: "C", octave: 4, fullName: "C4", string: 2, fret: 1 }
+            { midi: 48, name: "C", fullName: "1小節目: C", string: 0, fret: 0 },
+            { midi: 48, name: "C", fullName: "2小節目: C", string: 0, fret: 0 }
         ]
     },
     {
-        id: 3, title: "EX 3: Em ⇄ Am コードチェンジ", desc: "基本コードの切り替えに挑戦！指の形を保ったまま移動しよう",
-        tex: '\\title "EX 3: Em ⇄ Am チェンジ" . :4 0.6 2.5 0.5 1.2 |',
+        id: 7,
+        title: "EX 7: 高音弦の三角形「D」リズムストローク",
+        desc: "高音弦（4〜1弦）を軽快にストローク！2小節続けて鳴らそう",
+        mode: "patternB",
+        bpm: 60,
+        progression: [
+            { chord: "D", bar: 1, beat: 0 },
+            { chord: "D", bar: 2, beat: 4 }
+        ],
+        tex: '\\tempo 60 \\title "EX 7: D リズムストローク" . :1 (0.4 2.3 3.2 2.1) | :1 (0.4 2.3 3.2 2.1) |',
         guide: {
-            title: "EX 3: コードチェンジを素早くするコツ",
-            content: "中指と薬指の「指の幅」を崩さず、そのまま1段下（または上）にスライドさせるイメージで動かします。指を一本ずつ探して押さえるのではなく、同時に着地できるように練習しましょう。"
+            title: "EX 7: 4弦から下をコンパクトに振る",
+            content: "Dコードは太い6弦・5弦を鳴らさないのがポイントです。4弦から下に向かって手首のスナップでサラリと振り抜きましょう。"
         },
         defaultNotes: [
-            { midi: 40, name: "E", octave: 2, fullName: "E2", string: 6, fret: 0 },
-            { midi: 47, name: "B", octave: 2, fullName: "B2", string: 5, fret: 2 },
-            { midi: 45, name: "A", octave: 2, fullName: "A2", string: 5, fret: 0 },
-            { midi: 60, name: "C", octave: 4, fullName: "C4", string: 2, fret: 1 }
+            { midi: 50, name: "D", fullName: "1小節目: D", string: 0, fret: 0 },
+            { midi: 50, name: "D", fullName: "2小節目: D", string: 0, fret: 0 }
         ]
     },
     {
-        id: 4, title: "EX 4: 明るく力強い「E (メジャー)」", desc: "Amと全く同じ指の形を1段上に戻すと「E」になる！",
-        tex: '\\title "EX 4: E メジャーコード" . :4 0.6 2.5 2.4 1.3 |',
+        id: 8,
+        title: "EX 8: 広がりを感じる「G」リズムストローク",
+        desc: "指をしっかり広げて6弦〜1弦までダイナミックに2小節ストローク！",
+        mode: "patternB",
+        bpm: 60,
+        progression: [
+            { chord: "G", bar: 1, beat: 0 },
+            { chord: "G", bar: 2, beat: 4 }
+        ],
+        tex: '\\tempo 60 \\title "EX 8: G リズムストローク" . :1 (3.6 2.5 0.4 0.3 0.2 3.1) | :1 (3.6 2.5 0.4 0.3 0.2 3.1) |',
         guide: {
-            title: "EX 4: EコードとAmコードの深い関係",
-            content: "Amを押さえたフォームのまま、すべての指を1弦ずつ上（6〜3弦側）に移動させるとEコードになります。ギターのコードフォームはこうして形ごと連動して覚えられます！"
+            title: "EX 8: 全弦鳴らすGコードの迫力",
+            content: "6弦3f、5弦2f、1弦3fを押さえます。ネックの角度を少し高めに構えると、小指や薬指が1弦に届きやすくなります。"
         },
         defaultNotes: [
-            { midi: 40, name: "E", octave: 2, fullName: "E2", string: 6, fret: 0 },
-            { midi: 47, name: "B", octave: 2, fullName: "B2", string: 5, fret: 2 },
-            { midi: 52, name: "E", octave: 3, fullName: "E3", string: 4, fret: 2 },
-            { midi: 56, name: "G#", octave: 3, fullName: "G#3", string: 3, fret: 1 }
+            { midi: 43, name: "G", fullName: "1小節目: G", string: 0, fret: 0 },
+            { midi: 43, name: "G", fullName: "2小節目: G", string: 0, fret: 0 }
         ]
     },
     {
-        id: 5, title: "EX 5: ポップスの王道「Cmaj7 (シーメジャーセブン)」", desc: "指2本だけ！都会的でおしゃれな響きのコード",
-        tex: '\\title "EX 5: Cmaj7 コード" . :4 3.5 2.4 0.3 0.2 |',
+        id: 9,
+        title: "EX 9: 王道3大コードチェンジ (G ➔ C ➔ D ➔ G)",
+        desc: "世界中の名曲で使われるコード進行をメトロノームに合わせて完奏！",
+        mode: "patternB",
+        bpm: 60,
+        progression: [
+            { chord: "G", bar: 1, beat: 0 },
+            { chord: "C", bar: 2, beat: 4 },
+            { chord: "D", bar: 3, beat: 8 },
+            { chord: "G", bar: 4, beat: 12 }
+        ],
+        tex: '\\tempo 60 \\title "EX 9: G - C - D チェンジ" . :1 (3.6 2.5 0.4 0.3 0.2 3.1) | :1 (3.5 2.4 0.3 1.2 0.1) | :1 (0.4 2.3 3.2 2.1) | :1 (3.6 2.5 0.4 0.3 0.2 3.1) |',
         guide: {
-            title: "EX 5: Cコードの前にCmaj7で指を慣らす",
-            content: "薬指で5弦3f、中指で4弦2fを押さえます。3弦・2弦は開放弦です。薬指の第一関節をしっかり立てて、開放弦に触れない綺麗な響きを作りましょう。"
+            title: "EX 9: 拍に遅れないコードチェンジ",
+            content: "4拍目の余韻の間に、左手の力をふっと抜いて次のコードの形を空中で作り、次の1拍目ジャストに指を着地させてストロークします。"
         },
         defaultNotes: [
-            { midi: 48, name: "C", octave: 3, fullName: "C3", string: 5, fret: 3 },
-            { midi: 52, name: "E", octave: 3, fullName: "E3", string: 4, fret: 2 },
-            { midi: 55, name: "G", octave: 3, fullName: "G3", string: 3, fret: 0 },
-            { midi: 59, name: "B", octave: 3, fullName: "B3", string: 2, fret: 0 }
+            { midi: 43, name: "G", fullName: "1. G", string: 0, fret: 0 },
+            { midi: 48, name: "C", fullName: "2. C", string: 0, fret: 0 },
+            { midi: 50, name: "D", fullName: "3. D", string: 0, fret: 0 },
+            { midi: 43, name: "G", fullName: "4. G", string: 0, fret: 0 }
         ]
     },
     {
-        id: 6, title: "EX 6: 初心者の登竜門「C (メジャー)」", desc: "Cmaj7に人差し指を足すだけ！超重要コード「C」",
-        tex: '\\title "EX 6: C メジャーコード" . :4 3.5 2.4 0.3 1.2 |',
+        id: 10,
+        title: "EX 10: 難易度3 卒業テスト (カノン進行)",
+        desc: "C ➔ G ➔ Am ➔ Em！感動の王道コード進行をリズムに乗せて弾き切ろう！",
+        mode: "patternB",
+        bpm: 60,
+        progression: [
+            { chord: "C",  bar: 1, beat: 0 },
+            { chord: "G",  bar: 2, beat: 4 },
+            { chord: "Am", bar: 3, beat: 8 },
+            { chord: "Em", bar: 4, beat: 12 }
+        ],
+        tex: '\\tempo 60 \\title "EX 10: カノン進行" . :1 (3.5 2.4 0.3 1.2 0.1) | :1 (3.6 2.5 0.4 0.3 0.2 3.1) | :1 (0.5 2.4 2.3 1.2 0.1) | :1 (0.6 2.5 2.4 0.3 0.2 0.1) |',
         guide: {
-            title: "EX 6: Cコードの1弦・3弦音詰まり解消法",
-            content: "さきほどのCmaj7に、人差し指で2弦1fを足すと「Cコード」の完成です。初心者が最も詰まりやすいのは3弦と1弦です。手首を軽く前に突き出すようにすると指が垂直に立ちます。"
+            title: "EX 10: コード入門の集大成！",
+            content: "初心者が最初に習得すべき4大コードがすべて登場します。メトロノームのビートに乗って、すべての小節で美しく響かせたら難易度3クリアです！"
         },
         defaultNotes: [
-            { midi: 48, name: "C", octave: 3, fullName: "C3", string: 5, fret: 3 },
-            { midi: 52, name: "E", octave: 3, fullName: "E3", string: 4, fret: 2 },
-            { midi: 55, name: "G", octave: 3, fullName: "G3", string: 3, fret: 0 },
-            { midi: 60, name: "C", octave: 4, fullName: "C4", string: 2, fret: 1 }
-        ]
-    },
-    {
-        id: 7, title: "EX 7: 高音弦の三角形「D (メジャー)」", desc: "1〜3弦の高音を軽やかに鳴らすDコード",
-        tex: '\\title "EX 7: D メジャーコード" . :4 0.4 2.3 3.2 2.1 |',
-        guide: {
-            title: "EX 7: 1弦と2弦が詰まらないように注意",
-            content: "4弦開放、3弦2f(人差し指)、2弦3f(薬指)、1弦2f(中指)を押さえます。3本の指で小さな三角形を作るイメージです。薬指が寝て1弦に触れないよう、指先でピンポイントに押さえましょう。"
-        },
-        defaultNotes: [
-            { midi: 50, name: "D", octave: 3, fullName: "D3", string: 4, fret: 0 },
-            { midi: 57, name: "A", octave: 3, fullName: "A3", string: 3, fret: 2 },
-            { midi: 62, name: "D", octave: 4, fullName: "D4", string: 2, fret: 3 },
-            { midi: 66, name: "F#", octave: 4, fullName: "F#4", string: 1, fret: 2 }
-        ]
-    },
-    {
-        id: 8, title: "EX 8: 広がりを感じる「G (メジャー)」", desc: "指を大きく開いて6弦・5弦・1弦を押さえるGコード",
-        tex: '\\title "EX 8: G メジャーコード" . :4 3.6 2.5 0.3 3.1 |',
-        guide: {
-            title: "EX 8: Gコードで指を広げるコツ",
-            content: "中指で6弦3f、人差し指で5弦2f、薬指(または小指)で1弦3fを押さえます。手が届きにくい場合は、ギターのネックを少し斜め上に持ち上げて構えてみてください。"
-        },
-        defaultNotes: [
-            { midi: 43, name: "G", octave: 2, fullName: "G2", string: 6, fret: 3 },
-            { midi: 47, name: "B", octave: 2, fullName: "B2", string: 5, fret: 2 },
-            { midi: 55, name: "G", octave: 3, fullName: "G3", string: 3, fret: 0 },
-            { midi: 67, name: "G", octave: 4, fullName: "G4", string: 1, fret: 3 }
-        ]
-    },
-    {
-        id: 9, title: "EX 9: 王道3大コードチェンジ (G ➔ C ➔ D)", desc: "世界中の名曲で使われる黄金の3コード進行！",
-        tex: '\\title "EX 9: G - C - D チェンジ" . :4 3.6 3.5 0.4 2.1 |',
-        guide: {
-            title: "EX 9: 代表的なコード進行にチャレンジ",
-            content: "Gのルート(6弦3f) ➔ Cのルート(5弦3f) ➔ Dのルート(4弦開放) ➔ Dの1弦(1弦2f) と順番に弾いていきます。コードの移り変わりのスムーズさを意識しましょう。"
-        },
-        defaultNotes: [
-            { midi: 43, name: "G", octave: 2, fullName: "G2", string: 6, fret: 3 },
-            { midi: 48, name: "C", octave: 3, fullName: "C3", string: 5, fret: 3 },
-            { midi: 50, name: "D", octave: 3, fullName: "D3", string: 4, fret: 0 },
-            { midi: 66, name: "F#", octave: 4, fullName: "F#4", string: 1, fret: 2 }
-        ]
-    },
-    {
-        id: 10, title: "EX 10: 難易度3 卒業テスト (カノン進行)", desc: "C ➔ G ➔ Am ➔ Em のヒット曲の王道進行を完奏！",
-        tex: '\\title "EX 10: 難易度3 卒業テスト" . :4 3.5 3.6 0.5 0.6 |',
-        guide: {
-            title: "EX 10: カノン進行のルート音を制覇！",
-            content: "Cコード(5弦3f) ➔ Gコード(6弦3f) ➔ Amコード(5弦開放) ➔ Emコード(6弦開放) とコードの響きを感じながらピッキング。全弦綺麗な音で鳴らし切れたらコード入門卒業です！"
-        },
-        defaultNotes: [
-            { midi: 48, name: "C", octave: 3, fullName: "C3", string: 5, fret: 3 },
-            { midi: 43, name: "G", octave: 2, fullName: "G2", string: 6, fret: 3 },
-            { midi: 45, name: "A", octave: 2, fullName: "A2", string: 5, fret: 0 },
-            { midi: 40, name: "E", octave: 2, fullName: "E2", string: 6, fret: 0 }
+            { midi: 48, name: "C",  fullName: "1. C",  string: 0, fret: 0 },
+            { midi: 43, name: "G",  fullName: "2. G",  string: 0, fret: 0 },
+            { midi: 45, name: "Am", fullName: "3. Am", string: 0, fret: 0 },
+            { midi: 40, name: "Em", fullName: "4. Em", string: 0, fret: 0 }
         ]
     }
 ];
 
-// 音名とデフォルトチューニング設定
 export const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 export const defaultTuning = { 1: 64, 2: 59, 3: 55, 4: 50, 5: 45, 6: 40 };
 export const SAVE_KEY = "guitar_app_save_data_v2";
