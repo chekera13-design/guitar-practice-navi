@@ -3,118 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ギター練習ナビ - 初心者からコード入門までマスター</title>
-    <link rel="stylesheet" href="style.css">
+    <title>超ギタートレーニング（超ギタトレ） - 基礎編</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- alphaTab の読み込み（外部CDN経由） -->
+    <link rel="icon" href="data:,">
     <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
-    <!-- [広告枠: トップバナー] -->
+    <!-- 📢 ① 最上部 広告スペース -->
     <div class="ad-container top-ad">
-        <div class="ad-placeholder">広告スペース (728x90 / レスポンシブ)</div>
+        <div class="ad-placeholder">
+            <span class="ad-badge">スポンサーリンク</span>
+            <span class="ad-text">広告スペース（トップバナー 728x90 / 320x50〜100）</span>
+        </div>
     </div>
 
-    <!-- ヘッダー & 全体進捗 -->
-    <header class="header card">
-        <div class="header-top">
-            <h1 id="headerLevelTitle">🎸 難易度 1 : 音程入門編</h1>
-            <button id="resetProgressBtn" class="sub-btn">進捗リセット</button>
-        </div>
-        <p id="headerLevelDesc">全ステージ合格を目指して、焦らず自分のペースでピッキングを身につけよう！</p>
-        
-        <div class="progress-bar-container">
-            <div class="progress-bar-label">
-                <span id="progressLabelText">難易度1のクリア進捗</span>
-                <span id="progressPercent">0% (0 / 10)</span>
+    <!-- 🎸 統合ヘッダー・ダッシュボード -->
+    <header class="card hero-dashboard-card">
+        <div class="dashboard-header-row">
+            <div class="dashboard-title-group">
+                <h1 class="app-title">🎸 超ギタートレーニング</h1>
+                <span class="app-brand-badge">超ギタトレ</span>
             </div>
-            <div class="progress-bar-track">
-                <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            
+            <!-- 横並びトグルバー -->
+            <div class="dashboard-actions">
+                <details class="dashboard-details about-details">
+                    <summary class="dashboard-summary">
+                        <span>📖 超ギタトレとは</span>
+                        <span class="dash-arrow">▼</span>
+                    </summary>
+                    <div class="dashboard-panel about-panel">
+                        <p><strong>「超ギタトレ」</strong>は、メトロノームに合わせたピッキング練習と自動録音チェックがブラウザだけで完結する、無料のギター練習Webアプリです。</p>
+                        <ul class="about-points">
+                            <li>🎯 <strong>TAB譜 ＆ メトロノーム同期:</strong> 視覚と音でリズムのズレを逃さない！</li>
+                            <li>🎧 <strong>即時自動録音:</strong> 弾き終わったらその場で自分の音を聴いて客観的に確認！</li>
+                            <li>⚡ <strong>登録不要ですぐ練習:</strong> スマホ・PCのブラウザで即座に開始できます。</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="dashboard-details tuner-details">
+                    <summary class="dashboard-summary">
+                        <span>⚖ 簡易チューナー</span>
+                        <span class="dash-arrow">▼</span>
+                    </summary>
+                    <div class="dashboard-panel tuner-panel">
+                        <p class="tuner-note-desc">開放弦をポロンと鳴らし、メーターの針が中央（緑色）になるようにペグを回しましょう。</p>
+                        <div class="tuner-buttons-container">
+                            <button class="sub-btn tuner-string-btn" data-string="6" data-midi="40" data-note="E">6弦 (E)</button>
+                            <button class="sub-btn tuner-string-btn" data-string="5" data-midi="45" data-note="A">5弦 (A)</button>
+                            <button class="sub-btn tuner-string-btn" data-string="4" data-midi="50" data-note="D">4弦 (D)</button>
+                            <button class="sub-btn tuner-string-btn" data-string="3" data-midi="55" data-note="G">3弦 (G)</button>
+                            <button class="sub-btn tuner-string-btn" data-string="2" data-midi="59" data-note="B">2弦 (B)</button>
+                            <button class="sub-btn tuner-string-btn" data-string="1" data-midi="64" data-note="E">1弦 (E)</button>
+                        </div>
+
+                        <!-- チューナーHUD -->
+                        <div id="tunerHud" class="tuner-hud-compact hidden">
+                            <div id="tunerTargetLabel" class="tuner-target-label">6弦 (E2) 目標</div>
+                            <div id="tunerStatusText" class="tuner-status-text">音をポロンと鳴らしてください</div>
+                            <div class="tuner-meter-track">
+                                <div id="tunerMeterPointer" class="tuner-meter-pointer"></div>
+                                <div class="tuner-center-mark"></div>
+                            </div>
+                            <div id="tunerHzDisplay" class="tuner-hz-display">0.0 Hz</div>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </header>
 
-    <!-- 🎸 簡易チューナー機能 -->
-    <div class="card tuner-card">
-        <h3 class="section-title">⚖️ 簡易チューナー</h3>
-        <p class="stage-desc" style="margin-bottom: 12px;">開放弦をポロンと鳴らして、メーターの針が中央（緑色）にくるようにペグを回して合わせましょう。</p>
-        
-        <div class="tuner-buttons-container" style="display: flex; gap: 6px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
-            <button class="sub-btn tuner-string-btn" data-string="6" data-midi="40" data-note="E2">6弦 (E)</button>
-            <button class="sub-btn tuner-string-btn" data-string="5" data-midi="45" data-note="A2">5弦 (A)</button>
-            <button class="sub-btn tuner-string-btn" data-string="4" data-midi="50" data-note="D3">4弦 (D)</button>
-            <button class="sub-btn tuner-string-btn" data-string="3" data-midi="55" data-note="G3">3弦 (G)</button>
-            <button class="sub-btn tuner-string-btn" data-string="2" data-midi="59" data-note="B3">2弦 (B)</button>
-            <button class="sub-btn tuner-string-btn" data-string="1" data-midi="64" data-note="E4">1弦 (E)</button>
-        </div>
-
-        <div id="tunerHud" class="hud-box hidden" style="border-color: #10b981; background: #0f172a;">
-            <div style="text-align: center;">
-                <div id="tunerTargetLabel" style="font-size: 14px; color: #94a3b8; font-weight: bold;">6弦 (E2) に合わせ中...</div>
-                <div id="tunerStatusText" style="font-size: 22px; font-weight: bold; color: #fbbf24; margin: 8px 0;">音をポロンと鳴らしてください</div>
-                
-                <div style="background: #334155; height: 16px; border-radius: 8px; position: relative; overflow: hidden; max-width: 320px; margin: 10px auto;">
-                    <div id="tunerMeterPointer" style="background: #10b981; width: 6px; height: 100%; position: absolute; left: 50%; transform: translateX(-50%); transition: left 0.1s ease;"></div>
-                    <div style="border-left: 2px dashed #ffffff; height: 100%; position: absolute; left: 50%; transform: translateX(-1%); opacity: 0.5;"></div>
-                </div>
-                <div id="tunerHzDisplay" style="font-size: 13px; color: #94a3b8;">0.0 Hz</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ステージ選択グリッド -->
-    <section class="card">
+    <!-- 🔰 基礎編 トレーニング一覧カード -->
+    <main class="card stages-container-card">
         <div class="stages-header">
-            <h2 class="section-title">ステージ選択（タップして挑戦）</h2>
-            <div class="level-tabs-container">
-                <button id="levelTab1" class="level-tab active" data-level="1">
-                    🎸 難易度 1 : 音程入門
-                </button>
-                <button id="levelTab2" class="level-tab" data-level="2">
-                    ⏱️ 難易度 2 : リズム基礎
-                </button>
-                <button id="levelTab3" class="level-tab" data-level="3">
-                    🎼 難易度 3 : コード入門
-                </button>
+            <div class="stages-header-title-row">
+                <h2 class="stages-title">🔰 基礎編トレーニング一覧</h2>
+                <span class="stages-count-badge">タップして開始</span>
             </div>
+            <p class="stages-desc">練習したいメニューをタップすると練習画面が開き、すぐにピッキング練習と録音を開始できます！</p>
         </div>
-        <div id="stagesGrid" class="stages-grid"></div>
-    </section>
 
-    <!-- [広告枠: コンテンツ間バナー] -->
+        <!-- ★ JavaScript (app.js) により動的自動生成されるグリッド ★ -->
+        <div id="exerciseGrid" class="exercise-grid"></div>
+    </main>
+
+    <!-- 📢 ボトム広告スペース -->
     <div class="ad-container bottom-ad">
-        <div class="ad-placeholder">広告スペース (コンテンツ間バナー)</div>
+        <div class="ad-placeholder">
+            <span class="ad-badge">スポンサーリンク</span>
+            <span class="ad-text">広告スペース（ボトムレクタングル / ディスプレイ広告）</span>
+        </div>
     </div>
 
-    <!-- ギター初心者のための共通ガイド & よくある質問 -->
-    <section class="card extra-knowledge-card">
-        <h2>🎸 初心者が最初に覚えるべきピッキングの3大原則</h2>
-        <div class="knowledge-grid">
-            <div class="knowledge-item">
-                <h4>1. ピックは先端2〜3mmだけ出す</h4>
-                <p>深く持ちすぎると指が弦に当たり、浅すぎると弦の抵抗でブレます。親指と人差し指でしっかり挟み、先端をほんの少しだけ出しましょう。</p>
-            </div>
-            <div class="knowledge-item">
-                <h4>2. 手首のスナップで軽く振り抜く</h4>
-                <p>腕全体でピッキングすると力みます。うちわを仰ぐように手首をやわらかく使い、弦の上を滑らせるイメージで弾きます。</p>
-            </div>
-            <div class="knowledge-item">
-                <h4>3. ピックの角度は平行〜やや斜め</h4>
-                <p>弦に対して垂直に当たると引っかかります。軽く30度ほど傾けて当てると、弦離れがよくなりスムーズにピッキングできます。</p>
-            </div>
-        </div>
-
-        <hr class="divider">
-
-        <h3>❓ 音がうまく判定されないときのチェック</h3>
-        <ul class="faq-list">
-            <li><b>チューニングは合っていますか？</b>：ピッチがズレていると合格になりません。練習前に上の簡易チューナーで合わせてみましょう。</li>
-            <li><b>マイクとの距離</b>：スマホやPCの内蔵マイクから約30cm〜50cmほど離れた位置で鳴らすと綺麗に音を拾えます。</li>
-            <li><b>生音・アンプの音量</b>：音が小さすぎるとノイズ判定で無視されます。しっかり芯のある音でポロンと鳴らしてみましょう。</li>
-        </ul>
-    </section>
-
-    <!-- [フッター] -->
+    <!-- フッター -->
     <footer class="footer">
         <div class="footer-links">
             <button id="openAboutBtn" class="footer-link">運営者情報</button>
@@ -123,135 +107,96 @@
             <span class="footer-sep">|</span>
             <button id="openContactBtn" class="footer-link">お問い合わせ</button>
         </div>
-        <p class="copyright">© 2025 ギター練習ナビ - 無料ギター練習Webアプリ</p>
+        <p class="copyright">&copy; 2025 超ギタートレーニング（超ギタトレ） - 無料ギター練習Webアプリ</p>
     </footer>
 
-    <!-- ========================================== -->
-    <!-- ★ ステージ演奏ポップアップモーダル ★ -->
-    <!-- ========================================== -->
-    <div id="playModal" class="modal play-modal hidden">
-        <div id="playModalContent" class="modal-content play-modal-content">
-            <!-- モーダルヘッダー -->
-            <div class="play-modal-header">
-                <div class="play-title-group">
-                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 2px;">
-                        <span id="currentStageBadge" class="badge">EX 1</span>
-                        <span id="bpmBadge" class="badge bpm-badge hidden">BPM 60</span>
-                    </div>
-                    <h2 id="currentStageTitle" class="stage-title">ステージタイトル</h2>
-                    <p id="currentStageDesc" class="stage-desc">説明文</p>
+    <!-- ★ 練習ポップアップモーダル ★ -->
+    <div id="practiceModal" class="modal practice-modal hidden">
+        <div class="practice-modal-content">
+            
+            <!-- ① スリムヘッダー -->
+            <div class="practice-modal-header">
+                <div class="modal-header-left">
+                    <span id="modalStageBadge" class="app-badge">基礎編 EX 1</span>
+                    <span id="modalBpmBadge" class="bpm-badge">BPM 60</span>
+                    <span id="modalBarsBadge" class="bars-badge">1小節</span>
+                    <h3 id="modalStageTitle" class="practice-modal-title">EX 1: 6弦開放 (E2) ピッキング</h3>
                 </div>
-                <div class="play-header-actions">
-                    <label class="file-btn sub-file-btn" title="作成したMusicXMLファイルを差し替え">
-                        📁 XML
-                        <input type="file" id="fileInput" accept=".xml,.musicxml,.mxl">
-                    </label>
-                    <button id="closePlayModalBtn" class="close-x-btn" title="閉じる">✕</button>
-                </div>
+                <button id="closePracticeModalBtn" class="close-x-btn" title="閉じる">✕</button>
             </div>
 
-            <!-- 折りたたみ式 攻略ポイントアコーディオン -->
-            <div id="guideAccordion" class="guide-accordion">
-                <button id="guideToggleBtn" class="guide-toggle-btn" type="button">
-                    <span>💡 <span id="guideTitle">練習のコツ & 攻略ポイント</span></span>
-                    <span id="guideArrow" class="guide-arrow">▼</span>
-                </button>
-                <div id="guideContent" class="guide-content-body hidden"></div>
-            </div>
-
-            <!-- サブコントロール：🔊 メトロノーム音量調節 -->
-            <div class="stage-sub-controls">
-                <div class="metronome-vol-control">
-                    <label for="metroVolSlider" class="vol-label">🔊 クリック音量</label>
-                    <input type="range" id="metroVolSlider" min="0" max="1" step="0.05" value="0.5" class="vol-slider">
-                    <span id="metroVolVal" class="vol-val">50%</span>
-                </div>
-            </div>
-
-            <!-- ★ スリム化された判定HUD（演奏中） ★ -->
-            <div id="hudCard" class="hud-box compact-hud hidden">
-                <!-- カウントイン（横並びでぴったり収まるよう調整） -->
-                <div id="countInOverlay" class="count-in-overlay compact-count-in hidden">
-                    <div id="countInNumber" class="count-in-number">4</div>
-                    <div class="count-in-text">カウントに合わせて準備！</div>
-                </div>
-
-                <div class="compact-hud-main">
-                    <!-- 目標の音 -->
-                    <div class="hud-pill target-pill">
-                        <span class="pill-label">目標</span>
-                        <span id="targetNote" class="pill-note">--</span>
-                        <span id="targetInfo" class="pill-info">--弦</span>
-                    </div>
-
-                    <!-- 判定バッジ -->
-                    <div class="hud-pill-center">
-                        <div id="rhythmJudgeBadge" class="rhythm-judge hidden">READY</div>
-                    </div>
-
-                    <!-- あなたの音 -->
-                    <div class="hud-pill detected-pill">
-                        <span class="pill-label">判定音</span>
-                        <span id="detectedNote" class="pill-note">--</span>
-                        <span id="detectedHz" class="pill-hz">0.0 Hz</span>
+            <!-- ② ビジュアルメトロノーム（中央） ＆ 音量コントロールバー（右端固定） -->
+            <div id="visualMetronomeBox" class="visual-metronome-compact">
+                <!-- 中央メトロノーム本体 -->
+                <div class="metro-center-group">
+                    <span id="metroPhaseBadge" class="metro-phase-badge">STANDBY</span>
+                    <div id="metroBigCount" class="metro-count-chip">-</div>
+                    <div class="beat-dots-container">
+                        <div class="beat-dot"><span class="dot-num">1</span></div>
+                        <div class="beat-dot"><span class="dot-num">2</span></div>
+                        <div class="beat-dot"><span class="dot-num">3</span></div>
+                        <div class="beat-dot"><span class="dot-num">4</span></div>
                     </div>
                 </div>
 
-                <div class="notes-queue compact-queue" id="notesQueue"></div>
+                <!-- 右端固定の音量バー -->
+                <div class="metro-vol-container" title="メトロノーム音量">
+                    <span id="metroVolIcon" class="metro-vol-icon">🔉</span>
+                    <input type="range" id="metroVolSlider" class="metro-vol-slider" min="0" max="100" value="40" aria-label="メトロノーム音量">
+                    <span id="metroVolLabel" class="metro-vol-label">40%</span>
+                </div>
             </div>
 
-            <!-- TAB譜面エリア（中心の主役） -->
+            <!-- ③ TAB譜面エリア -->
             <div class="score-wrapper">
-                <!-- ★ 動くTAB譜面カーソル ★ -->
-                <div id="scoreCursor" class="score-cursor hidden"></div>
+                <div id="scoreBarHighlight" class="score-bar-highlight hidden" aria-hidden="true"></div>
                 <div id="alphaTab"></div>
             </div>
 
-            <!-- TAB譜のすぐ真下に配置された特大開始ボタン -->
-            <div class="play-bottom-action">
-                <button id="startChallengeBtn" class="action-btn wide-start-btn">🎤 チャレンジ開始</button>
+            <!-- ④ 🎧 録音結果プレイヤーカード -->
+            <div id="recordResultCard" class="record-result-card hidden">
+                <div class="record-result-header">
+                    <span class="rec-icon">🎧</span>
+                    <div>
+                        <h4 class="record-result-title">録音完了！あなたの演奏をチェック</h4>
+                        <p class="record-result-desc">メトロノームのビートとピッキングのタイミングが合っているか聴いてみましょう！</p>
+                    </div>
+                </div>
+                <audio id="recordedAudioPlayer" class="record-audio-player" controls></audio>
+                
+                <div class="modal-inline-ad">
+                    <span class="ad-badge">おすすめアイテム</span>
+                    <p class="modal-ad-text">練習用ピック・交換弦・チューナーなどのおすすめ情報</p>
+                </div>
             </div>
+
+            <!-- ⑤ 💡 攻略ガイド -->
+            <details class="guide-details">
+                <summary class="guide-summary">
+                    <span id="stageGuideTitle">💡 ピッキングのコツ & 練習のポイントを見る</span>
+                    <span class="guide-arrow">▼</span>
+                </summary>
+                <div id="stageGuideBody" class="guide-body"></div>
+            </details>
+
+            <!-- ⑥ スタートボタン -->
+            <div class="modal-footer-action">
+                <button id="mainActionBtn" class="wide-start-btn">▶ 練習スタート (カウントイン & 録音)</button>
+            </div>
+
         </div>
     </div>
 
     <!-- 汎用インフォモーダル -->
     <div id="infoModal" class="modal hidden">
-        <div class="modal-content info-modal-content">
+        <div class="modal-content">
             <button id="closeInfoModalBtn" class="close-x-btn">✕</button>
-            <h2 id="infoModalTitle" class="info-title">タイトル</h2>
+            <h3 id="infoModalTitle" class="info-title">タイトル</h3>
             <div id="infoModalBody" class="info-body"></div>
         </div>
     </div>
 
-    <!-- 合格・リトライモーダル -->
-    <div id="clearModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="hanamaru-container">
-                <div class="hanamaru-icon">💮</div>
-                <div class="hanamaru-text">たいへんよくできました！</div>
-            </div>
-            <h2 id="modalTitle">🎉 STAGE CLEAR!</h2>
-            <p id="modalDesc">ナイスピッキング！基礎がしっかり身についています。</p>
-            
-            <div id="modalScoreStats" class="modal-score-stats hidden">
-                <div>PERFECT: <span id="statPerfect" class="stat-perfect">0</span></div>
-                <div>GOOD: <span id="statGood" class="stat-good">0</span></div>
-                <div>MISS: <span id="statMiss" class="stat-miss">0</span></div>
-            </div>
-
-            <div id="modalAudioSection" class="modal-audio-section hidden">
-                <div class="modal-audio-title">🎧 あなたの演奏をチェック</div>
-                <audio id="recordedPlayer" controls preload="auto"></audio>
-            </div>
-
-            <div class="ad-placeholder modal-ad">おすすめギター弦・アクセサリ</div>
-            <div class="modal-buttons">
-                <button id="nextStageBtn" class="action-btn">次のステージへ ➔</button>
-                <button id="retryBtn" class="sub-btn">もう一度練習する</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- メインスクリプト -->
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

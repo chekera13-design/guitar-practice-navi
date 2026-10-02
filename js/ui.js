@@ -1,113 +1,302 @@
 // ==========================================
-// ギター練習ナビ - UI制御・画面表示ロジック (js/ui.js)
+// 超ギタートレーニング（超ギタトレ） - UI制御・画面表示ロジック (js/ui.js)
 // ==========================================
 
-/**
- * 楽譜（alphaTab）の下部に表示される練習キュー（音符バッジ一覧）を描画
- */
-export function renderQueue(currentNotes, currentIndex, notesQueueEl) {
-    if (!notesQueueEl) return;
-    notesQueueEl.innerHTML = '';
-    currentNotes.forEach((n, idx) => {
-        const badge = document.createElement('div');
-        badge.className = 'note-badge';
-        badge.innerText = `${idx + 1}. ${n.fullName}`;
-        if (idx < currentIndex) badge.classList.add('cleared');
-        if (idx === currentIndex) {
-            badge.classList.add('current');
-            // ★ 現在のターゲットが画面中央に来るように自動スクロール
-            setTimeout(() => {
-                badge.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }, 10);
-        }
-        notesQueueEl.appendChild(badge);
-    });
-}
+// --- ビジュアルメトロノーム表示更新 ---
+export function updateVisualMetronome(beat, isAccent, phaseText, phaseClass) {
+    const dots = document.querySelectorAll(".beat-dot");
+    const countDisplay = document.getElementById("metroBigCount");
+    const phaseBadge = document.getElementById("metroPhaseBadge");
+    const visualBox = document.getElementById("visualMetronomeBox");
 
-/**
- * チャレンジ中に次に狙うべき「ターゲットの音名」と「弦・フレット情報」の表示を更新
- */
-export function updateTargetUI(currentNotes, currentIndex, targetNoteEl, targetInfoEl) {
-    const target = currentNotes[currentIndex];
-    if (!target) return;
-    if (targetNoteEl) targetNoteEl.innerText = target.fullName;
-    if (targetInfoEl) {
-        if (target.string === 0) {
-            targetInfoEl.innerText = "すべての弦を一気に振り抜く！";
-        } else {
-            targetInfoEl.innerText = `${target.string}弦 ${target.fret}フレット`;
+    dots.forEach((dot, index) => {
+        const dotBeat = index + 1;
+        dot.classList.remove("active", "accent", "flash");
+        if (dotBeat === beat) {
+            dot.classList.add("active");
+            if (isAccent) dot.classList.add("accent");
+            void dot.offsetWidth;
+            dot.classList.add("flash");
         }
+    });
+
+    if (countDisplay) {
+        countDisplay.innerText = beat || "-";
+        countDisplay.className = "metro-count-chip " + (isAccent ? "accent pulse" : "pulse");
+    }
+
+    if (phaseBadge) {
+        phaseBadge.innerText = phaseText;
+        phaseBadge.className = "metro-phase-badge " + (phaseClass || "");
+    }
+
+    if (visualBox) {
+        visualBox.classList.remove("beat-flash", "accent-flash");
+        void visualBox.offsetWidth;
+        visualBox.classList.add(isAccent ? "accent-flash" : "beat-flash");
     }
 }
 
-/**
- * リズムの判定結果（PERFECT / GOOD / MISS / STRUM）を画面中央に表示
- */
-export function showRhythmJudge(rating, rhythmJudgeBadge) {
-    if (!rhythmJudgeBadge) return;
-    rhythmJudgeBadge.innerText = rating;
-    rhythmJudgeBadge.className = `rhythm-judge ${rating.toLowerCase()}`;
+export function setPlayFinishedVisual(message = "演奏終了") {
+    const dots = document.querySelectorAll(".beat-dot");
+    const countDisplay = document.getElementById("metroBigCount");
+    const phaseBadge = document.getElementById("metroPhaseBadge");
+    const visualBox = document.getElementById("visualMetronomeBox");
+
+    dots.forEach(dot => dot.classList.remove("active", "accent", "flash"));
+
+    if (countDisplay) {
+        countDisplay.innerText = "✓";
+        countDisplay.className = "metro-count-chip finished";
+    }
+
+    if (phaseBadge) {
+        phaseBadge.innerText = message;
+        phaseBadge.className = "metro-phase-badge finished";
+    }
+
+    if (visualBox) {
+        visualBox.classList.remove("beat-flash", "accent-flash", "recording");
+    }
 }
 
-/**
- * ステージ選択エリアのグリッドUIを一括描画・更新する
- */
-export function renderStagesUI({
-    stages,
-    clearedList,
-    currentStageIndex,
-    stagesGrid,
-    progressPercentEl,
-    progressBarFill,
-    onSelectStage
+export function resetVisualMetronome() {
+    const dots = document.querySelectorAll(".beat-dot");
+    const countDisplay = document.getElementById("metroBigCount");
+    const phaseBadge = document.getElementById("metroPhaseBadge");
+    const visualBox = document.getElementById("visualMetronomeBox");
+
+    dots.forEach(dot => dot.classList.remove("active", "accent", "flash"));
+    if (countDisplay) {
+        countDisplay.innerText = "-";
+        countDisplay.className = "metro-count-chip";
+    }
+    if (phaseBadge) {
+        phaseBadge.innerText = "STANDBY";
+        phaseBadge.className = "metro-phase-badge";
+    }
+    if (visualBox) {
+        visualBox.classList.remove("beat-flash", "accent-flash", "recording");
+    }
+}
+
+// ==========================================
+// ★ 譜面ハイライト & スムーズ連続自動スクロール ★
+// ==========================================
+let cachedBarLayouts = [];
+let cachedScoreEndX = 0;
+let lastFocusedBar = -1;
+let continuousScrollFrameId = null;
+
+export function resetScoreFocusState() {
+    lastFocusedBar = -1;
+    stopScoreContinuousScroll();
+    const highlight = document.getElementById("scoreBarHighlight");
+    if (highlight) highlight.classList.add("hidden");
+    cachedBarLayouts = [];
+    cachedScoreEndX = 0;
+}
+
+function isUsableBounds(bounds) {
+    return !!bounds && Number.isFinite(bounds.x) && Number.isFinite(bounds.y) &&
+        Number.isFinite(bounds.w) && Number.isFinite(bounds.h) && bounds.w > 0 && bounds.h > 0;
+}
+
+function getNodeBounds(node) {
+    if (!node) return null;
+    const bounds = isUsableBounds(node.realBounds) ? node.realBounds : node.visualBounds;
+    return isUsableBounds(bounds) ? bounds : null;
+}
+
+function mergeBounds(nodes) {
+    const rects = nodes.map(getNodeBounds).filter(Boolean);
+    if (rects.length === 0) return null;
+    const left = Math.min(...rects.map(rect => rect.x));
+    const top = Math.min(...rects.map(rect => rect.y));
+    const right = Math.max(...rects.map(rect => rect.x + rect.w));
+    const bottom = Math.max(...rects.map(rect => rect.y + rect.h));
+    return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+function getMasterBarBounds(lookup, barIndex) {
+    const indexed = lookup?.findMasterBarByIndex?.(barIndex);
+    if (getNodeBounds(indexed)) return indexed;
+
+    const systems = Array.from(lookup?.staffSystems || []);
+    for (const system of systems) {
+        const masterBar = Array.from(system?.bars || []).find(item => item?.index === barIndex);
+        if (masterBar && (getNodeBounds(masterBar) || mergeBounds(Array.from(masterBar.bars || [])))) {
+            return masterBar;
+        }
+    }
+    return null;
+}
+
+// 全小節のレイアウト座標（コンテンツ基準）を安全に一括構築・キャッシュ
+export function buildScoreBarLayouts(api, totalBars) {
+    cachedBarLayouts = [];
+    cachedScoreEndX = 0;
+    const wrapper = document.querySelector(".score-wrapper");
+    const svg = document.querySelector("#alphaTab svg");
+    if (!wrapper || !svg || !api) return;
+
+    const lookup = api?.boundsLookup || api?.renderer?.boundsLookup;
+    const svgRect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox?.baseVal;
+    const viewWidth = viewBox?.width || Number.parseFloat(svg.getAttribute("width")) || svgRect.width;
+    const viewHeight = viewBox?.height || Number.parseFloat(svg.getAttribute("height")) || svgRect.height;
+    const scaleX = (viewWidth > 0 && svgRect.width > 0) ? (svgRect.width / viewWidth) : 1;
+    const scaleY = (viewHeight > 0 && svgRect.height > 0) ? (svgRect.height / viewHeight) : 1;
+    const viewBoxX = viewBox?.x || 0;
+    const viewBoxY = viewBox?.y || 0;
+
+    let totalMeasuredWidth = 0;
+    let measuredCount = 0;
+    const rawLayouts = [];
+
+    for (let i = 0; i < totalBars; i++) {
+        const masterBarBounds = getMasterBarBounds(lookup, i);
+        const bounds = getNodeBounds(masterBarBounds) || (masterBarBounds?.bars ? mergeBounds(Array.from(masterBarBounds.bars)) : null);
+
+        if (bounds) {
+            const left = (bounds.x - viewBoxX) * scaleX;
+            const top = (bounds.y - viewBoxY) * scaleY;
+            const width = bounds.w * scaleX;
+            const height = bounds.h * scaleY;
+            rawLayouts[i] = { left, top, width, height };
+            totalMeasuredWidth += width;
+            measuredCount++;
+        } else {
+            rawLayouts[i] = null;
+        }
+    }
+
+    // 取得できなかった小節（13小節目以降など）のための安全平均幅
+    const fallbackWidth = measuredCount > 0 ? (totalMeasuredWidth / measuredCount) : 260;
+    const defaultHeight = (wrapper.clientHeight && wrapper.clientHeight > 40) ? (wrapper.clientHeight - 20) : 180;
+
+    let currentCursorX = 0;
+    for (let i = 0; i < totalBars; i++) {
+        if (rawLayouts[i]) {
+            cachedBarLayouts[i] = rawLayouts[i];
+            currentCursorX = rawLayouts[i].left + rawLayouts[i].width;
+        } else {
+            // 境界データが取れない小節は前の小節に続けて自動補完（フォールバック）
+            const prev = cachedBarLayouts[i - 1];
+            const left = prev ? (prev.left + prev.width) : currentCursorX;
+            const top = prev ? prev.top : 10;
+            const width = prev ? prev.width : fallbackWidth;
+            const height = prev ? prev.height : defaultHeight;
+            cachedBarLayouts[i] = { left, top, width, height };
+            currentCursorX = left + width;
+        }
+    }
+
+    if (cachedBarLayouts.length > 0) {
+        const last = cachedBarLayouts[cachedBarLayouts.length - 1];
+        cachedScoreEndX = last.left + last.width;
+    }
+}
+
+// 小節ハイライト枠の位置更新
+export function updateHighlightBar(barIndex) {
+    const highlight = document.getElementById("scoreBarHighlight");
+    if (!highlight || barIndex < 0) {
+        if (highlight) highlight.classList.add("hidden");
+        return;
+    }
+
+    const rect = cachedBarLayouts[barIndex];
+    if (!rect) return;
+
+    if (barIndex !== lastFocusedBar) {
+        highlight.style.left = `${rect.left}px`;
+        highlight.style.top = `${rect.top}px`;
+        highlight.style.width = `${rect.width}px`;
+        highlight.style.height = `${rect.height}px`;
+        highlight.classList.remove("hidden");
+        lastFocusedBar = barIndex;
+    }
+}
+
+// ★ 演奏開始に合わせて毎フレーム「スイーッ」と滑らかに自動スクロールするループを開始
+export function startScoreContinuousScroll({
+    api,
+    totalBars,
+    beatsPerBar = 4,
+    beatSec = 0.5,
+    onProgress
 }) {
-    if (!stagesGrid) return;
-    stagesGrid.innerHTML = '';
-    const maxUnlocked = clearedList.length + 1;
+    stopScoreContinuousScroll();
 
-    stages.forEach((stage, idx) => {
-        const isCleared = clearedList.includes(stage.id);
-        const isLocked = stage.id > maxUnlocked;
-        const isActive = idx === currentStageIndex;
+    const wrapper = document.querySelector(".score-wrapper");
+    if (!wrapper) return;
 
-        const btn = document.createElement('div');
-        btn.className = `stage-btn ${isCleared ? 'cleared' : ''} ${isLocked ? 'locked' : ''} ${isActive ? 'active' : ''}`;
+    // 小節座標キャッシュが未構築なら構築
+    if (cachedBarLayouts.length < totalBars) {
+        buildScoreBarLayouts(api, totalBars);
+    }
 
-        let statusText = isCleared ? "💮 合格" : (isLocked ? "🔒 ロック" : "🟢 挑戦可能");
+    const totalDurationSec = totalBars * beatsPerBar * beatSec;
+    const startTime = performance.now();
 
-        btn.innerHTML = `
-            <div class="stage-btn-top">
-                <span>EX ${stage.id}</span>
-                <span class="${isCleared ? 'cleared-status' : ''}">${statusText}</span>
-            </div>
-            <div class="stage-btn-title">${stage.title.split(': ')[1] || stage.title}</div>
-        `;
-
-        if (!isLocked && onSelectStage) {
-            btn.addEventListener('click', () => onSelectStage(idx));
+    function frame(now) {
+        const elapsedSec = (now - startTime) / 1000;
+        if (elapsedSec < 0) {
+            continuousScrollFrameId = requestAnimationFrame(frame);
+            return;
         }
 
-        stagesGrid.appendChild(btn);
-    });
+        const currentTotalBeats = elapsedSec / beatSec;
+        const currentBarIndex = Math.min(totalBars - 1, Math.floor(currentTotalBeats / beatsPerBar));
+        const progressInBar = Math.max(0, Math.min(1, (currentTotalBeats % beatsPerBar) / beatsPerBar));
 
-    // クリア進捗バーの更新
-    const percent = Math.round((clearedList.length / stages.length) * 100);
-    if (progressPercentEl) progressPercentEl.innerText = `${percent}% (${clearedList.length} / ${stages.length})`;
-    if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+        // 現在の演奏進行X座標を小節内進捗から算出
+        const barRect = cachedBarLayouts[currentBarIndex];
+        let currentX = 0;
+        if (barRect) {
+            currentX = barRect.left + (barRect.width * progressInBar);
+            updateHighlightBar(currentBarIndex);
+        }
+
+        // スクロール位置計算（現在位置が画面の左から約28%付近に来るように追従）
+        const maxScroll = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
+        // ★ 終端クランプ: 譜面右端が画面右端（余白30px）に達したらそれ以上スクロールさせない！
+        const maxTargetForScoreEnd = Math.max(0, (cachedScoreEndX || wrapper.scrollWidth) - wrapper.clientWidth + 30);
+        const desiredTarget = currentX - (wrapper.clientWidth * 0.28);
+        const targetScrollLeft = Math.max(0, Math.min(desiredTarget, maxTargetForScoreEnd, maxScroll));
+
+        // 毎フレーム連続して直接追従（目標値自体が滑らかに変化するためスイーっと動く）
+        wrapper.scrollLeft = targetScrollLeft;
+
+        if (onProgress) {
+            onProgress(currentBarIndex, Math.floor(currentTotalBeats % beatsPerBar) + 1);
+        }
+
+        if (elapsedSec < totalDurationSec + 0.5) {
+            continuousScrollFrameId = requestAnimationFrame(frame);
+        } else {
+            continuousScrollFrameId = null;
+        }
+    }
+
+    continuousScrollFrameId = requestAnimationFrame(frame);
 }
 
-// --- チューナー用スムージングステート ---
+// 連続スクロール停止
+export function stopScoreContinuousScroll() {
+    if (continuousScrollFrameId !== null) {
+        cancelAnimationFrame(continuousScrollFrameId);
+        continuousScrollFrameId = null;
+    }
+}
+
+// ==========================================
+// ★ 簡易チューナー UI 制御 ★
+// ==========================================
 let smoothedCents = 0;
 let lastInTuneSoundTime = 0;
 let inTuneHoldFrames = 0;
-
-/**
- * 簡易チューナー起動時、ピッチのズレ（セント）に合わせてメーターの針やテキストを動かす
- * - 6弦・5弦の倍音自動補正
- * - 針の滑らかな追従（EMAフィルタ）
- * - ピッタリ合ったときの効果音・緑発光
- */
-// js/ui.js 内の updateTunerUI 関数内の冒頭を修正
 
 export function updateTunerUI({
     freq,
@@ -117,9 +306,6 @@ export function updateTunerUI({
     tunerStatusText,
     onInTunePing
 }) {
-    // 1. 【全弦対応オクターブ正規化】
-    // マイクの特性で第2倍音（オクターブ上）やサブハーモニクスを拾った場合でも、
-    // 目標弦の周波数帯（±600セント以内）に自動で引き寄せてピッチ比較を行う
     let actualFreq = freq;
     while (actualFreq < tunerTargetFreq * 0.7071) {
         actualFreq *= 2;
@@ -132,13 +318,9 @@ export function updateTunerUI({
         tunerHzDisplay.innerText = `${actualFreq.toFixed(1)} Hz (生: ${freq.toFixed(1)} Hz)`;
     }
 
-    // 周波数からセント（半音の1/100）のズレを計算
     const rawCents = 1200 * Math.log2(actualFreq / tunerTargetFreq);
-
-    // 2. 【スムージング】急激なブレを抑えて滑らかに追従 (EMA)
     smoothedCents = smoothedCents * 0.65 + rawCents * 0.35;
 
-    // メーターの針の位置（±50セントの範囲を 10% 〜 90% にマッピング）
     let pointerPos = 50 + (smoothedCents / 50) * 40;
     pointerPos = Math.max(8, Math.min(92, pointerPos));
 
@@ -148,11 +330,9 @@ export function updateTunerUI({
 
     if (!tunerStatusText || !tunerMeterPointer) return;
 
-    // 3. 【判定フィードバック】
     const absCents = Math.abs(smoothedCents);
 
     if (absCents <= 6) {
-        // ✨ ピッタリ（±6セント以内）
         inTuneHoldFrames++;
         tunerStatusText.innerText = "✨ ピッタリ合っています！";
         tunerStatusText.style.color = "#10b981";
@@ -180,20 +360,7 @@ export function updateTunerUI({
     }
 }
 
-/**
- * チューナー停止時や弦変更時にスムージング値をリセット
- */
 export function resetTunerSmoothing() {
     smoothedCents = 0;
     inTuneHoldFrames = 0;
-}
-/**
- * カウントインの数字が切り替わったときに弾むアニメーションを再実行
- */
-export function triggerCountInPulse(el, count) {
-    if (!el) return;
-    el.innerText = count;
-    el.classList.remove('pulse');
-    void el.offsetWidth; // リフローを強制してアニメーションをリセット
-    el.classList.add('pulse');
 }
