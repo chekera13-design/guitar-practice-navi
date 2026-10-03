@@ -84,13 +84,9 @@ export function resetVisualMetronome() {
 // ★ 譜面ハイライト & スムーズ連続自動スクロール ★
 // ==========================================
 let cachedBarLayouts = [];
-let cachedBarViewBoxes = [];
 let cachedScoreEndX = 0;
 let lastFocusedBar = -1;
 let continuousScrollFrameId = null;
-let phrasePicker = null;
-let phrasePickerIndex = 0;
-let phrasePickerManualTimerId = null;
 
 export function resetScoreFocusState() {
     lastFocusedBar = -1;
@@ -98,7 +94,6 @@ export function resetScoreFocusState() {
     const highlight = document.getElementById("scoreBarHighlight");
     if (highlight) highlight.classList.add("hidden");
     cachedBarLayouts = [];
-    cachedBarViewBoxes = [];
     cachedScoreEndX = 0;
 }
 
@@ -160,7 +155,6 @@ export function buildScoreBarLayouts(api, totalBars) {
     let totalMeasuredWidth = 0;
     let measuredCount = 0;
     const rawLayouts = [];
-    cachedBarViewBoxes = [];
 
     for (let i = 0; i < totalBars; i++) {
         const masterBarBounds = getMasterBarBounds(lookup, i);
@@ -172,7 +166,6 @@ export function buildScoreBarLayouts(api, totalBars) {
             const width = bounds.w * scaleX;
             const height = bounds.h * scaleY;
             rawLayouts[i] = { left, top, width, height };
-            cachedBarViewBoxes[i] = { x: bounds.x, y: bounds.y, width: bounds.w, height: bounds.h };
             totalMeasuredWidth += width;
             measuredCount++;
         } else {
@@ -195,12 +188,6 @@ export function buildScoreBarLayouts(api, totalBars) {
             const width = prev ? prev.width : fallbackWidth;
             const height = prev ? prev.height : defaultHeight;
             cachedBarLayouts[i] = { left, top, width, height };
-            cachedBarViewBoxes[i] = {
-                x: viewBoxX + left / scaleX,
-                y: viewBoxY,
-                width: width / scaleX,
-                height: viewHeight
-            };
             currentCursorX = left + width;
         }
     }
@@ -210,134 +197,6 @@ export function buildScoreBarLayouts(api, totalBars) {
         cachedScoreEndX = last.left + last.width;
     }
     return true;
-}
-
-// alphaTab が描画したSVGをベクターのまま小節ごとに切り出す縦画面用ビュー。
-export function renderPhrasePicker(totalBars, initialBar = 0) {
-    destroyPhrasePicker();
-    const wrapper = document.querySelector(".score-wrapper");
-    const sourceSvg = document.querySelector("#alphaTab svg");
-    if (!wrapper || !sourceSvg || cachedBarViewBoxes.length < totalBars) return false;
-
-    const viewBox = sourceSvg.viewBox?.baseVal;
-    const fullWidth = viewBox?.width || Number.parseFloat(sourceSvg.getAttribute("width"));
-    const fullHeight = viewBox?.height || Number.parseFloat(sourceSvg.getAttribute("height"));
-    if (!(fullWidth > 0 && fullHeight > 0)) return false;
-
-    const viewport = document.createElement("div");
-    viewport.className = "phrase-picker";
-    viewport.setAttribute("role", "group");
-    viewport.setAttribute("aria-label", "譜面。上下にスワイプして小節を切り替えます");
-    const track = document.createElement("div");
-    track.className = "phrase-picker-track";
-    viewport.append(track);
-
-    for (let i = 0; i < totalBars; i++) {
-        const card = document.createElement("div");
-        card.className = "phrase-picker-card";
-        card.dataset.barIndex = String(i);
-        const clone = sourceSvg.cloneNode(true);
-        const bar = cachedBarViewBoxes[i];
-        const nextBar = cachedBarViewBoxes[i + 1];
-        const segmentWidth = nextBar && nextBar.x > bar.x
-            ? nextBar.x - bar.x
-            : bar.width;
-        const viewX = viewBox?.x || 0;
-        const cropLeft = Math.max(viewX, bar.x);
-        const cropRight = Math.min(viewX + fullWidth, bar.x + segmentWidth);
-        clone.setAttribute("viewBox", `${cropLeft} ${viewBox?.y || 0} ${cropRight - cropLeft} ${fullHeight}`);
-        clone.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        clone.removeAttribute("width");
-        clone.removeAttribute("height");
-        clone.setAttribute("aria-hidden", "true");
-        card.append(clone);
-        track.append(card);
-    }
-
-    wrapper.append(viewport);
-    phrasePicker = { wrapper, viewport, track, totalBars };
-    phrasePicker.manualInteraction = false;
-    phrasePicker.pendingAutoIndex = null;
-    phrasePickerIndex = Math.max(0, Math.min(totalBars - 1, initialBar));
-
-    let pointerStart = null;
-    viewport.addEventListener("pointerdown", event => {
-        if (pointerStart) return;
-        pointerStart = { id: event.pointerId, y: event.clientY };
-        viewport.setPointerCapture?.(event.pointerId);
-    });
-    viewport.addEventListener("pointerup", event => {
-        if (!pointerStart || pointerStart.id !== event.pointerId) return;
-        const deltaY = event.clientY - pointerStart.y;
-        pointerStart = null;
-        if (Math.abs(deltaY) < 35) return;
-        setManualPhrasePickerIndex(phrasePickerIndex + (deltaY < 0 ? 1 : -1));
-    });
-    viewport.addEventListener("pointercancel", () => { pointerStart = null; });
-    viewport.addEventListener("lostpointercapture", () => { pointerStart = null; });
-
-    updatePhrasePicker(phrasePickerIndex);
-    return true;
-}
-
-export function updatePhrasePicker(barIndex) {
-    if (!phrasePicker) return;
-    if (phrasePicker.manualInteraction) {
-        phrasePicker.pendingAutoIndex = barIndex;
-        return;
-    }
-    setPhrasePickerIndex(barIndex);
-}
-
-function setManualPhrasePickerIndex(barIndex) {
-    if (!phrasePicker) return;
-    phrasePicker.manualInteraction = true;
-    setPhrasePickerIndex(barIndex);
-    if (phrasePickerManualTimerId !== null) clearTimeout(phrasePickerManualTimerId);
-    phrasePickerManualTimerId = setTimeout(() => {
-        phrasePickerManualTimerId = null;
-        if (!phrasePicker) return;
-        phrasePicker.manualInteraction = false;
-        if (phrasePicker.pendingAutoIndex !== null) {
-            setPhrasePickerIndex(phrasePicker.pendingAutoIndex);
-            phrasePicker.pendingAutoIndex = null;
-        }
-    }, 900);
-}
-
-function setPhrasePickerIndex(barIndex) {
-    if (!phrasePicker) return;
-    phrasePickerIndex = Math.max(0, Math.min(phrasePicker.totalBars - 1, barIndex));
-    const step = phrasePicker.viewport.clientHeight * 0.34;
-    const offset = phrasePicker.viewport.clientHeight / 2 - step / 2 - phrasePickerIndex * step;
-    phrasePicker.track.style.setProperty("--phrase-step", `${step}px`);
-    phrasePicker.track.style.transform = `translate3d(0, ${offset}px, 0)`;
-    phrasePicker.track.querySelectorAll(".phrase-picker-card").forEach((card, index) => {
-        const top = `${index * step}px`;
-        if (card.dataset.top !== top) {
-            card.style.top = top;
-            card.dataset.top = top;
-        }
-        const distance = Math.abs(index - phrasePickerIndex);
-        card.classList.toggle("is-current", distance === 0);
-        card.classList.toggle("is-adjacent", distance === 1);
-        card.classList.toggle("is-nearby", distance === 2);
-        card.classList.toggle("is-far", distance > 2);
-        card.setAttribute("aria-label", `${index + 1}小節${index === phrasePickerIndex ? "、現在" : ""}`);
-    });
-}
-
-export function resizePhrasePicker() {
-    if (phrasePicker) setPhrasePickerIndex(phrasePickerIndex);
-}
-
-export function destroyPhrasePicker() {
-    if (phrasePickerManualTimerId !== null) {
-        clearTimeout(phrasePickerManualTimerId);
-        phrasePickerManualTimerId = null;
-    }
-    phrasePicker?.viewport.remove();
-    phrasePicker = null;
 }
 
 // 小節ハイライト枠の位置更新
@@ -380,7 +239,6 @@ export function startScoreContinuousScroll({
 
     const totalDurationSec = totalBars * beatsPerBar * beatSec;
     const startTime = performance.now();
-    let lastProgressBar = -1;
 
     function frame(now) {
         const elapsedSec = (now - startTime) / 1000;
@@ -407,8 +265,7 @@ export function startScoreContinuousScroll({
 
         wrapper.scrollLeft = targetScrollLeft;
 
-        if (onProgress && currentBarIndex !== lastProgressBar) {
-            lastProgressBar = currentBarIndex;
+        if (onProgress) {
             onProgress(currentBarIndex, Math.floor(currentTotalBeats % beatsPerBar) + 1);
         }
 
@@ -427,14 +284,6 @@ export function stopScoreContinuousScroll() {
     if (continuousScrollFrameId !== null) {
         cancelAnimationFrame(continuousScrollFrameId);
         continuousScrollFrameId = null;
-    }
-    if (phrasePickerManualTimerId !== null) {
-        clearTimeout(phrasePickerManualTimerId);
-        phrasePickerManualTimerId = null;
-    }
-    if (phrasePicker) {
-        phrasePicker.manualInteraction = false;
-        phrasePicker.pendingAutoIndex = null;
     }
 }
 

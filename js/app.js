@@ -15,7 +15,6 @@ import {
     updateVisualMetronome, setPlayFinishedVisual, resetVisualMetronome,
     buildScoreBarLayouts, updateHighlightBar,
     startScoreContinuousScroll, stopScoreContinuousScroll,
-    renderPhrasePicker, updatePhrasePicker, resizePhrasePicker, destroyPhrasePicker,
     resetScoreFocusState, updateTunerUI, resetTunerSmoothing
 } from "./ui.js";
 
@@ -24,7 +23,6 @@ let currentStage = BASIC_STAGES[0];
 let isPracticing = false;
 let currentBpm = 60;
 let practiceTimerIds = [];
-let currentPracticeBarIndex = 0;
 
 // 単体メトロノーム状態
 let isStandaloneMetroPlaying = false;
@@ -34,51 +32,6 @@ let standaloneNextTickTime = 0;
 
 // 譜面描画状態
 let isScoreRendered = false;
-const portraitPhoneQuery = window.matchMedia("(max-width: 600px) and (orientation: portrait)");
-let portraitPhraseRenderRetryId = null;
-
-function isPortraitPhone() {
-    return portraitPhoneQuery.matches;
-}
-
-function syncPortraitPhraseMode(forceRender = false, retry = 0) {
-    if (!practiceModal) return;
-    const active = !practiceModal.classList.contains("hidden") && isPortraitPhone();
-    const wasActive = practiceModal.classList.contains("is-portrait-phrase-mode");
-    practiceModal.classList.toggle("is-portrait-phrase-mode", active);
-    if (!active) {
-        if (portraitPhraseRenderRetryId !== null) {
-            clearTimeout(portraitPhraseRenderRetryId);
-            portraitPhraseRenderRetryId = null;
-        }
-        destroyPhrasePicker();
-        return;
-    }
-    if ((forceRender || !wasActive) && isScoreRendered && api?.score?.masterBars?.length) {
-        const bars = api.score.masterBars.length;
-        buildScoreBarLayouts(api, bars);
-        const initialBar = isPracticing ? currentPracticeBarIndex : 0;
-        if (!renderPhrasePicker(bars, initialBar)) {
-            practiceModal.classList.remove("is-portrait-phrase-mode");
-            if (retry < 8 && portraitPhraseRenderRetryId === null) {
-                portraitPhraseRenderRetryId = setTimeout(() => {
-                    portraitPhraseRenderRetryId = null;
-                    syncPortraitPhraseMode(true, retry + 1);
-                }, 120);
-            }
-        } else if (portraitPhraseRenderRetryId !== null) {
-            clearTimeout(portraitPhraseRenderRetryId);
-            portraitPhraseRenderRetryId = null;
-        }
-    }
-}
-
-portraitPhoneQuery.addEventListener?.("change", syncPortraitPhraseMode);
-window.addEventListener("orientationchange", syncPortraitPhraseMode);
-window.addEventListener("resize", () => {
-    syncPortraitPhraseMode();
-    resizePhrasePicker();
-});
 
 // 録音ステート
 let mediaRecorder = null;
@@ -99,8 +52,6 @@ const stageGuideTitle = document.getElementById("stageGuideTitle");
 const stageGuideBody = document.getElementById("stageGuideBody");
 
 const visualMetronomeBox = document.getElementById("visualMetronomeBox");
-const recordingLiveBadge = document.getElementById("recordingLiveBadge");
-const practiceStopHud = document.getElementById("practiceStopHud");
 const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
@@ -115,8 +66,6 @@ const metroVolSlider = document.getElementById("metroVolSlider");
 const metroVolLabel = document.getElementById("metroVolLabel");
 const metroVolIcon = document.getElementById("metroVolIcon");
 let volCollapseTimer = null;
-
-if (practiceStopHud) practiceStopHud.addEventListener("click", () => mainActionBtn.click());
 
 // チューナー関連DOM
 const tunerDetails = document.querySelector(".tuner-details");
@@ -344,7 +293,6 @@ function initAlphaTabIfNeeded() {
                 resetScoreFocusState();
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(api, bars);
-                syncPortraitPhraseMode(true);
             });
             return true;
         } catch (e) {
@@ -444,8 +392,6 @@ function renderExerciseCards() {
 // ==========================================
 function openPracticeModal(stage) {
     currentStage = stage;
-    currentPracticeBarIndex = 0;
-    practiceModal.classList.remove("is-playing");
     currentBpm = stage.bpm || 60;
     isScoreRendered = false;
 
@@ -514,7 +460,6 @@ function closePracticeModal() {
     collapseVolumeBar();
     stopScoreContinuousScroll();
     resetScoreFocusState();
-    destroyPhrasePicker();
 
     if (api) {
         try {
@@ -526,7 +471,6 @@ function closePracticeModal() {
     }
 
     practiceModal.classList.add("hidden");
-    practiceModal.classList.remove("is-playing");
     document.body.style.overflow = "";
 }
 
@@ -574,8 +518,6 @@ async function startPractice() {
     }
 
     isPracticing = true;
-    currentPracticeBarIndex = 0;
-    practiceModal.classList.add("is-playing");
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
@@ -653,9 +595,9 @@ function handleBeatStep(step, config) {
         const noteIndex = step - countInBeats;
         const barIndex = Math.floor(noteIndex / beatsPerBar);
         const currentPracticeBar = barIndex + 1;
-        const progressText = `${currentPracticeBar}/${practiceBars}`;
+        const recText = practiceBars > 1 ? `REC ${currentPracticeBar}/${practiceBars}` : "REC";
 
-        updateVisualMetronome(beatInBar, isAccent, progressText, "rec");
+        updateVisualMetronome(beatInBar, isAccent, recText, "rec");
 
         // 演奏開始の最初の1拍目で、滑らかなスイーっと自動スクロールループを開始
         if (noteIndex === 0) {
@@ -663,13 +605,7 @@ function handleBeatStep(step, config) {
                 api,
                 totalBars: practiceBars,
                 beatsPerBar,
-                beatSec,
-                onProgress: barIndex => {
-                    currentPracticeBarIndex = barIndex;
-                    if (practiceModal.classList.contains("is-portrait-phrase-mode")) {
-                        updatePhrasePicker(barIndex);
-                    }
-                }
+                beatSec
             });
         }
     } 
@@ -686,7 +622,6 @@ function handleBeatStep(step, config) {
 
 function stopPractice() {
     isPracticing = false;
-    practiceModal.classList.remove("is-playing");
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -705,7 +640,6 @@ function stopPractice() {
 
 function finishPractice() {
     isPracticing = false;
-    practiceModal.classList.remove("is-playing");
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -760,15 +694,11 @@ function setupMediaRecorder(stream) {
 }
 
 function startRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "inactive") {
-        mediaRecorder.start();
-        if (recordingLiveBadge) recordingLiveBadge.classList.remove("hidden");
-    }
+    if (mediaRecorder && mediaRecorder.state === "inactive") mediaRecorder.start(); 
 }
 
 function stopRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-    if (recordingLiveBadge) recordingLiveBadge.classList.add("hidden");
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop(); 
 }
 
 // ==========================================

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>超ギタートレーニング（超ギタトレ） - 基礎編</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- alphaTab の読み込み（外部CDN経由） -->
@@ -139,7 +139,6 @@
 
                 <!-- 🎯 中央: メトロノーム本体 -->
                 <div class="metro-center-group">
-                    <span id="recordingLiveBadge" class="recording-live-badge hidden" role="status" aria-label="録音中" aria-live="polite">●</span>
                     <span id="metroPhaseBadge" class="metro-phase-badge">STANDBY</span>
                     <div id="metroBigCount" class="metro-count-chip">-</div>
                     <div class="beat-dots-container">
@@ -163,12 +162,9 @@
             </div>
 
             <!-- ③ TAB譜面エリア -->
-            <div class="score-stage">
-                <div class="score-wrapper">
-                    <div id="scoreBarHighlight" class="score-bar-highlight hidden" aria-hidden="true"></div>
-                    <div id="alphaTab"></div>
-                </div>
-                <button id="practiceStopHud" class="practice-stop-hud" type="button" aria-label="練習を停止" title="練習を停止">■</button>
+            <div class="score-wrapper">
+                <div id="scoreBarHighlight" class="score-bar-highlight hidden" aria-hidden="true"></div>
+                <div id="alphaTab"></div>
             </div>
 
             <!-- ④ 🎧 録音結果プレイヤーカード -->
