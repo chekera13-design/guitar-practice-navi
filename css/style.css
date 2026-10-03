@@ -505,16 +505,16 @@ body {
 }
 
 .recording-live-badge {
-    color: #fecaca;
-    background: #7f1d1d;
-    border: 1px solid #ef4444;
-    border-radius: 999px;
-    padding: 3px 6px;
-    font-size: 10px;
+    color: #ef4444;
+    padding: 0 2px;
+    font-size: 12px;
     line-height: 1;
     font-weight: 800;
-    white-space: nowrap;
+    flex: 0 0 auto;
 }
+
+.score-stage { display: contents; }
+.practice-stop-hud { display: none; }
 
 #alphaTab {
     display: block;
@@ -744,18 +744,6 @@ button { touch-action: manipulation; }
     display: none !important;
 }
 
-/* 通常時は追加の横向きHUDをレイアウトに参加させない */
-.landscape-controls-layer,
-.landscape-controls-panel {
-    display: contents;
-}
-
-.landscape-controls-toggle,
-.landscape-controls-panel-header,
-.landscape-recording-hud {
-    display: none;
-}
-
 @media (max-width: 600px) {
     .practice-modal.is-playing {
         padding: 0;
@@ -797,12 +785,46 @@ button { touch-action: manipulation; }
         margin-bottom: 0;
     }
 
+    .practice-modal.is-playing .score-stage {
+        position: relative;
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
     .practice-modal.is-playing .score-wrapper {
         flex: 1 1 auto;
-        height: auto;
+        width: 100%;
+        height: 100%;
         min-height: 0;
         margin-bottom: 0;
         padding: 6px 4px;
+    }
+
+    .practice-modal.is-playing .modal-footer-action {
+        display: none;
+    }
+
+    .practice-modal.is-playing .practice-stop-hud {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        z-index: 10;
+        right: 8px;
+        bottom: 8px;
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        border-radius: 50%;
+        background: rgba(15, 23, 42, 0.82);
+        color: #ef4444;
+        font-size: 20px;
+        line-height: 1;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        touch-action: manipulation;
     }
 
     .practice-modal.is-playing #alphaTab {
@@ -810,26 +832,9 @@ button { touch-action: manipulation; }
         min-height: 0;
     }
 
-    .practice-modal.is-playing .modal-footer-action {
-        position: relative;
-        inset: auto;
-        flex: 0 0 auto;
-        display: flex;
-        justify-content: flex-end;
-        margin: 0;
-        padding: 2px 0 0;
-        background: none;
-    }
-
-    .practice-modal.is-playing .wide-start-btn {
-        width: auto;
-        min-width: 104px;
-        padding: 9px 18px;
-        font-size: 14px;
-    }
 }
 
-/* 横向きスマートフォンの演奏専用UI */
+/* 横向きスマートフォンでは情報ヘッダーを譜面に譲る */
 @media (max-width: 900px) and (orientation: landscape) {
     .practice-modal.is-playing {
         padding: 0;
@@ -852,104 +857,26 @@ button { touch-action: manipulation; }
         display: none;
     }
 
-    .practice-modal.is-playing .landscape-controls-panel {
-        display: none;
-    }
-
-    .practice-modal.is-playing .landscape-controls-layer.controls-open .landscape-controls-panel {
-        display: block;
-        position: fixed;
-        z-index: 35;
-        top: max(8px, calc(env(safe-area-inset-top) + 8px));
-        right: max(8px, calc(env(safe-area-inset-right) + 8px));
-        width: min(420px, calc(100vw - 32px));
-        padding: 8px;
-        border: 1px solid #475569;
-        border-radius: 12px;
-        background: rgba(15, 23, 42, 0.97);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .practice-modal.is-playing .landscape-controls-panel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 6px;
-    }
-
-    .landscape-controls-hint {
-        color: #cbd5e1;
-        font-size: 11px;
-    }
-
     .practice-modal.is-playing .visual-metronome-compact {
-        width: 100%;
-        min-height: 42px;
-        margin: 0;
-        padding: 4px 8px;
+        flex: 0 0 auto;
+        min-height: 36px;
+        margin-bottom: 0;
+        padding: 2px 8px;
         border-radius: 8px;
     }
 
-    .practice-modal.is-playing .metro-standalone-btn {
-        left: 6px;
-    }
-
-    .practice-modal.is-playing .metro-vol-container {
-        right: 6px;
-    }
-
-    .practice-modal.is-playing .landscape-controls-toggle {
+    .practice-modal.is-playing .score-stage {
+        position: relative;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        z-index: 36;
-        top: max(6px, calc(env(safe-area-inset-top) + 6px));
-        right: max(8px, calc(env(safe-area-inset-right) + 8px));
-        width: 44px;
-        height: 44px;
-        padding: 0;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        border-radius: 50%;
-        background: rgba(15, 23, 42, 0.82);
-        color: #fff;
-        font-size: 28px;
-        line-height: 1;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .practice-modal.is-playing .landscape-controls-layer.controls-open .landscape-controls-toggle {
-        background: #334155;
-    }
-
-    .practice-modal.is-playing .landscape-recording-hud:not(.hidden) {
-        display: inline-flex;
-        align-items: center;
-        position: fixed;
-        z-index: 34;
-        top: max(8px, calc(env(safe-area-inset-top) + 8px));
-        left: max(8px, calc(env(safe-area-inset-left) + 8px));
-        padding: 3px 6px;
-        border: 1px solid rgba(248, 113, 113, 0.6);
-        border-radius: 999px;
-        background: rgba(127, 29, 29, 0.85);
-        color: #fecaca;
-        font-size: 9px;
-        line-height: 1;
-        font-weight: 800;
-        pointer-events: none;
-    }
-
-    .practice-modal.is-playing #recordingLiveBadge {
-        display: none !important;
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .practice-modal.is-playing .score-wrapper {
-        flex: 1 1 0;
+        flex: 0 0 100%;
         width: 100%;
-        height: auto;
+        height: 100%;
         min-height: 0;
         margin: 0;
         padding: 0;
@@ -959,29 +886,34 @@ button { touch-action: manipulation; }
         overflow-y: hidden;
     }
 
+    .practice-modal.is-playing .modal-footer-action {
+        display: none;
+    }
+
     .practice-modal.is-playing #alphaTab {
         height: 100%;
         min-height: 0;
     }
 
-    .practice-modal.is-playing .modal-footer-action {
-        position: fixed;
-        z-index: 37;
-        right: max(8px, calc(env(safe-area-inset-right) + 8px));
-        bottom: max(8px, calc(env(safe-area-inset-bottom) + 8px));
-        width: auto;
-        margin: 0;
+    .practice-modal.is-playing .practice-stop-hud {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        z-index: 10;
+        right: 8px;
+        bottom: 8px;
+        width: 46px;
+        height: 46px;
         padding: 0;
-        background: none;
-    }
-
-    .practice-modal.is-playing .wide-start-btn {
-        width: auto;
-        min-width: 112px;
-        min-height: 46px;
-        padding: 8px 14px;
-        font-size: 13px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        border-radius: 50%;
+        background: rgba(15, 23, 42, 0.82);
+        color: #ef4444;
+        font-size: 20px;
+        line-height: 1;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        touch-action: manipulation;
     }
 }

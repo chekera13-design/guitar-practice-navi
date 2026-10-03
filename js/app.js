@@ -53,10 +53,7 @@ const stageGuideBody = document.getElementById("stageGuideBody");
 
 const visualMetronomeBox = document.getElementById("visualMetronomeBox");
 const recordingLiveBadge = document.getElementById("recordingLiveBadge");
-const landscapeRecordingHud = document.getElementById("landscapeRecordingHud");
-const landscapeControlsLayer = document.getElementById("landscapeControlsLayer");
-const landscapeControlsToggle = document.getElementById("landscapeControlsToggle");
-const landscapeBpmBadge = document.getElementById("landscapeBpmBadge");
+const practiceStopHud = document.getElementById("practiceStopHud");
 const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
@@ -72,18 +69,7 @@ const metroVolLabel = document.getElementById("metroVolLabel");
 const metroVolIcon = document.getElementById("metroVolIcon");
 let volCollapseTimer = null;
 
-function setLandscapeControlsOpen(isOpen) {
-    if (!landscapeControlsLayer || !landscapeControlsToggle) return;
-    landscapeControlsLayer.classList.toggle("controls-open", isOpen);
-    landscapeControlsToggle.setAttribute("aria-expanded", String(isOpen));
-    landscapeControlsToggle.setAttribute("aria-label", isOpen ? "演奏中の操作を閉じる" : "演奏中の操作を開く");
-}
-
-if (landscapeControlsToggle) {
-    landscapeControlsToggle.addEventListener("click", () => {
-        setLandscapeControlsOpen(!landscapeControlsLayer.classList.contains("controls-open"));
-    });
-}
+if (practiceStopHud) practiceStopHud.addEventListener("click", () => mainActionBtn.click());
 
 // チューナー関連DOM
 const tunerDetails = document.querySelector(".tuner-details");
@@ -411,7 +397,6 @@ function renderExerciseCards() {
 function openPracticeModal(stage) {
     currentStage = stage;
     practiceModal.classList.remove("is-playing");
-    setLandscapeControlsOpen(false);
     currentBpm = stage.bpm || 60;
     isScoreRendered = false;
 
@@ -430,7 +415,6 @@ function openPracticeModal(stage) {
 
     if (modalStageBadge) modalStageBadge.innerText = stage.stageBadge || "基礎編";
     if (modalBpmBadge) modalBpmBadge.innerText = `BPM ${currentBpm}`;
-    if (landscapeBpmBadge) landscapeBpmBadge.innerText = `BPM ${currentBpm}`;
     if (modalBarsBadge) modalBarsBadge.innerText = `${practiceBars}小節`;
     if (modalStageTitle) modalStageTitle.innerText = stage.title;
     if (modalStageDesc) modalStageDesc.innerText = stage.desc || "";
@@ -493,16 +477,12 @@ function closePracticeModal() {
 
     practiceModal.classList.add("hidden");
     practiceModal.classList.remove("is-playing");
-    setLandscapeControlsOpen(false);
     document.body.style.overflow = "";
 }
 
 if (closePracticeModalBtn) closePracticeModalBtn.addEventListener("click", closePracticeModal);
 if (practiceModal) {
     practiceModal.addEventListener("click", (e) => {
-        if (landscapeControlsLayer?.classList.contains("controls-open") && !landscapeControlsLayer.contains(e.target)) {
-            setLandscapeControlsOpen(false);
-        }
         if (e.target === practiceModal) closePracticeModal();
     });
 }
@@ -545,7 +525,6 @@ async function startPractice() {
 
     isPracticing = true;
     practiceModal.classList.add("is-playing");
-    setLandscapeControlsOpen(false);
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
@@ -623,9 +602,9 @@ function handleBeatStep(step, config) {
         const noteIndex = step - countInBeats;
         const barIndex = Math.floor(noteIndex / beatsPerBar);
         const currentPracticeBar = barIndex + 1;
-        const recText = practiceBars > 1 ? `REC ${currentPracticeBar}/${practiceBars}` : "REC";
+        const progressText = `${currentPracticeBar}/${practiceBars}`;
 
-        updateVisualMetronome(beatInBar, isAccent, recText, "rec");
+        updateVisualMetronome(beatInBar, isAccent, progressText, "rec");
 
         // 演奏開始の最初の1拍目で、滑らかなスイーっと自動スクロールループを開始
         if (noteIndex === 0) {
@@ -651,7 +630,6 @@ function handleBeatStep(step, config) {
 function stopPractice() {
     isPracticing = false;
     practiceModal.classList.remove("is-playing");
-    setLandscapeControlsOpen(false);
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -671,7 +649,6 @@ function stopPractice() {
 function finishPractice() {
     isPracticing = false;
     practiceModal.classList.remove("is-playing");
-    setLandscapeControlsOpen(false);
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -729,14 +706,12 @@ function startRecording() {
     if (mediaRecorder && mediaRecorder.state === "inactive") {
         mediaRecorder.start();
         if (recordingLiveBadge) recordingLiveBadge.classList.remove("hidden");
-        if (landscapeRecordingHud) landscapeRecordingHud.classList.remove("hidden");
     }
 }
 
 function stopRecording() { 
     if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
     if (recordingLiveBadge) recordingLiveBadge.classList.add("hidden");
-    if (landscapeRecordingHud) landscapeRecordingHud.classList.add("hidden");
 }
 
 // ==========================================
