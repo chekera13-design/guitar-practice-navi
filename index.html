@@ -127,6 +127,15 @@
                 <button id="closePracticeModalBtn" class="close-x-btn" title="閉じる">✕</button>
             </div>
 
+            <!-- 横向き演奏時はメトロノーム操作をフローティングパネルへまとめる -->
+            <div id="landscapeControlsLayer" class="landscape-controls-layer">
+                <button id="landscapeControlsToggle" class="landscape-controls-toggle" type="button" aria-label="演奏中の操作を開く" aria-controls="landscapeControlsPanel" aria-expanded="false">⋮</button>
+                <div id="landscapeControlsPanel" class="landscape-controls-panel">
+                    <div class="landscape-controls-panel-header">
+                        <span id="landscapeBpmBadge" class="bpm-badge">BPM 60</span>
+                        <span class="landscape-controls-hint">メトロノーム・音量</span>
+                    </div>
+
             <!-- ② ビジュアルメトロノーム（左端：単体ボタン / 中央：本体 / 右端：音量バー） -->
             <div id="visualMetronomeBox" class="visual-metronome-compact">
                 <!-- ⏱️ 左端固定: 単体メトロノームボタン（メトロノームSVGアイコン付き） -->
@@ -161,6 +170,9 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </div>
+            <span id="landscapeRecordingHud" class="landscape-recording-hud hidden" role="status" aria-live="polite">● REC</span>
 
             <!-- ③ TAB譜面エリア -->
             <div class="score-wrapper">
