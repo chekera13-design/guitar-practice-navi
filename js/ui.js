@@ -132,15 +132,17 @@ function getMasterBarBounds(lookup, barIndex) {
     return null;
 }
 
-// 全小節のレイアウト座標（コンテンツ基準）を安全に一括構築・キャッシュ
+// 全小節のレイアウト座標を一括構築・キャッシュ
 export function buildScoreBarLayouts(api, totalBars) {
     cachedBarLayouts = [];
     cachedScoreEndX = 0;
     const wrapper = document.querySelector(".score-wrapper");
     const svg = document.querySelector("#alphaTab svg");
-    if (!wrapper || !svg || !api) return;
+    if (!wrapper || !svg || !api) return false;
 
     const lookup = api?.boundsLookup || api?.renderer?.boundsLookup;
+    if (!lookup) return false;
+
     const svgRect = svg.getBoundingClientRect();
     const viewBox = svg.viewBox?.baseVal;
     const viewWidth = viewBox?.width || Number.parseFloat(svg.getAttribute("width")) || svgRect.width;
@@ -171,7 +173,6 @@ export function buildScoreBarLayouts(api, totalBars) {
         }
     }
 
-    // 取得できなかった小節（13小節目以降など）のための安全平均幅
     const fallbackWidth = measuredCount > 0 ? (totalMeasuredWidth / measuredCount) : 260;
     const defaultHeight = (wrapper.clientHeight && wrapper.clientHeight > 40) ? (wrapper.clientHeight - 20) : 180;
 
@@ -181,7 +182,6 @@ export function buildScoreBarLayouts(api, totalBars) {
             cachedBarLayouts[i] = rawLayouts[i];
             currentCursorX = rawLayouts[i].left + rawLayouts[i].width;
         } else {
-            // 境界データが取れない小節は前の小節に続けて自動補完（フォールバック）
             const prev = cachedBarLayouts[i - 1];
             const left = prev ? (prev.left + prev.width) : currentCursorX;
             const top = prev ? prev.top : 10;
@@ -196,6 +196,7 @@ export function buildScoreBarLayouts(api, totalBars) {
         const last = cachedBarLayouts[cachedBarLayouts.length - 1];
         cachedScoreEndX = last.left + last.width;
     }
+    return true;
 }
 
 // 小節ハイライト枠の位置更新
@@ -219,7 +220,7 @@ export function updateHighlightBar(barIndex) {
     }
 }
 
-// ★ 演奏開始に合わせて毎フレーム「スイーッ」と滑らかに自動スクロールするループを開始
+// ★ 演奏開始に合わせて滑らかに自動スクロールするループを開始
 export function startScoreContinuousScroll({
     api,
     totalBars,
@@ -232,7 +233,6 @@ export function startScoreContinuousScroll({
     const wrapper = document.querySelector(".score-wrapper");
     if (!wrapper) return;
 
-    // 小節座標キャッシュが未構築なら構築
     if (cachedBarLayouts.length < totalBars) {
         buildScoreBarLayouts(api, totalBars);
     }
@@ -251,7 +251,6 @@ export function startScoreContinuousScroll({
         const currentBarIndex = Math.min(totalBars - 1, Math.floor(currentTotalBeats / beatsPerBar));
         const progressInBar = Math.max(0, Math.min(1, (currentTotalBeats % beatsPerBar) / beatsPerBar));
 
-        // 現在の演奏進行X座標を小節内進捗から算出
         const barRect = cachedBarLayouts[currentBarIndex];
         let currentX = 0;
         if (barRect) {
@@ -259,14 +258,11 @@ export function startScoreContinuousScroll({
             updateHighlightBar(currentBarIndex);
         }
 
-        // スクロール位置計算（現在位置が画面の左から約28%付近に来るように追従）
         const maxScroll = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
-        // ★ 終端クランプ: 譜面右端が画面右端（余白30px）に達したらそれ以上スクロールさせない！
         const maxTargetForScoreEnd = Math.max(0, (cachedScoreEndX || wrapper.scrollWidth) - wrapper.clientWidth + 30);
         const desiredTarget = currentX - (wrapper.clientWidth * 0.28);
         const targetScrollLeft = Math.max(0, Math.min(desiredTarget, maxTargetForScoreEnd, maxScroll));
 
-        // 毎フレーム連続して直接追従（目標値自体が滑らかに変化するためスイーっと動く）
         wrapper.scrollLeft = targetScrollLeft;
 
         if (onProgress) {

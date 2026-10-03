@@ -268,13 +268,14 @@ body {
 .practice-modal-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding-bottom: 8px;
     margin-bottom: 8px;
     border-bottom: 1px solid #e2e8f0;
 }
-.modal-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.practice-modal-title { margin: 0; font-size: 16px; color: #0f172a; font-weight: 800; }
+.modal-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
+.practice-modal-title { margin: 0; font-size: 16px; color: #0f172a; font-weight: 800; width: 100%; }
+.practice-modal-desc { margin: 4px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.4; width: 100%; }
 .app-badge {
     background: #3b82f6; color: white; font-size: 12px; font-weight: 800;
     padding: 3px 9px; border-radius: 6px; letter-spacing: 0.5px;
@@ -512,14 +513,15 @@ body {
     z-index: 2;
 }
 
-/* 小節全体の控えめな背景ハイライト（色を薄くし、少し右へ8pxシフト） */
+/* 小節全体の控えめな背景ハイライト */
 .score-bar-highlight {
     position: absolute;
     z-index: 1;
-    background: rgba(250, 204, 21, 0.07);
-    transform: translateX(8px);
+    background: rgba(250, 204, 21, 0.10);
     border-radius: 4px;
     pointer-events: none;
+    transition: left 0.1s ease, width 0.1s ease;
+    transform: translateX(9px);
 }
 
 /* ④ 録音結果プレイヤーカード */
@@ -658,7 +660,13 @@ button { touch-action: manipulation; }
 
     .practice-modal-content { padding: 12px 12px; width: 98%; max-height: 96vh; }
     .practice-modal-title { font-size: 14px; }
-    .modal-footer-action { margin: 4px -12px -12px -12px; padding: 8px 12px 12px 12px; }
+    
+    /* 修正: スマホでの食い込み防止 */
+    .modal-footer-action {
+        bottom: -12px;
+        margin: 4px -12px -12px -12px;
+        padding: 8px 12px 12px 12px;
+    }
     .wide-start-btn { font-size: 15px; padding: 12px 14px; }
 
     /* メトロノームバー: スマホ向け最適化 */

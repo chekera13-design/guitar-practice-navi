@@ -28,6 +28,10 @@ let practiceTimerIds = [];
 let isStandaloneMetroPlaying = false;
 let standaloneMetroTimerId = null;
 let standaloneBeat = 0;
+let standaloneNextTickTime = 0;
+
+// 譜面描画状態
+let isScoreRendered = false;
 
 // 録音ステート
 let mediaRecorder = null;
@@ -74,6 +78,7 @@ const tunerStringBtns = document.querySelectorAll(".tuner-string-btn");
 let isTuning = false;
 let currentTunerStringNum = null;
 let tunerTargetFreq = 82.41;
+let tunerAnimFrameId = null; // 修正: 多重ループ防止用のアニメーションフレームID
 
 // インフォモーダルDOM
 const infoModal = document.getElementById("infoModal");
@@ -92,7 +97,7 @@ const METRO_SVG_ICON = `
 `;
 
 // ==========================================
-// ★ 単体メトロノーム制御（部分練習用） ★
+// ★ 単体メトロノーム制御（ドリフトフリー高精度タイマー） ★
 // ==========================================
 async function toggleStandaloneMetronome() {
     if (isPracticing) return;
@@ -118,22 +123,36 @@ async function startStandaloneMetronome() {
 
     const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
     const beatSec = 60 / currentBpm;
-    const beatMs = beatSec * 1000;
+    
+    // Web Audio の正確なタイムラインを基準にする（累積遅延ゼロ）
+    standaloneNextTickTime = audioContext.currentTime + 0.05;
 
-    function tick() {
+    function scheduler() {
         if (!isStandaloneMetroPlaying) return;
 
-        const beatInBar = (standaloneBeat % beatsPerBar) + 1;
-        const isAccent = (beatInBar === 1);
+        // 0.1秒先までスケジュール
+        while (standaloneNextTickTime < audioContext.currentTime + 0.1) {
+            const beatInBar = (standaloneBeat % beatsPerBar) + 1;
+            const isAccent = (beatInBar === 1);
 
-        scheduleTick(audioContext.currentTime, isAccent);
-        updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
+            scheduleTick(standaloneNextTickTime, isAccent);
 
-        standaloneBeat++;
-        standaloneMetroTimerId = setTimeout(tick, beatMs);
+            // 音声発音時刻に合わせた視覚更新のタイマー
+            const delayMs = Math.max(0, (standaloneNextTickTime - audioContext.currentTime) * 1000);
+            setTimeout(() => {
+                if (isStandaloneMetroPlaying) {
+                    updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
+                }
+            }, delayMs);
+
+            standaloneNextTickTime += beatSec;
+            standaloneBeat++;
+        }
+
+        standaloneMetroTimerId = setTimeout(scheduler, 25);
     }
 
-    tick();
+    scheduler();
 }
 
 function stopStandaloneMetronome() {
@@ -181,7 +200,7 @@ function resetVolumeCollapseTimer() {
     if (volCollapseTimer) clearTimeout(volCollapseTimer);
     volCollapseTimer = setTimeout(() => {
         collapseVolumeBar();
-    }, 3000); // 3秒間触らないと自動収納
+    }, 3000);
 }
 
 function initVolumeControl() {
@@ -219,7 +238,6 @@ function initVolumeControl() {
         });
     }
 
-    // バーの外側をタップしたときに収納
     document.addEventListener("click", (e) => {
         if (metroVolContainer && !metroVolContainer.contains(e.target)) {
             collapseVolumeBar();
@@ -269,7 +287,9 @@ function initAlphaTabIfNeeded() {
                     if (modalBarsBadge) modalBarsBadge.innerText = `${bars}小節`;
                 }
             });
+
             api.renderFinished.on(() => {
+                isScoreRendered = true;
                 resetScoreFocusState();
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(api, bars);
@@ -283,7 +303,6 @@ function initAlphaTabIfNeeded() {
     return !!api;
 }
 
-// ステージの小節数を取得
 function getStagePracticeBars(stage) {
     if (api && api.score && api.score.masterBars && api.score.masterBars.length > 0) {
         return api.score.masterBars.length;
@@ -299,6 +318,7 @@ function getStagePracticeBars(stage) {
 // ==========================================
 function renderTab(stage = currentStage) {
     if (!stage) return;
+    isScoreRendered = false;
     initAlphaTabIfNeeded();
     if (!api) return;
 
@@ -373,6 +393,7 @@ function renderExerciseCards() {
 function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
+    isScoreRendered = false;
 
     unlockAudioContext().catch(() => {});
 
@@ -467,7 +488,7 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ==========================================
-// ★ 練習 & 録音 シーケンス制御 ★
+// ★ 練習 & 録音 シーケンス制御（完全同期タイマー） ★
 // ==========================================
 async function startPractice() {
     if (isStandaloneMetroPlaying) {
@@ -515,32 +536,36 @@ async function startPractice() {
     const totalSteps = totalBeats + ringOutBeats;
 
     const beatSec = 60 / currentBpm;
-    const beatMs = beatSec * 1000;
-    const offsetMs = 200;
-    const startTime = audioContext.currentTime + (offsetMs / 1000);
+    const offsetSec = 0.25; // 250msの安定オフセット
+    const startTime = audioContext.currentTime + offsetSec;
 
     buildScoreBarLayouts(api, practiceBars);
 
-    // 1. メトロノーム発音スケジュール
+    // 1. メトロノーム発音スケジュール（Web Audio API クロックで厳密に確定）
     for (let b = 0; b < totalBeats; b++) {
         const isAccent = (b % beatsPerBar === 0);
-        scheduleTick(startTime + b * beatSec, isAccent);
+        scheduleTick(startTime + (b * beatSec), isAccent);
     }
 
-    // 2. ステップタイマースケジュール
+    // 2. 音声時刻と厳密に同期したビジュアルステップタイマー（ドリフト補正付き）
     for (let step = 0; step < totalSteps; step++) {
+        const stepTime = startTime + (step * beatSec);
+        const delayMs = Math.max(0, (stepTime - audioContext.currentTime) * 1000);
+
         const timerId = setTimeout(() => {
             if (!isPracticing) return;
             handleBeatStep(step, { beatsPerBar, countInBars, countInBeats, practiceBars, practiceBeats, totalBeats, totalSteps, beatSec });
-        }, offsetMs + (step * beatMs));
+        }, delayMs);
         practiceTimerIds.push(timerId);
     }
 
     // 3. 終了タイマー
+    const finishTime = startTime + (totalSteps * beatSec) + 0.1;
+    const finishDelayMs = Math.max(0, (finishTime - audioContext.currentTime) * 1000);
     const endTimerId = setTimeout(() => {
         if (!isPracticing) return;
         finishPractice();
-    }, offsetMs + (totalSteps * beatMs) + 100);
+    }, finishDelayMs);
     practiceTimerIds.push(endTimerId);
 }
 
@@ -677,10 +702,17 @@ function stopRecording() {
 }
 
 // ==========================================
-// ★ 簡易チューナー ★
+// ★ 簡易チューナー（多重ループ完全防止） ★
 // ==========================================
 async function selectTunerString(stringNum, midi, noteName) {
-    if (isTuning && currentTunerStringNum === stringNum) { stopTuner(); return; }
+    if (isTuning && currentTunerStringNum === stringNum) { 
+        stopTuner(); 
+        return; 
+    }
+    
+    // 一旦既存のチューナー処理を完全停止
+    stopTuner();
+
     if (isPracticing) stopPractice();
     stopStandaloneMetronome();
     resetTunerSmoothing();
@@ -694,6 +726,7 @@ async function selectTunerString(stringNum, midi, noteName) {
     tunerHud.classList.remove("hidden");
 
     tunerStringBtns.forEach(btn => btn.classList.toggle("active", Number(btn.dataset.string) === stringNum));
+    
     await unlockAudioContext();
     try {
         if (!microphoneStream) {
@@ -702,13 +735,21 @@ async function selectTunerString(stringNum, midi, noteName) {
             });
         }
         await setupMicrophoneStream(microphoneStream);
-        if (!isTuning) { isTuning = true; tunePitchLoop(); }
-    } catch (err) { alert("マイクの利用を許可してください。"); stopTuner(); }
+        isTuning = true;
+        tunePitchLoop();
+    } catch (err) { 
+        alert("マイクの利用を許可してください。"); 
+        stopTuner(); 
+    }
 }
 
 function stopTuner() {
     isTuning = false;
     currentTunerStringNum = null;
+    if (tunerAnimFrameId !== null) {
+        cancelAnimationFrame(tunerAnimFrameId);
+        tunerAnimFrameId = null;
+    }
     if (tunerHud) tunerHud.classList.add("hidden");
     tunerStringBtns.forEach(btn => btn.classList.remove("active"));
 }
@@ -726,6 +767,7 @@ if (tunerDetails) tunerDetails.addEventListener("toggle", () => { if (!tunerDeta
 
 function tunePitchLoop() {
     if (!isTuning || !analyser || !audioBuffer || !audioContext) return;
+    
     analyser.getFloatTimeDomainData(audioBuffer);
     let sum = 0;
     for (let i = 0; i < audioBuffer.length; i++) sum += audioBuffer[i] * audioBuffer[i];
@@ -736,7 +778,7 @@ function tunePitchLoop() {
             updateTunerUI({ freq, tunerTargetFreq, tunerHzDisplay, tunerMeterPointer, tunerStatusText, onInTunePing: playTunerPing });
         }
     }
-    requestAnimationFrame(tunePitchLoop);
+    tunerAnimFrameId = requestAnimationFrame(tunePitchLoop);
 }
 
 // ==========================================

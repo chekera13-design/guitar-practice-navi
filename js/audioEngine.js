@@ -121,7 +121,7 @@ export function scheduleTick(time, isAccent = false) {
     gain.gain.setValueAtTime(baseGain, safeTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, safeTime + 0.045);
 
-    // ★ マスターゲインノードに接続することで演奏中のリアルタイム音量変更を実現！
+    // ★ マスターゲインノードに接続
     osc.connect(gain);
     gain.connect(metroMasterGain);
 
