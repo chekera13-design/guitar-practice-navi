@@ -525,6 +525,61 @@ body {
     z-index: 2;
 }
 
+/* 縦向きスマートフォン用の実験的な小節ピッカー */
+.practice-modal.is-portrait-phrase-mode .score-wrapper {
+    overflow: hidden;
+    touch-action: none;
+}
+
+.practice-modal.is-portrait-phrase-mode #alphaTab,
+.practice-modal.is-portrait-phrase-mode #scoreBarHighlight {
+    display: none !important;
+}
+
+.phrase-picker {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: contain;
+    z-index: 3;
+}
+
+.phrase-picker-track {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+    transition: transform 260ms cubic-bezier(0.22, 0.75, 0.25, 1);
+}
+
+.phrase-picker-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: var(--phrase-step, 42%);
+    opacity: 0.38;
+    transform: scale(0.76);
+    transform-origin: center;
+    transition: opacity 220ms ease, transform 260ms ease;
+    pointer-events: none;
+}
+
+.phrase-picker-card.is-current {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.phrase-picker-card svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
 /* 小節全体の控えめな背景ハイライト */
 .score-bar-highlight {
     position: absolute;
@@ -533,7 +588,7 @@ body {
     border-radius: 4px;
     pointer-events: none;
     transition: left 0.1s ease, width 0.1s ease;
-    transform: translateX(9px);
+    transform: translateX(7px);
 }
 
 /* ④ 録音結果プレイヤーカード */

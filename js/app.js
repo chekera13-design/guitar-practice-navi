@@ -15,6 +15,7 @@ import {
     updateVisualMetronome, setPlayFinishedVisual, resetVisualMetronome,
     buildScoreBarLayouts, updateHighlightBar,
     startScoreContinuousScroll, stopScoreContinuousScroll,
+    renderPhrasePicker, updatePhrasePicker, resizePhrasePicker, destroyPhrasePicker,
     resetScoreFocusState, updateTunerUI, resetTunerSmoothing
 } from "./ui.js";
 
@@ -32,6 +33,34 @@ let standaloneNextTickTime = 0;
 
 // 譜面描画状態
 let isScoreRendered = false;
+const portraitPhoneQuery = window.matchMedia("(max-width: 600px) and (orientation: portrait)");
+
+function isPortraitPhone() {
+    return portraitPhoneQuery.matches && (window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0);
+}
+
+function syncPortraitPhraseMode(forceRender = false) {
+    if (!practiceModal) return;
+    const active = !practiceModal.classList.contains("hidden") && isPortraitPhone();
+    const wasActive = practiceModal.classList.contains("is-portrait-phrase-mode");
+    practiceModal.classList.toggle("is-portrait-phrase-mode", active);
+    if (!active) {
+        destroyPhrasePicker();
+        return;
+    }
+    if ((forceRender || !wasActive) && isScoreRendered && api?.score?.masterBars?.length) {
+        const bars = api.score.masterBars.length;
+        buildScoreBarLayouts(api, bars);
+        renderPhrasePicker(bars);
+    }
+}
+
+portraitPhoneQuery.addEventListener?.("change", syncPortraitPhraseMode);
+window.addEventListener("orientationchange", syncPortraitPhraseMode);
+window.addEventListener("resize", () => {
+    syncPortraitPhraseMode();
+    resizePhrasePicker();
+});
 
 // 録音ステート
 let mediaRecorder = null;
@@ -297,6 +326,7 @@ function initAlphaTabIfNeeded() {
                 resetScoreFocusState();
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(api, bars);
+                syncPortraitPhraseMode(true);
             });
             return true;
         } catch (e) {
@@ -465,6 +495,7 @@ function closePracticeModal() {
     collapseVolumeBar();
     stopScoreContinuousScroll();
     resetScoreFocusState();
+    destroyPhrasePicker();
 
     if (api) {
         try {
@@ -612,7 +643,12 @@ function handleBeatStep(step, config) {
                 api,
                 totalBars: practiceBars,
                 beatsPerBar,
-                beatSec
+                beatSec,
+                onProgress: barIndex => {
+                    if (practiceModal.classList.contains("is-portrait-phrase-mode")) {
+                        updatePhrasePicker(barIndex);
+                    }
+                }
             });
         }
     } 
