@@ -24,6 +24,11 @@ let isPracticing = false;
 let currentBpm = 60;
 let practiceTimerIds = [];
 
+// 単体メトロノーム状態
+let isStandaloneMetroPlaying = false;
+let standaloneMetroTimerId = null;
+let standaloneBeat = 0;
+
 // 録音ステート
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -47,10 +52,16 @@ const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 
+// 単体メトロノームボタンDOM
+const standaloneMetroBtn = document.getElementById("standaloneMetroBtn");
+
 // メトロノーム音量スライダーDOM
+const metroVolContainer = document.getElementById("metroVolContainer");
+const metroVolToggleBtn = document.getElementById("metroVolToggleBtn");
 const metroVolSlider = document.getElementById("metroVolSlider");
 const metroVolLabel = document.getElementById("metroVolLabel");
 const metroVolIcon = document.getElementById("metroVolIcon");
+let volCollapseTimer = null;
 
 // チューナー関連DOM
 const tunerDetails = document.querySelector(".tuner-details");
@@ -73,13 +84,109 @@ const openAboutBtn = document.getElementById("openAboutBtn");
 const openPrivacyBtn = document.getElementById("openPrivacyBtn");
 const openContactBtn = document.getElementById("openContactBtn");
 
+// メトロノームSVGアイコンのテンプレート
+const METRO_SVG_ICON = `
+    <svg class="metro-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+        <path d="M12 2c-.4 0-.8.25-.95.63L4.6 19H3a1 1 0 100 2h18a1 1 0 100-2h-1.6L12.95 2.63c-.15-.38-.55-.63-.95-.63zm0 3.5l4.8 13.5H7.2L12 5.5zm-.5 3.5v5.2l-1.6-1.6-1.4 1.4 3 3a1 1 0 001.4 0l4-4-1.4-1.4-2.5 2.5V9h-1.5z"/>
+    </svg>
+`;
+
 // ==========================================
-// ★ メトロノーム音量スライダー初期化＆連動 ★
+// ★ 単体メトロノーム制御（部分練習用） ★
 // ==========================================
+async function toggleStandaloneMetronome() {
+    if (isPracticing) return;
+
+    if (isStandaloneMetroPlaying) {
+        stopStandaloneMetronome();
+    } else {
+        await startStandaloneMetronome();
+    }
+}
+
+async function startStandaloneMetronome() {
+    stopTuner();
+    await unlockAudioContext();
+
+    isStandaloneMetroPlaying = true;
+    standaloneBeat = 0;
+
+    if (standaloneMetroBtn) {
+        standaloneMetroBtn.classList.add("active");
+        standaloneMetroBtn.innerHTML = `<span>⏹</span><span class="metro-btn-text">停止</span>`;
+    }
+
+    const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
+    const beatSec = 60 / currentBpm;
+    const beatMs = beatSec * 1000;
+
+    function tick() {
+        if (!isStandaloneMetroPlaying) return;
+
+        const beatInBar = (standaloneBeat % beatsPerBar) + 1;
+        const isAccent = (beatInBar === 1);
+
+        scheduleTick(audioContext.currentTime, isAccent);
+        updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
+
+        standaloneBeat++;
+        standaloneMetroTimerId = setTimeout(tick, beatMs);
+    }
+
+    tick();
+}
+
+function stopStandaloneMetronome() {
+    isStandaloneMetroPlaying = false;
+    if (standaloneMetroTimerId) {
+        clearTimeout(standaloneMetroTimerId);
+        standaloneMetroTimerId = null;
+    }
+
+    stopAllScheduledTicks();
+
+    if (standaloneMetroBtn) {
+        standaloneMetroBtn.classList.remove("active");
+        standaloneMetroBtn.innerHTML = `${METRO_SVG_ICON}<span class="metro-btn-text">クリック</span>`;
+    }
+
+    if (!isPracticing) {
+        resetVisualMetronome();
+    }
+}
+
+if (standaloneMetroBtn) {
+    standaloneMetroBtn.addEventListener("click", toggleStandaloneMetronome);
+}
+
+// ==========================================
+// ★ メトロノーム音量スライダー制御（スマホ展開 ＆ 3秒自動収納） ★
+// ==========================================
+function expandVolumeBar() {
+    if (!metroVolContainer) return;
+    metroVolContainer.classList.add("expanded");
+    resetVolumeCollapseTimer();
+}
+
+function collapseVolumeBar() {
+    if (!metroVolContainer) return;
+    metroVolContainer.classList.remove("expanded");
+    if (volCollapseTimer) {
+        clearTimeout(volCollapseTimer);
+        volCollapseTimer = null;
+    }
+}
+
+function resetVolumeCollapseTimer() {
+    if (volCollapseTimer) clearTimeout(volCollapseTimer);
+    volCollapseTimer = setTimeout(() => {
+        collapseVolumeBar();
+    }, 3000); // 3秒間触らないと自動収納
+}
+
 function initVolumeControl() {
     if (!metroVolSlider) return;
 
-    // 前回の保存値があれば復元（デフォルトは40%）
     const savedVol = localStorage.getItem("chogita_metro_vol");
     const initialVol = (savedVol !== null) ? Number(savedVol) : 40;
 
@@ -91,9 +198,32 @@ function initVolumeControl() {
         const val = Number(e.target.value);
         setMetronomeVolume(val / 100);
         updateVolumeDisplay(val);
+        resetVolumeCollapseTimer();
         try {
             localStorage.setItem("chogita_metro_vol", String(val));
         } catch (err) {}
+    });
+
+    metroVolSlider.addEventListener("touchstart", () => {
+        resetVolumeCollapseTimer();
+    }, { passive: true });
+
+    if (metroVolToggleBtn) {
+        metroVolToggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (metroVolContainer.classList.contains("expanded")) {
+                collapseVolumeBar();
+            } else {
+                expandVolumeBar();
+            }
+        });
+    }
+
+    // バーの外側をタップしたときに収納
+    document.addEventListener("click", (e) => {
+        if (metroVolContainer && !metroVolContainer.contains(e.target)) {
+            collapseVolumeBar();
+        }
     });
 }
 
@@ -251,6 +381,8 @@ function openPracticeModal(stage) {
     const modalContent = document.querySelector(".practice-modal-content");
     if (modalContent) modalContent.scrollTop = 0;
 
+    stopStandaloneMetronome();
+    collapseVolumeBar();
     resetScoreFocusState();
 
     const practiceBars = getStagePracticeBars(stage);
@@ -287,6 +419,8 @@ function openPracticeModal(stage) {
     mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
     mainActionBtn.classList.remove("btn-stop");
 
+    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
+
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
@@ -301,6 +435,8 @@ function closePracticeModal() {
         stopPractice();
     }
     
+    stopStandaloneMetronome();
+    collapseVolumeBar();
     stopScoreContinuousScroll();
     resetScoreFocusState();
 
@@ -334,6 +470,11 @@ window.addEventListener("keydown", (e) => {
 // ★ 練習 & 録音 シーケンス制御 ★
 // ==========================================
 async function startPractice() {
+    if (isStandaloneMetroPlaying) {
+        stopStandaloneMetronome();
+    }
+
+    collapseVolumeBar();
     stopTuner();
     await unlockAudioContext();
     await requestWakeLock();
@@ -359,6 +500,8 @@ async function startPractice() {
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
+
+    if (standaloneMetroBtn) standaloneMetroBtn.disabled = true;
 
     setupMediaRecorder(microphoneStream);
 
@@ -464,6 +607,8 @@ function stopPractice() {
     stopScoreContinuousScroll();
     resetScoreFocusState();
 
+    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
+
     mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
     mainActionBtn.classList.remove("btn-stop");
 }
@@ -480,6 +625,8 @@ function finishPractice() {
     resetVisualMetronome();
     stopScoreContinuousScroll();
     resetScoreFocusState();
+
+    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
 
     mainActionBtn.innerText = "▶ もう一度練習する";
     mainActionBtn.classList.remove("btn-stop");
@@ -535,6 +682,7 @@ function stopRecording() {
 async function selectTunerString(stringNum, midi, noteName) {
     if (isTuning && currentTunerStringNum === stringNum) { stopTuner(); return; }
     if (isPracticing) stopPractice();
+    stopStandaloneMetronome();
     resetTunerSmoothing();
 
     currentTunerStringNum = stringNum;

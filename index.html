@@ -125,9 +125,17 @@
                 <button id="closePracticeModalBtn" class="close-x-btn" title="閉じる">✕</button>
             </div>
 
-            <!-- ② ビジュアルメトロノーム（中央） ＆ 音量コントロールバー（右端固定） -->
+            <!-- ② ビジュアルメトロノーム（左端：単体ボタン / 中央：本体 / 右端：音量バー） -->
             <div id="visualMetronomeBox" class="visual-metronome-compact">
-                <!-- 中央メトロノーム本体 -->
+                <!-- ⏱️ 左端固定: 単体メトロノームボタン（メトロノームSVGアイコン付き） -->
+                <button id="standaloneMetroBtn" class="metro-standalone-btn" title="メトロノーム単体再生/停止">
+                    <svg class="metro-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                        <path d="M12 2c-.4 0-.8.25-.95.63L4.6 19H3a1 1 0 100 2h18a1 1 0 100-2h-1.6L12.95 2.63c-.15-.38-.55-.63-.95-.63zm0 3.5l4.8 13.5H7.2L12 5.5zm-.5 3.5v5.2l-1.6-1.6-1.4 1.4 3 3a1 1 0 001.4 0l4-4-1.4-1.4-2.5 2.5V9h-1.5z"/>
+                    </svg>
+                    <span class="metro-btn-text">クリック</span>
+                </button>
+
+                <!-- 🎯 中央: メトロノーム本体 -->
                 <div class="metro-center-group">
                     <span id="metroPhaseBadge" class="metro-phase-badge">STANDBY</span>
                     <div id="metroBigCount" class="metro-count-chip">-</div>
@@ -139,11 +147,15 @@
                     </div>
                 </div>
 
-                <!-- 右端固定の音量バー -->
-                <div class="metro-vol-container" title="メトロノーム音量">
-                    <span id="metroVolIcon" class="metro-vol-icon">🔉</span>
-                    <input type="range" id="metroVolSlider" class="metro-vol-slider" min="0" max="100" value="40" aria-label="メトロノーム音量">
-                    <span id="metroVolLabel" class="metro-vol-label">40%</span>
+                <!-- 🔊 右端固定: 音量バー（スマホではアイコンタップで展開＆3秒自動収納） -->
+                <div id="metroVolContainer" class="metro-vol-container" title="メトロノーム音量">
+                    <button id="metroVolToggleBtn" class="metro-vol-icon-btn" aria-label="音量調整">
+                        <span id="metroVolIcon" class="metro-vol-icon">🔉</span>
+                    </button>
+                    <div class="metro-vol-slider-wrap">
+                        <input type="range" id="metroVolSlider" class="metro-vol-slider" min="0" max="100" value="40" aria-label="メトロノーム音量">
+                        <span id="metroVolLabel" class="metro-vol-label">40%</span>
+                    </div>
                 </div>
             </div>
 

@@ -280,7 +280,7 @@ body {
     padding: 3px 9px; border-radius: 6px; letter-spacing: 0.5px;
 }
 
-/* ★ ビジュアルメトロノームバー（中央揃え & 右端固定） */
+/* ★ ビジュアルメトロノームバー（左端：単体ボタン / 中央：本体 / 右端：音量バー） */
 .visual-metronome-compact {
     position: relative;
     background: #0f172a;
@@ -296,11 +296,53 @@ body {
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
-.visual-metronome-compact.beat-flash { border-color: #ef4444; box-shadow: 0 0 16px rgba(56, 189, 248, 0.35); }
+.visual-metronome-compact.beat-flash { border-color: #ef4444; box-shadow: 0 0 16px rgba(239, 68, 68, 0.35); }
 .visual-metronome-compact.accent-flash { border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
 .visual-metronome-compact.recording { border-color: #ef4444; }
 
-/* 中央メトロノームグループ */
+/* ⏱️ 左端固定 単体メトロノームボタン */
+.metro-standalone-btn {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e293b;
+    border: 1px solid #475569;
+    color: #38bdf8;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    user-select: none;
+    z-index: 5;
+    white-space: nowrap;
+}
+.metro-icon-svg {
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+.metro-standalone-btn:hover { background: #334155; border-color: #64748b; }
+.metro-standalone-btn.active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+.metro-standalone-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: #1e293b;
+    border-color: #334155;
+    color: #64748b;
+}
+
+/* 🎯 中央メトロノームグループ */
 .metro-center-group {
     display: flex;
     align-items: center;
@@ -315,6 +357,7 @@ body {
 }
 .metro-phase-badge.count-in { background: #0284c7; color: white; }
 .metro-phase-badge.rec { background: #ef4444; color: white; animation: recBlink 1s infinite alternate; }
+.metro-phase-badge.metro-solo { background: #0284c7; color: white; }
 @keyframes recBlink { 0% { opacity: 1; box-shadow: 0 0 8px #ef4444; } 100% { opacity: 0.5; box-shadow: none; } }
 .metro-phase-badge.finished { background: #10b981; color: white; }
 
@@ -358,11 +401,27 @@ body {
     border-radius: 8px;
     z-index: 5;
 }
+.metro-vol-icon-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
 .metro-vol-icon {
     font-size: 13px;
-    cursor: default;
+    cursor: pointer;
     user-select: none;
     line-height: 1;
+}
+.metro-vol-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 .metro-vol-slider {
     -webkit-appearance: none;
@@ -457,7 +516,7 @@ body {
 .score-bar-highlight {
     position: absolute;
     z-index: 1;
-    background: rgba(250, 204, 21, 0.05);
+    background: rgba(250, 204, 21, 0.07);
     transform: translateX(8px);
     border-radius: 4px;
     pointer-events: none;
@@ -579,7 +638,7 @@ body {
 .hidden { display: none !important; }
 button { touch-action: manipulation; }
 
-/* 📱 スマホ対応レスポンシブ最適化（案A: 1行キープ・スリム化） */
+/* 📱 スマホ対応レスポンシブ最適化 */
 @media (max-width: 600px) {
     body { padding: 6px 4px 16px 4px; }
     .card { padding: 14px 10px; }
@@ -602,17 +661,56 @@ button { touch-action: manipulation; }
     .modal-footer-action { margin: 4px -12px -12px -12px; padding: 8px 12px 12px 12px; }
     .wide-start-btn { font-size: 15px; padding: 12px 14px; }
 
-    /* 1行でスリムに中央メトロノーム＋右端固定音量バーを収める設定 */
+    /* メトロノームバー: スマホ向け最適化 */
     .visual-metronome-compact { padding: 4px 6px; min-height: 40px; }
-    .metro-center-group { gap: 6px; }
-    .metro-phase-badge { font-size: 9px; padding: 2px 4px; min-width: 48px; }
+    
+    /* ⏱️ スマホではテキストを隠してメトロノームアイコンのみ表示 */
+    .metro-standalone-btn {
+        left: 6px;
+        padding: 5px;
+        width: 28px;
+        height: 28px;
+        justify-content: center;
+    }
+    .metro-btn-text { display: none; }
+    .metro-icon-svg { width: 15px; height: 15px; }
+
+    /* 🎯 中央メトロノーム本体（スペース確保） */
+    .metro-center-group { gap: 4px; }
+    .metro-phase-badge { font-size: 9px; padding: 2px 4px; min-width: 44px; }
     .metro-count-chip { min-width: 22px; height: 22px; font-size: 12px; }
-    .beat-dots-container { gap: 4px; }
+    .beat-dots-container { gap: 3px; }
     .beat-dot { width: 18px; height: 18px; }
     .beat-dot .dot-num { font-size: 9px; }
     
-    .metro-vol-container { right: 6px; padding: 2px 5px; gap: 3px; }
-    .metro-vol-slider { width: 42px; }
+    /* 🔊 スマホ音量バー: 普段はアイコンのみ、タップで横に展開 ＆ 3秒自動収納 */
+    .metro-vol-container {
+        right: 6px;
+        padding: 4px;
+        gap: 0;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .metro-vol-slider-wrap {
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+        transition: max-width 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+        margin-left: 0;
+    }
+    .metro-vol-container.expanded {
+        padding: 3px 8px;
+        background: #0f172a;
+        border-color: #38bdf8;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+    .metro-vol-container.expanded .metro-vol-slider-wrap {
+        max-width: 95px;
+        opacity: 1;
+        pointer-events: auto;
+        margin-left: 6px;
+    }
+    .metro-vol-slider { width: 48px; }
     .metro-vol-label { font-size: 9px; min-width: 22px; }
 
     .score-wrapper { min-height: 175px; height: 185px; padding: 8px 6px; }
