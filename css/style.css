@@ -504,6 +504,18 @@ body {
     background: #94a3b8;
 }
 
+.recording-live-badge {
+    color: #fecaca;
+    background: #7f1d1d;
+    border: 1px solid #ef4444;
+    border-radius: 999px;
+    padding: 3px 6px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 #alphaTab {
     display: block;
     width: 100%;
@@ -722,4 +734,148 @@ button { touch-action: manipulation; }
     .metro-vol-label { font-size: 9px; min-width: 22px; }
 
     .score-wrapper { min-height: 175px; height: 185px; padding: 8px 6px; }
+}
+
+/* 演奏中は説明を退け、譜面・拍・停止操作を優先する */
+.practice-modal.is-playing .practice-modal-title,
+.practice-modal.is-playing .practice-modal-desc,
+.practice-modal.is-playing .guide-details,
+.practice-modal.is-playing .record-result-card {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    .practice-modal.is-playing {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .practice-modal.is-playing .practice-modal-content {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+        border-radius: 0;
+        overflow: hidden;
+        gap: 4px;
+    }
+
+    .practice-modal.is-playing .practice-modal-header {
+        flex: 0 0 auto;
+        align-items: center;
+        padding-bottom: 4px;
+        margin-bottom: 0;
+    }
+
+    .practice-modal.is-playing .modal-header-left {
+        gap: 5px;
+    }
+
+    .practice-modal.is-playing .app-badge,
+    .practice-modal.is-playing .bpm-badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    .practice-modal.is-playing .visual-metronome-compact {
+        flex: 0 0 auto;
+        min-height: 38px;
+        margin-bottom: 0;
+    }
+
+    .practice-modal.is-playing .score-wrapper {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        margin-bottom: 0;
+        padding: 6px 4px;
+    }
+
+    .practice-modal.is-playing #alphaTab {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .practice-modal.is-playing .modal-footer-action {
+        position: relative;
+        inset: auto;
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: flex-end;
+        margin: 0;
+        padding: 2px 0 0;
+        background: none;
+    }
+
+    .practice-modal.is-playing .wide-start-btn {
+        width: auto;
+        min-width: 104px;
+        padding: 9px 18px;
+        font-size: 14px;
+    }
+}
+
+/* 横向き端末では、画面高を譜面に渡しつつ操作をsafe-area内に保つ */
+@media (max-width: 900px) and (orientation: landscape) {
+    .practice-modal.is-playing {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .practice-modal.is-playing .practice-modal-content {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        border-radius: 0;
+        overflow: hidden;
+        gap: 2px;
+    }
+
+    .practice-modal.is-playing .practice-modal-header {
+        flex: 0 0 auto;
+        padding-bottom: 2px;
+        margin-bottom: 0;
+    }
+
+    .practice-modal.is-playing .visual-metronome-compact {
+        flex: 0 0 auto;
+        min-height: 32px;
+        margin-bottom: 0;
+    }
+
+    .practice-modal.is-playing .score-wrapper {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        margin-bottom: 0;
+        padding: 2px 4px;
+    }
+
+    .practice-modal.is-playing #alphaTab {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .practice-modal.is-playing .modal-footer-action {
+        position: relative;
+        inset: auto;
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: flex-end;
+        margin: 0;
+        padding: 0;
+        background: none;
+    }
+
+    .practice-modal.is-playing .wide-start-btn {
+        width: auto;
+        min-width: 100px;
+        padding: 5px 14px;
+        font-size: 12px;
+    }
 }

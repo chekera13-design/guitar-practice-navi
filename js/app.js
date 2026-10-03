@@ -52,6 +52,7 @@ const stageGuideTitle = document.getElementById("stageGuideTitle");
 const stageGuideBody = document.getElementById("stageGuideBody");
 
 const visualMetronomeBox = document.getElementById("visualMetronomeBox");
+const recordingLiveBadge = document.getElementById("recordingLiveBadge");
 const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
@@ -392,6 +393,7 @@ function renderExerciseCards() {
 // ==========================================
 function openPracticeModal(stage) {
     currentStage = stage;
+    practiceModal.classList.remove("is-playing");
     currentBpm = stage.bpm || 60;
     isScoreRendered = false;
 
@@ -471,6 +473,7 @@ function closePracticeModal() {
     }
 
     practiceModal.classList.add("hidden");
+    practiceModal.classList.remove("is-playing");
     document.body.style.overflow = "";
 }
 
@@ -518,6 +521,7 @@ async function startPractice() {
     }
 
     isPracticing = true;
+    practiceModal.classList.add("is-playing");
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
@@ -622,6 +626,7 @@ function handleBeatStep(step, config) {
 
 function stopPractice() {
     isPracticing = false;
+    practiceModal.classList.remove("is-playing");
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -640,6 +645,7 @@ function stopPractice() {
 
 function finishPractice() {
     isPracticing = false;
+    practiceModal.classList.remove("is-playing");
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -694,11 +700,15 @@ function setupMediaRecorder(stream) {
 }
 
 function startRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "inactive") mediaRecorder.start(); 
+    if (mediaRecorder && mediaRecorder.state === "inactive") {
+        mediaRecorder.start();
+        if (recordingLiveBadge) recordingLiveBadge.classList.remove("hidden");
+    }
 }
 
 function stopRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop(); 
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+    if (recordingLiveBadge) recordingLiveBadge.classList.add("hidden");
 }
 
 // ==========================================
