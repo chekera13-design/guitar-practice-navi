@@ -90,6 +90,7 @@ let lastFocusedBar = -1;
 let continuousScrollFrameId = null;
 let phrasePicker = null;
 let phrasePickerIndex = 0;
+let phrasePickerManualTimerId = null;
 
 export function resetScoreFocusState() {
     lastFocusedBar = -1;
@@ -237,10 +238,13 @@ export function renderPhrasePicker(totalBars, initialBar = 0) {
         card.dataset.barIndex = String(i);
         const clone = sourceSvg.cloneNode(true);
         const bar = cachedBarViewBoxes[i];
-        const marginX = Math.min(18, bar.width * 0.12);
+        const nextBar = cachedBarViewBoxes[i + 1];
+        const segmentWidth = nextBar && nextBar.x > bar.x
+            ? nextBar.x - bar.x
+            : bar.width;
         const viewX = viewBox?.x || 0;
-        const cropLeft = Math.max(viewX, bar.x - marginX);
-        const cropRight = Math.min(viewX + fullWidth, bar.x + bar.width + marginX);
+        const cropLeft = Math.max(viewX, bar.x);
+        const cropRight = Math.min(viewX + fullWidth, bar.x + segmentWidth);
         clone.setAttribute("viewBox", `${cropLeft} ${viewBox?.y || 0} ${cropRight - cropLeft} ${fullHeight}`);
         clone.setAttribute("preserveAspectRatio", "xMidYMid meet");
         clone.removeAttribute("width");
@@ -252,25 +256,25 @@ export function renderPhrasePicker(totalBars, initialBar = 0) {
 
     wrapper.append(viewport);
     phrasePicker = { wrapper, viewport, track, totalBars };
+    phrasePicker.manualInteraction = false;
+    phrasePicker.pendingAutoIndex = null;
     phrasePickerIndex = Math.max(0, Math.min(totalBars - 1, initialBar));
 
     let pointerStart = null;
     viewport.addEventListener("pointerdown", event => {
-        if (event.pointerType === "mouse") return;
+        if (pointerStart) return;
         pointerStart = { id: event.pointerId, y: event.clientY };
+        viewport.setPointerCapture?.(event.pointerId);
     });
     viewport.addEventListener("pointerup", event => {
         if (!pointerStart || pointerStart.id !== event.pointerId) return;
         const deltaY = event.clientY - pointerStart.y;
         pointerStart = null;
         if (Math.abs(deltaY) < 35) return;
-        setPhrasePickerIndex(phrasePickerIndex + (deltaY < 0 ? 1 : -1));
+        setManualPhrasePickerIndex(phrasePickerIndex + (deltaY < 0 ? 1 : -1));
     });
     viewport.addEventListener("pointercancel", () => { pointerStart = null; });
     viewport.addEventListener("lostpointercapture", () => { pointerStart = null; });
-    viewport.addEventListener("pointerdown", event => {
-        if (event.pointerType !== "mouse") viewport.setPointerCapture?.(event.pointerId);
-    });
 
     updatePhrasePicker(phrasePickerIndex);
     return true;
@@ -278,13 +282,33 @@ export function renderPhrasePicker(totalBars, initialBar = 0) {
 
 export function updatePhrasePicker(barIndex) {
     if (!phrasePicker) return;
+    if (phrasePicker.manualInteraction) {
+        phrasePicker.pendingAutoIndex = barIndex;
+        return;
+    }
     setPhrasePickerIndex(barIndex);
+}
+
+function setManualPhrasePickerIndex(barIndex) {
+    if (!phrasePicker) return;
+    phrasePicker.manualInteraction = true;
+    setPhrasePickerIndex(barIndex);
+    if (phrasePickerManualTimerId !== null) clearTimeout(phrasePickerManualTimerId);
+    phrasePickerManualTimerId = setTimeout(() => {
+        phrasePickerManualTimerId = null;
+        if (!phrasePicker) return;
+        phrasePicker.manualInteraction = false;
+        if (phrasePicker.pendingAutoIndex !== null) {
+            setPhrasePickerIndex(phrasePicker.pendingAutoIndex);
+            phrasePicker.pendingAutoIndex = null;
+        }
+    }, 900);
 }
 
 function setPhrasePickerIndex(barIndex) {
     if (!phrasePicker) return;
     phrasePickerIndex = Math.max(0, Math.min(phrasePicker.totalBars - 1, barIndex));
-    const step = phrasePicker.viewport.clientHeight * 0.42;
+    const step = phrasePicker.viewport.clientHeight * 0.34;
     const offset = phrasePicker.viewport.clientHeight / 2 - step / 2 - phrasePickerIndex * step;
     phrasePicker.track.style.setProperty("--phrase-step", `${step}px`);
     phrasePicker.track.style.transform = `translate3d(0, ${offset}px, 0)`;
@@ -294,7 +318,11 @@ function setPhrasePickerIndex(barIndex) {
             card.style.top = top;
             card.dataset.top = top;
         }
-        card.classList.toggle("is-current", index === phrasePickerIndex);
+        const distance = Math.abs(index - phrasePickerIndex);
+        card.classList.toggle("is-current", distance === 0);
+        card.classList.toggle("is-adjacent", distance === 1);
+        card.classList.toggle("is-nearby", distance === 2);
+        card.classList.toggle("is-far", distance > 2);
         card.setAttribute("aria-label", `${index + 1}小節${index === phrasePickerIndex ? "、現在" : ""}`);
     });
 }
@@ -304,6 +332,10 @@ export function resizePhrasePicker() {
 }
 
 export function destroyPhrasePicker() {
+    if (phrasePickerManualTimerId !== null) {
+        clearTimeout(phrasePickerManualTimerId);
+        phrasePickerManualTimerId = null;
+    }
     phrasePicker?.viewport.remove();
     phrasePicker = null;
 }
@@ -395,6 +427,14 @@ export function stopScoreContinuousScroll() {
     if (continuousScrollFrameId !== null) {
         cancelAnimationFrame(continuousScrollFrameId);
         continuousScrollFrameId = null;
+    }
+    if (phrasePickerManualTimerId !== null) {
+        clearTimeout(phrasePickerManualTimerId);
+        phrasePickerManualTimerId = null;
+    }
+    if (phrasePicker) {
+        phrasePicker.manualInteraction = false;
+        phrasePicker.pendingAutoIndex = null;
     }
 }
 

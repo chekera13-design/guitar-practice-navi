@@ -24,6 +24,7 @@ let currentStage = BASIC_STAGES[0];
 let isPracticing = false;
 let currentBpm = 60;
 let practiceTimerIds = [];
+let currentPracticeBarIndex = 0;
 
 // 単体メトロノーム状態
 let isStandaloneMetroPlaying = false;
@@ -34,24 +35,41 @@ let standaloneNextTickTime = 0;
 // 譜面描画状態
 let isScoreRendered = false;
 const portraitPhoneQuery = window.matchMedia("(max-width: 600px) and (orientation: portrait)");
+let portraitPhraseRenderRetryId = null;
 
 function isPortraitPhone() {
-    return portraitPhoneQuery.matches && (window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0);
+    return portraitPhoneQuery.matches;
 }
 
-function syncPortraitPhraseMode(forceRender = false) {
+function syncPortraitPhraseMode(forceRender = false, retry = 0) {
     if (!practiceModal) return;
     const active = !practiceModal.classList.contains("hidden") && isPortraitPhone();
     const wasActive = practiceModal.classList.contains("is-portrait-phrase-mode");
     practiceModal.classList.toggle("is-portrait-phrase-mode", active);
     if (!active) {
+        if (portraitPhraseRenderRetryId !== null) {
+            clearTimeout(portraitPhraseRenderRetryId);
+            portraitPhraseRenderRetryId = null;
+        }
         destroyPhrasePicker();
         return;
     }
     if ((forceRender || !wasActive) && isScoreRendered && api?.score?.masterBars?.length) {
         const bars = api.score.masterBars.length;
         buildScoreBarLayouts(api, bars);
-        renderPhrasePicker(bars);
+        const initialBar = isPracticing ? currentPracticeBarIndex : 0;
+        if (!renderPhrasePicker(bars, initialBar)) {
+            practiceModal.classList.remove("is-portrait-phrase-mode");
+            if (retry < 8 && portraitPhraseRenderRetryId === null) {
+                portraitPhraseRenderRetryId = setTimeout(() => {
+                    portraitPhraseRenderRetryId = null;
+                    syncPortraitPhraseMode(true, retry + 1);
+                }, 120);
+            }
+        } else if (portraitPhraseRenderRetryId !== null) {
+            clearTimeout(portraitPhraseRenderRetryId);
+            portraitPhraseRenderRetryId = null;
+        }
     }
 }
 
@@ -426,6 +444,7 @@ function renderExerciseCards() {
 // ==========================================
 function openPracticeModal(stage) {
     currentStage = stage;
+    currentPracticeBarIndex = 0;
     practiceModal.classList.remove("is-playing");
     currentBpm = stage.bpm || 60;
     isScoreRendered = false;
@@ -555,6 +574,7 @@ async function startPractice() {
     }
 
     isPracticing = true;
+    currentPracticeBarIndex = 0;
     practiceModal.classList.add("is-playing");
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
@@ -645,6 +665,7 @@ function handleBeatStep(step, config) {
                 beatsPerBar,
                 beatSec,
                 onProgress: barIndex => {
+                    currentPracticeBarIndex = barIndex;
                     if (practiceModal.classList.contains("is-portrait-phrase-mode")) {
                         updatePhrasePicker(barIndex);
                     }

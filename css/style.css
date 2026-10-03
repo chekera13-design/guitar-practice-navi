@@ -531,7 +531,11 @@ body {
     touch-action: none;
 }
 
-.practice-modal.is-portrait-phrase-mode #alphaTab,
+.practice-modal.is-portrait-phrase-mode #alphaTab {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .practice-modal.is-portrait-phrase-mode #scoreBarHighlight {
     display: none !important;
 }
@@ -543,6 +547,7 @@ body {
     touch-action: none;
     overscroll-behavior: contain;
     z-index: 3;
+    background: #ffffff;
 }
 
 .phrase-picker-track {
@@ -560,17 +565,46 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: var(--phrase-step, 42%);
-    opacity: 0.38;
-    transform: scale(0.76);
+    height: var(--phrase-step, 28%);
+    opacity: 0.26;
+    transform: scale(0.68);
     transform-origin: center;
-    transition: opacity 220ms ease, transform 260ms ease;
+    transition: opacity 220ms ease, transform 260ms ease, filter 220ms ease;
     pointer-events: none;
+}
+
+.phrase-picker-card.is-adjacent {
+    opacity: 0.5;
+    transform: scale(0.82);
+}
+
+.phrase-picker-card.is-nearby {
+    opacity: 0.34;
+    transform: scale(0.72);
 }
 
 .phrase-picker-card.is-current {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.18);
+    z-index: 2;
+    filter: drop-shadow(0 5px 12px rgba(15, 23, 42, 0.18));
+}
+
+.phrase-picker-card svg {
+    background: #ffffff;
+    border: 1px solid #dbe4ef;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.phrase-picker-card.is-current svg {
+    border: 2px solid #38bdf8;
+    border-radius: 12px;
+}
+
+.phrase-picker-card.is-far {
+    opacity: 0.22;
+    transform: scale(0.64);
 }
 
 .phrase-picker-card svg {
