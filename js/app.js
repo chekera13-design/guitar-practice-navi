@@ -878,24 +878,87 @@ function tunePitchLoop() {
 if (openAboutBtn) {
     openAboutBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "運営者情報";
-        infoModalBody.innerHTML = `<p>ギター練習ドットコム 運営事務局</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                    「ギター練習ドットコム」をご利用いただきありがとうございます。当アプリは、ギタリストの基礎トレーニングをブラウザ上で快適にサポートするために開発・運営されています。
+                </p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px;">
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; width: 30%; font-weight: 700;">運営元</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">ギター練習ドットコム 運営事務局</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">主な活動</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">Webオーディオ技術を活用した音楽学習支援ツールの開発、およびメンテナンス</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">公式URL</th>
+                        <td style="padding: 10px 6px; color: #2563eb; word-break: break-all;">（※アプリを公開しているURLをここに記載）</td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">お問い合わせ</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">フッターの「お問い合わせ」リンクよりお寄せください。</td>
+                    </tr>
+                </table>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (openPrivacyBtn) {
     openPrivacyBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "プライバシーポリシー";
-        infoModalBody.innerHTML = `<p>音声データは端末内でのみ処理され、外部送信されません。</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">1. 音声データの取り扱いについて</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリ内の「練習機能（自動録音）」および「簡易チューナー」で使用されるマイク入力音声は、**すべてお客様のご利用端末（ブラウザ内部）でのみリアルタイム処理**されます。音声データが外部のサーバーに送信・蓄積されることは一切ありません。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">2. ローカルストレージの利用</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリでは、お客様が設定されたメトロノームの音量設定などを保持するため、ブラウザのLocalStorage機能を使用しています。このデータも端末内にのみ保存されます。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">3. 免責事項</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリの利用により生じたトラブルや不利益について、運営事務局は一切の責任を負いかねます。あらかじめご了承の上、毎日の楽しい練習にお役立てください。
+                    </p>
+                </div>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (openContactBtn) {
     openContactBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "お問い合わせ";
-        infoModalBody.innerHTML = `<p>ご意見等はフォームよりお寄せください。</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                    アプリへのご意見、バグ報告、応援メッセージなど、何かございましたら以下の方法でお気軽にご連絡ください！
+                </p>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 12px; color: #334155;">
+                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">📩 連絡先・方法について</strong>
+                    現在は、外部のGoogleフォームや、運営者のSNS（X/GitHub等）のDM・Issueにて個別に対応させていただいております。
+                    <br><br>
+                    <a href="（※ここにGoogleフォームやSNSのリンクを入れる）" target="_blank" rel="noopener noreferrer" 
+                       style="display: inline-block; background: #2563eb; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; margin-top: 4px;">
+                        👉 お問い合わせフォームを開く
+                    </a>
+                </div>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (closeInfoModalBtn) closeInfoModalBtn.addEventListener("click", () => infoModal.classList.add("hidden"));
 if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === infoModal) infoModal.classList.add("hidden"); });
 
