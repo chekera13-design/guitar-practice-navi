@@ -12,10 +12,10 @@ let activeMicStream = null;
 // --- 🔊 現在スケジュールされているオシレーターを管理する配列 ---
 let activeOscillators = []; 
 
-// --- 🔊 メトロノーム・マスターゲインノード ---
+// --- 🔊 メトロノーム・マスターゲインノード（演奏中のリアルタイム音量調整用） ---
 let metroMasterGain = null;
 
-// --- メトロノーム音量ステート (デフォルト 0.4 = 40%) ---
+// --- メトロノーム音量ステート (0.0 〜 1.0、デフォルト 0.4 = 40%) ---
 let metronomeVolume = 0.4;
 
 function ensureMetroMasterGain() {
@@ -27,6 +27,7 @@ function ensureMetroMasterGain() {
     }
 }
 
+// 演奏中いつでも即座にメトロノーム全体の音量を反映
 export function setMetronomeVolume(val) {
     metronomeVolume = Math.max(0, Math.min(1, val));
     if (audioContext && metroMasterGain) {
@@ -70,7 +71,7 @@ export async function unlockAudioContext() {
     source.start(0);
 }
 
-// 修正⑥: マイクストリームの作成と接続
+// マイクストリームの作成と接続
 export async function setupMicrophoneStream(existingStream = null) {
     if (analyser && micSourceNode && activeMicStream) return activeMicStream;
 
@@ -85,6 +86,7 @@ export async function setupMicrophoneStream(existingStream = null) {
     activeMicStream = stream;
     micSourceNode = audioContext.createMediaStreamSource(stream);
 
+    // チューナー用フィルタ
     const lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
     lowpass.frequency.setValueAtTime(2200, audioContext.currentTime);
@@ -104,7 +106,7 @@ export async function setupMicrophoneStream(existingStream = null) {
     return stream;
 }
 
-// 修正⑥: マイクのトラックを停止してバッテリー消費を抑える
+// マイクのトラックを停止してバッテリー消費・マイク常時使用を抑える
 export function stopMicrophoneStream() {
     if (activeMicStream) {
         activeMicStream.getTracks().forEach(track => track.stop());
@@ -128,8 +130,10 @@ export function scheduleTick(time, isAccent = false) {
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
+    // 40% (0.4) の時に従来の音量になるベースゲイン設計
     const baseGain = isAccent ? 0.40 : 0.225;
 
+    // 1拍目は高音アクセント(triangle)、2〜4拍目は通常クリック音(sine)
     osc.type = isAccent ? "triangle" : "sine";
     osc.frequency.setValueAtTime(isAccent ? 1320 : 880, safeTime);
     gain.gain.setValueAtTime(baseGain, safeTime);
@@ -147,9 +151,12 @@ export function scheduleTick(time, isAccent = false) {
     };
 }
 
+// スケジュールされたすべての音を即座に強制停止する関数
 export function stopAllScheduledTicks() {
     activeOscillators.forEach(osc => {
-        try { osc.stop(); } catch (e) {}
+        try {
+            osc.stop();
+        } catch (e) {}
     });
     activeOscillators = [];
 }
@@ -157,7 +164,7 @@ export function stopAllScheduledTicks() {
 // ==========================================
 // ★ チューナー用 ピッチ検出エンジン ★
 // ==========================================
-// 修正②: 96kHz / 192kHz 対応のためバッファサイズを 4096 に拡大
+// 96kHz / 192kHz 対応のためバッファサイズを 4096 に拡大
 const MAX_CORR_BUFFER_SIZE = 4096;
 const corrBuffer = new Float32Array(MAX_CORR_BUFFER_SIZE);
 
