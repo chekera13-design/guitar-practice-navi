@@ -34,6 +34,7 @@ let standaloneNextTickTime = 0;
 // 譜面描画状態
 let isScoreRendered = false;
 let modalOpenTimerId = null; // レースコンディション防止用タイマーID
+let scoreResizeObserver = null; // ★【ここに追記します】★
 
 // 録音ステート
 let mediaRecorder = null;
@@ -456,6 +457,9 @@ function renderExerciseCards() {
 // ==========================================
 // ★ 練習ポップアップモーダルの制御 ★
 // ==========================================
+// ==========================================
+// ★ 練習ポップアップモーダルの制御 ★
+// ==========================================
 function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
@@ -489,7 +493,7 @@ function openPracticeModal(stage) {
                     <div class="knowledge-item" style="margin-top: 10px;">
                         <h4>🎯 意識するポイント</h4>
                         <ul class="faq-list">
-                            ${stage.guide.points.map(pt => `<li>${pt}</li>`).join("")}
+                             ${stage.guide.points.map(pt => `<li>\${pt}</li>`).join("")}
                         </ul>
                     </div>
                 `;
@@ -512,45 +516,66 @@ function openPracticeModal(stage) {
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
-    // 素早いモーダル開閉時のレースコンディション防止
-    if (modalOpenTimerId) clearTimeout(modalOpenTimerId);
-    modalOpenTimerId = setTimeout(() => {
+    if (modalOpenTimerId) {
+        clearTimeout(modalOpenTimerId);
         modalOpenTimerId = null;
-        if (!practiceModal.classList.contains("hidden")) {
-            initAlphaTabIfNeeded();
-            renderTab(stage);
-        }
-    }, 150);
+    }
+    if (scoreResizeObserver) {
+        scoreResizeObserver.disconnect();
+    }
+
+    const targetContainer = document.getElementById("alphaTab");
+    if (targetContainer) {
+        scoreResizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                if (entry.contentRect.width > 0 && !isScoreRendered) {
+                    const initialized = initAlphaTabIfNeeded();
+                    if (initialized) {
+                        renderTab(stage);
+                        scoreResizeObserver.disconnect();
+                        scoreResizeObserver = null;
+                    }
+                }
+            }
+        });
+        scoreResizeObserver.observe(targetContainer);
+    }
 }
 
-// app.js 内の closePracticeModal 関数を以下のように書き換えてください
 
 function closePracticeModal() {
-    // ★【修正】もし現在練習中・録音中であれば、最優先でレコーダーとタイマーを止める
+    // ★【追加】モーダルを閉じる際は、チューナーの状態やUI選択ハイライトも確実に完全初期化する
+    stopTuner();
+
     if (isPracticing) {
         stopPractice();
     } else {
-        // 練習中でなくても、レコーダーが予期せず動いていた場合は確実に止める
         stopRecording();
     }
+    
+    // ★【追加】チューナーも確実に完全停止させ、UIのactiveクラスを消去する
+    stopTuner(); 
 
-    // ★【修正】非同期のonstopガードが効くよう、少しだけ安全な順序でメモリ・URLを解放
     if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
         recordedAudioUrl = null;
     }
     
-    // 描画タイマーの破棄
+    // ★【追加】モーダルが閉じられたらサイズ監視も強制終了
+    if (scoreResizeObserver) {
+        scoreResizeObserver.disconnect();
+        scoreResizeObserver = null;
+    }
+
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
         modalOpenTimerId = null;
     }
 
-    // 前回の録音再生中であれば即座に停止＆巻き戻し
     if (recordedAudioPlayer) {
         recordedAudioPlayer.pause();
         recordedAudioPlayer.currentTime = 0;
-        recordedAudioPlayer.src = ""; // ソースをクリアして接続を断つ
+        recordedAudioPlayer.src = "";
     }
     
     stopStandaloneMetronome();
@@ -558,7 +583,6 @@ function closePracticeModal() {
     stopScoreContinuousScroll();
     resetScoreFocusState();
 
-    // マイクストリームを完全解放（マイク赤ランプ消灯）
     if (microphoneStream) {
         microphoneStream.getTracks().forEach(t => t.stop());
         microphoneStream = null;
@@ -601,22 +625,18 @@ async function startPractice() {
     isStartingPractice = true;
     mainActionBtn.disabled = true;
 
+    // ★【バグ修正】非同期処理 (await) に入る前の最も浅い階層で、
+    // チューナーと単体メトロノームを同期的かつ最優先で完全停止・クリーンアップする
+    stopTuner();
+    stopStandaloneMetronome();
+
     // 前回の録音再生中であれば即座に停止＆巻き戻し（音の被り混入防止）
     if (recordedAudioPlayer) {
         recordedAudioPlayer.pause();
         recordedAudioPlayer.currentTime = 0;
     }
 
-    if (isStandaloneMetroPlaying) {
-        stopStandaloneMetronome();
-    }
-
     collapseVolumeBar();
-    
-    // ★【修正】チューナーを完全に停止し、マイクストリームも一度クリアする
-    if (isTuning) {
-        stopTuner(); 
-    }
     
     await unlockAudioContext();
     await requestWakeLock();
@@ -626,7 +646,7 @@ async function startPractice() {
     resetScoreFocusState();
 
     try {
-        // ★【修正】ストリームが完全に空であることを確認してから getUserMedia を呼ぶ
+        // ★【バグ修正】マイク取得からセットアップまでを一つの try ブロックで一貫して管理
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -634,14 +654,16 @@ async function startPractice() {
         }
         await setupMicrophoneStream(microphoneStream);
     } catch (err) {
-        console.error("マイク取得エラー:", err);
-        alert("マイクへのアクセスが拒否されました。ブラウザの設定でマイクを許可してください。");
+        console.error("マイク取得またはセットアップエラー:", err);
+        alert("マイクへのアクセスに失敗したか、オーディオの初期化が拒否されました。ブラウザの設定でマイクを許可してください。");
+        
+        // 確実にステートを復元する
         isStartingPractice = false;
         mainActionBtn.disabled = false;
         return;
     }
 
-    // --- 以降の録音シーケンス処理は元のコードのままで大丈夫です ---
+    // --- 録音・演奏ステートの確定 ---
     isPracticing = true;
     isStartingPractice = false;
     mainActionBtn.disabled = false;
@@ -657,6 +679,12 @@ async function startPractice() {
     startRecording();
     visualMetronomeBox.classList.add("recording");
 
+    // ★【バグ修正】startRecording()（MediaRecorderの初期起動に伴うクロックジッター）完了の "後" に、
+    // 最新の currentTime を取得して発音基準時刻を計算することで、2拍目以降の無音バグを完全に防止する
+    const beatSec = 60 / currentBpm;
+    const offsetSec = 0.3; // クロック変動を安全に吸収するため少し余裕を持たせる（0.25 -> 0.3）
+    const startTime = audioContext.currentTime + offsetSec; 
+
     const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
     const countInBars = currentStage.countInBars || 1;
     const countInBeats = countInBars * beatsPerBar;
@@ -665,10 +693,6 @@ async function startPractice() {
     const totalBeats = countInBeats + practiceBeats;
     const ringOutBeats = Math.min(4, beatsPerBar);
     const totalSteps = totalBeats + ringOutBeats;
-
-    const beatSec = 60 / currentBpm;
-    const offsetSec = 0.25;
-    const startTime = audioContext.currentTime + offsetSec;
 
     buildScoreBarLayouts(api, practiceBars);
 
@@ -700,6 +724,7 @@ async function startPractice() {
     }, finishDelayMs);
     practiceTimerIds.push(endTimerId);
 }
+
 
 function handleBeatStep(step, config) {
     const { beatsPerBar, countInBars, countInBeats, practiceBars, totalBeats, totalSteps, beatSec } = config;
@@ -937,7 +962,10 @@ if (tunerDetails) {
 }
 
 function tunePitchLoop() {
-    if (!isTuning || !analyser || !audioBuffer || !audioContext) return;
+    // ★【修正】フラグが折れている場合は即座に完全に終了し、再帰予約を遮断する
+    if (!isTuning || !analyser || !audioBuffer || !audioContext) {
+        return;
+    }
     
     analyser.getFloatTimeDomainData(audioBuffer);
     let sum = 0;

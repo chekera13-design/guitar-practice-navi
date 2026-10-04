@@ -71,8 +71,11 @@ export async function unlockAudioContext() {
     source.start(0);
 }
 
-// マイクストリームの作成と接続
+// ==========================================
+// ★ マイクストリームの作成と接続（サンプリングレート自動適応版） ★
+// ==========================================
 export async function setupMicrophoneStream(existingStream = null) {
+    // すでに存在し、かつ現在の環境に適したfftSizeが設定されている場合はスキップ
     if (analyser && micSourceNode && activeMicStream) return activeMicStream;
 
     const stream = existingStream || await navigator.mediaDevices.getUserMedia({
@@ -96,12 +99,22 @@ export async function setupMicrophoneStream(existingStream = null) {
     highpass.frequency.setValueAtTime(65, audioContext.currentTime);
 
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    
+    // ★【修正】サンプリング周波数に応じて fftSize を動的に変更
+    // 44.1k/48k ➔ 2048, 96k ➔ 4096, 192k ➔ 8192 とすることで低音域を確実にカバー
+    if (audioContext.sampleRate >= 192000) {
+        analyser.fftSize = 8192;
+    } else if (audioContext.sampleRate >= 96000) {
+        analyser.fftSize = 4096;
+    } else {
+        analyser.fftSize = 2048;
+    }
 
     micSourceNode.connect(highpass);
     highpass.connect(lowpass);
     lowpass.connect(analyser);
 
+    // ★【重要】拡張された fftSize に合わせてFloat32Arrayのサイズを確保
     audioBuffer = new Float32Array(analyser.fftSize);
     return stream;
 }
@@ -130,7 +143,7 @@ export function scheduleTick(time, isAccent = false) {
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
-    // ★【重要】停止時に0になったマスター音量を、現在の設定値（metronomeVolume）に一瞬で戻す
+    // 停止時に0になったマスター音量を、現在の設定値（metronomeVolume）に一瞬で戻す
     metroMasterGain.gain.setValueAtTime(metronomeVolume, audioContext.currentTime);
 
     // 40% (0.4) の時に従来の音量になるベースゲイン設計
@@ -153,6 +166,7 @@ export function scheduleTick(time, isAccent = false) {
         activeOscillators = activeOscillators.filter(item => item !== osc);
     };
 }
+
 
 // スケジュールされたすべての音を即座に強制停止する関数
 export function stopAllScheduledTicks() {
@@ -180,18 +194,23 @@ export function stopAllScheduledTicks() {
 // ==========================================
 // ★ チューナー用 ピッチ検出エンジン ★
 // ==========================================
-// ★【バグ修正】192kHzなどの超高サンプリング周波数環境でも、低音（6弦: 82Hz周辺）の周期計算を確実にカバーするため、バッファを 8192 に拡張
 const MAX_CORR_BUFFER_SIZE = 8192; 
 const corrBuffer = new Float32Array(MAX_CORR_BUFFER_SIZE);
 
 export function autoCorrelate(buf, sampleRate, rms) {
-    const SIZE = buf.length;
+    const SIZE = buf.length; 
     if (rms < 0.003) return -1;
 
     const minPeriod = Math.floor(sampleRate / 1300);
-    const maxPeriod = Math.min(MAX_CORR_BUFFER_SIZE - 1, Math.ceil(sampleRate / 65));
+    let maxPeriod = Math.min(MAX_CORR_BUFFER_SIZE - 1, Math.ceil(sampleRate / 65));
 
-    if (maxPeriod >= SIZE) return -1;
+    // ★【修正】常に一律リターンするのではなく、配列の最大サイズを超えないよう安全に丸め込む
+    if (maxPeriod >= SIZE) {
+        maxPeriod = SIZE - 1;
+    }
+    
+    // 念のため、最小周期が最大周期を逆転してしまった場合のみ安全にリターンする
+    if (minPeriod >= maxPeriod) return -1;
 
     const L = SIZE - maxPeriod;
 
@@ -234,12 +253,11 @@ export function autoCorrelate(buf, sampleRate, rms) {
     const x3 = corrBuffer[T0 + 1];
     const a = (x1 + x3 - 2 * x2) / 2;
     const b = (x3 - x1) / 2;
-    // ★ 修正: 浮動小数点数の誤差を考慮し、aが極めてゼロに近い場合は安全のために計算をスキップするガード
+
     if (Math.abs(a) > 1e-5) {
         T0 = T0 - b / (2 * a);
     }
 
-    // ★ 修正: T0が不正な値（0や負の数、NaNなど）になってサンプリング周波数の割算が壊れるのを防ぐ
     if (!T0 || T0 <= 0 || !Number.isFinite(T0)) return -1;
 
     return sampleRate / T0;
