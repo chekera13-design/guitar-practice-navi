@@ -102,15 +102,22 @@ const METRO_SVG_ICON = `
 // ==========================================
 // ★ 単体メトロノーム制御（ドリフトフリー高精度タイマー） ★
 // ==========================================
+// app.js 内の toggleStandaloneMetronome 関数を以下のように書き換えてください
+
 async function toggleStandaloneMetronome() {
+    // ★【修正】イベント直後の最も浅い階層で、非同期処理を挟まず同期的に呼び出す（Safari対策）
+    // unlockAudioContextはPromiseを返しますが、関数自体の呼び出しを1行目に置くことが重要です
+    unlockAudioContext().catch(() => {});
+
     if (isPracticing) return;
 
     if (isStandaloneMetroPlaying) {
         stopStandaloneMetronome();
     } else {
-        await startStandaloneMetronome();
+        await startStandaloneMetronome(); // startStandaloneMetronome内部のunlockAudioContextは削除しても問題ありません
     }
 }
+
 
 async function startStandaloneMetronome() {
     stopTuner();
@@ -210,6 +217,7 @@ function resetVolumeCollapseTimer() {
 function initVolumeControl() {
     if (!metroVolSlider) return;
 
+    // 1. ローカルストレージから前回の音量を復元、または初期値（40%）を適用
     const savedVol = localStorage.getItem("chogita_metro_vol");
     const initialVol = (savedVol !== null) ? Number(savedVol) : 40;
 
@@ -217,21 +225,8 @@ function initVolumeControl() {
     setMetronomeVolume(initialVol / 100);
     updateVolumeDisplay(initialVol);
 
-    metroVolSlider.addEventListener("input", (e) => {
-        const val = Number(e.target.value);
-        setMetronomeVolume(val / 100);
-        updateVolumeDisplay(val);
-        resetVolumeCollapseTimer();
-        try {
-            localStorage.setItem("chogita_metro_vol", String(val));
-        } catch (err) {}
-    });
-
-    // ==========================================
-    // ★【ここから変更】スライダー操作中の自動収納タイマー制御
-    // ==========================================
-    
-    // スライダーのつまみを触っている間は、タイマーをストップして勝手に閉じないようにする関数
+    // 2. 自動収納タイマーを管理する関数群（一時停止 と 再開）
+    // スライダーのつまみを触っている間は、タイマーをストップして勝手に閉じないようにする
     const pauseVolumeTimer = () => {
         if (volCollapseTimer) {
             clearTimeout(volCollapseTimer);
@@ -239,23 +234,41 @@ function initVolumeControl() {
         }
     };
 
-    // つまみから指・マウスを離した瞬間に、そこから新しく3秒のカウントダウンを始める関数
+    // つまみから指・マウスを離した瞬間に、そこから新しく3秒のカウントダウンを始める
     const resumeVolumeTimer = () => {
         resetVolumeCollapseTimer();
     };
 
-    // スマホ用（タッチイベント）のリスナー登録
+    // 3. スライダーの値が変更された（ドラッグ中・キーボード操作中）ときの処理
+    metroVolSlider.addEventListener("input", (e) => {
+        const val = Number(e.target.value);
+        setMetronomeVolume(val / 100);
+        updateVolumeDisplay(val);
+        
+        // ★【追加】値が動いている（ドラッグ中）間も、徹底してタイマーを一時停止させて勝手に閉じるのを防ぐ
+        pauseVolumeTimer(); 
+        
+        try {
+            localStorage.setItem("chogita_metro_vol", String(val));
+        } catch (err) {}
+    });
+
+    // 4. スマホ用（タッチイベント）のリスナー登録
     metroVolSlider.addEventListener("touchstart", pauseVolumeTimer, { passive: true });
     metroVolSlider.addEventListener("touchend", resumeVolumeTimer, { passive: true });
 
-    // PC用（マウスイベント）のリスナー登録（ドラッグ中に外に出て離された時の予防策）
+    // 5. PC用（マウスイベント）のリスナー登録
     metroVolSlider.addEventListener("mousedown", pauseVolumeTimer);
-    metroVolSlider.addEventListener("mouseup", resumeVolumeTimer);
+    
+    // ★【バグ修正】metroVolSlider単体のmouseupではなく、document（画面全体）のmouseupを監視する
+    // これにより、つまみを掴んだままマウスをスライダーの外側に大きく外して指を離しても、確実に「離した」ことを検知して3秒後に閉じます
+    document.addEventListener("mouseup", () => {
+        if (metroVolContainer && metroVolContainer.classList.contains("expanded")) {
+            resumeVolumeTimer();
+        }
+    });
 
-    // ==========================================
-    // ★【ここまで変更】
-    // ==========================================
-
+    // 6. 音量展開ボタン（スピーカーアイコン）が押されたときの開閉制御
     if (metroVolToggleBtn) {
         metroVolToggleBtn.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -267,12 +280,14 @@ function initVolumeControl() {
         });
     }
 
+    // 7. スライダー以外の画面の適当な場所をクリックしたときに閉じる
     document.addEventListener("click", (e) => {
         if (metroVolContainer && !metroVolContainer.contains(e.target)) {
             collapseVolumeBar();
         }
     });
 }
+
 
 
 function updateVolumeDisplay(val) {
@@ -508,12 +523,23 @@ function openPracticeModal(stage) {
     }, 150);
 }
 
+// app.js 内の closePracticeModal 関数を以下のように書き換えてください
+
 function closePracticeModal() {
-    // ★ 追加: モーダルを閉じるタイミングで、古い録音データのメモリをブラウザから完全に解放する
+    // ★【修正】もし現在練習中・録音中であれば、最優先でレコーダーとタイマーを止める
+    if (isPracticing) {
+        stopPractice();
+    } else {
+        // 練習中でなくても、レコーダーが予期せず動いていた場合は確実に止める
+        stopRecording();
+    }
+
+    // ★【修正】非同期のonstopガードが効くよう、少しだけ安全な順序でメモリ・URLを解放
     if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
         recordedAudioUrl = null;
     }
+    
     // 描画タイマーの破棄
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -524,10 +550,7 @@ function closePracticeModal() {
     if (recordedAudioPlayer) {
         recordedAudioPlayer.pause();
         recordedAudioPlayer.currentTime = 0;
-    }
-
-    if (isPracticing) {
-        stopPractice();
+        recordedAudioPlayer.src = ""; // ソースをクリアして接続を断つ
     }
     
     stopStandaloneMetronome();
@@ -554,6 +577,7 @@ function closePracticeModal() {
     practiceModal.classList.add("hidden");
     document.body.style.overflow = "";
 }
+
 
 if (closePracticeModalBtn) closePracticeModalBtn.addEventListener("click", closePracticeModal);
 if (practiceModal) {
@@ -588,7 +612,12 @@ async function startPractice() {
     }
 
     collapseVolumeBar();
-    stopTuner();
+    
+    // ★【修正】チューナーを完全に停止し、マイクストリームも一度クリアする
+    if (isTuning) {
+        stopTuner(); 
+    }
+    
     await unlockAudioContext();
     await requestWakeLock();
 
@@ -597,6 +626,7 @@ async function startPractice() {
     resetScoreFocusState();
 
     try {
+        // ★【修正】ストリームが完全に空であることを確認してから getUserMedia を呼ぶ
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -611,6 +641,7 @@ async function startPractice() {
         return;
     }
 
+    // --- 以降の録音シーケンス処理は元のコードのままで大丈夫です ---
     isPracticing = true;
     isStartingPractice = false;
     mainActionBtn.disabled = false;
@@ -766,9 +797,14 @@ function finishPractice() {
 }
 
 mainActionBtn.addEventListener("click", () => {
+    // ★【修正】クリックされた瞬間に最優先で解凍
+    unlockAudioContext().catch(() => {});
+
     if (isPracticing) stopPractice();
     else startPractice();
 });
+
+// app.js 内の setupMediaRecorder 関数を以下のように書き換えてください
 
 function setupMediaRecorder(stream) {
     if (!window.MediaRecorder || !stream) return;
@@ -783,7 +819,14 @@ function setupMediaRecorder(stream) {
         mediaRecorder.ondataavailable = (e) => { 
             if (e.data && e.data.size > 0) recordedChunks.push(e.data); 
         };
+        
         mediaRecorder.onstop = () => {
+            // ★【修正】データ切り出し時にすでにモーダルが閉じられていたら、後続のUI操作を安全にスキップする
+            if (!practiceModal || practiceModal.classList.contains("hidden")) {
+                recordedChunks = []; // メモリ解放
+                return;
+            }
+
             if (recordedChunks.length > 0) {
                 const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
                 if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
@@ -796,6 +839,7 @@ function setupMediaRecorder(stream) {
     }
 }
 
+
 function startRecording() { 
     if (mediaRecorder && mediaRecorder.state === "inactive") mediaRecorder.start(); 
 }
@@ -807,15 +851,20 @@ function stopRecording() {
 // ==========================================
 // ★ 簡易チューナー（多重ループ完全防止） ★
 // ==========================================
+// app.js 内の selectTunerString 関数を以下のようにアップデートしてください
+
 async function selectTunerString(stringNum, midi, noteName) {
     if (isTuning && currentTunerStringNum === stringNum) { 
         stopTuner(); 
         return; 
     }
     
+    // ★【修正】練習中であれば最優先で練習を完全停止する
+    if (isPracticing) {
+        stopPractice();
+    }
+    
     stopTuner();
-
-    if (isPracticing) stopPractice();
     stopStandaloneMetronome();
     resetTunerSmoothing();
     tunerSilenceFrames = 0;
@@ -832,6 +881,7 @@ async function selectTunerString(stringNum, midi, noteName) {
     
     await unlockAudioContext();
     try {
+        // ★【修正】ストリームを安全に初期化
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -845,6 +895,7 @@ async function selectTunerString(stringNum, midi, noteName) {
         stopTuner(); 
     }
 }
+
 
 function stopTuner() {
     isTuning = false;
@@ -869,6 +920,9 @@ function stopTuner() {
 
 tunerStringBtns.forEach(btn => {
     btn.addEventListener("click", () => {
+        // ★【修正】クリックした瞬間に最優先で解凍を走らせる
+        unlockAudioContext().catch(() => {});
+
         const sNum = Number(btn.dataset.string);
         const midi = Number(btn.dataset.midi);
         const note = btn.dataset.note;

@@ -180,8 +180,8 @@ export function stopAllScheduledTicks() {
 // ==========================================
 // ★ チューナー用 ピッチ検出エンジン ★
 // ==========================================
-// 96kHz / 192kHz 対応のためバッファサイズを 4096 に拡大
-const MAX_CORR_BUFFER_SIZE = 4096;
+// ★【バグ修正】192kHzなどの超高サンプリング周波数環境でも、低音（6弦: 82Hz周辺）の周期計算を確実にカバーするため、バッファを 8192 に拡張
+const MAX_CORR_BUFFER_SIZE = 8192; 
 const corrBuffer = new Float32Array(MAX_CORR_BUFFER_SIZE);
 
 export function autoCorrelate(buf, sampleRate, rms) {
