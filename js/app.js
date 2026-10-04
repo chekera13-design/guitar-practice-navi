@@ -1,10 +1,11 @@
 // ==========================================
-// 超ギタートレーニング（超ギタトレ） - メインアプリケーション (js/app.js)
+// ギター練習ドットコム - メインアプリケーション (js/app.js)
 // ==========================================
 
-import { BASIC_STAGES, EX1_STAGE, noteStrings, defaultTuning } from "./config.js";
+// 修正⑨: 未使用インポートの削除
+import { BASIC_STAGES } from "./config.js";
 import { 
-    unlockAudioContext, setupMicrophoneStream, scheduleTick,
+    unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
     requestWakeLock, releaseWakeLock,
     audioContext, analyser, audioBuffer,
@@ -21,6 +22,7 @@ import {
 // --- 状態管理 ---
 let currentStage = BASIC_STAGES[0]; 
 let isPracticing = false;
+let isStartingPractice = false; // 修正③: 連打防止フラグ
 let currentBpm = 60;
 let practiceTimerIds = [];
 
@@ -32,6 +34,7 @@ let standaloneNextTickTime = 0;
 
 // 譜面描画状態
 let isScoreRendered = false;
+let modalOpenTimerId = null; // 修正④: レースコンディション防止用タイマーID
 
 // 録音ステート
 let mediaRecorder = null;
@@ -78,7 +81,8 @@ const tunerStringBtns = document.querySelectorAll(".tuner-string-btn");
 let isTuning = false;
 let currentTunerStringNum = null;
 let tunerTargetFreq = 82.41;
-let tunerAnimFrameId = null; // 修正: 多重ループ防止用のアニメーションフレームID
+let tunerAnimFrameId = null;
+let tunerSilenceFrames = 0; // 修正⑦: 無音検知用カウンタ
 
 // インフォモーダルDOM
 const infoModal = document.getElementById("infoModal");
@@ -89,7 +93,6 @@ const openAboutBtn = document.getElementById("openAboutBtn");
 const openPrivacyBtn = document.getElementById("openPrivacyBtn");
 const openContactBtn = document.getElementById("openContactBtn");
 
-// メトロノームSVGアイコンのテンプレート
 const METRO_SVG_ICON = `
     <svg class="metro-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
         <path d="M12 2c-.4 0-.8.25-.95.63L4.6 19H3a1 1 0 100 2h18a1 1 0 100-2h-1.6L12.95 2.63c-.15-.38-.55-.63-.95-.63zm0 3.5l4.8 13.5H7.2L12 5.5zm-.5 3.5v5.2l-1.6-1.6-1.4 1.4 3 3a1 1 0 001.4 0l4-4-1.4-1.4-2.5 2.5V9h-1.5z"/>
@@ -97,7 +100,7 @@ const METRO_SVG_ICON = `
 `;
 
 // ==========================================
-// ★ 単体メトロノーム制御（ドリフトフリー高精度タイマー） ★
+// ★ 単体メトロノーム制御 ★
 // ==========================================
 async function toggleStandaloneMetronome() {
     if (isPracticing) return;
@@ -123,21 +126,17 @@ async function startStandaloneMetronome() {
 
     const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
     const beatSec = 60 / currentBpm;
-    
-    // Web Audio の正確なタイムラインを基準にする（累積遅延ゼロ）
     standaloneNextTickTime = audioContext.currentTime + 0.05;
 
     function scheduler() {
         if (!isStandaloneMetroPlaying) return;
 
-        // 0.1秒先までスケジュール
         while (standaloneNextTickTime < audioContext.currentTime + 0.1) {
             const beatInBar = (standaloneBeat % beatsPerBar) + 1;
             const isAccent = (beatInBar === 1);
 
             scheduleTick(standaloneNextTickTime, isAccent);
 
-            // 音声発音時刻に合わせた視覚更新のタイマー
             const delayMs = Math.max(0, (standaloneNextTickTime - audioContext.currentTime) * 1000);
             setTimeout(() => {
                 if (isStandaloneMetroPlaying) {
@@ -179,7 +178,7 @@ if (standaloneMetroBtn) {
 }
 
 // ==========================================
-// ★ メトロノーム音量スライダー制御（スマホ展開 ＆ 3秒自動収納） ★
+// ★ メトロノーム音量スライダー制御 ★
 // ==========================================
 function expandVolumeBar() {
     if (!metroVolContainer) return;
@@ -265,7 +264,7 @@ function initAlphaTabIfNeeded() {
             api = new alphaTab.AlphaTabApi(container, {
                 core: { engine: "svg" },
                 display: { 
-                    layoutMode: "horizontal", // 横1行固定
+                    layoutMode: "horizontal", 
                     staveProfile: "Tab", 
                     scale: 1.0
                 },
@@ -294,6 +293,23 @@ function initAlphaTabIfNeeded() {
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(api, bars);
             });
+
+            // 修正⑩: ロード失敗時の例外ハンドリング
+            api.error.on((error) => {
+                console.error("alphaTab エラー:", error);
+                const scoreWrapper = document.querySelector(".score-wrapper");
+                if (scoreWrapper) {
+                    const prevErr = scoreWrapper.querySelector(".score-error-msg");
+                    if (!prevErr) {
+                        const errMsg = document.createElement("div");
+                        errMsg.className = "score-error-msg";
+                        errMsg.style.cssText = "color: #ef4444; font-size: 13px; text-align: center; padding: 20px;";
+                        errMsg.innerText = "⚠️ 楽譜の読み込みに失敗しました。時間をおいて再試行してください。";
+                        scoreWrapper.appendChild(errMsg);
+                    }
+                }
+            });
+
             return true;
         } catch (e) {
             console.warn("alphaTab初期化エラー:", e);
@@ -313,14 +329,16 @@ function getStagePracticeBars(stage) {
     return 1;
 }
 
-// ==========================================
-// ★ 楽譜レンダリング ★
-// ==========================================
 function renderTab(stage = currentStage) {
     if (!stage) return;
     isScoreRendered = false;
     initAlphaTabIfNeeded();
     if (!api) return;
+
+    // 既存のエラーメッセージがあればクリア
+    const scoreWrapper = document.querySelector(".score-wrapper");
+    const prevErr = scoreWrapper?.querySelector(".score-error-msg");
+    if (prevErr) prevErr.remove();
 
     if (stage.file) {
         try {
@@ -439,19 +457,31 @@ function openPracticeModal(stage) {
     resetVisualMetronome();
     mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
     mainActionBtn.classList.remove("btn-stop");
+    mainActionBtn.disabled = false;
 
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
 
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
-    setTimeout(() => {
-        initAlphaTabIfNeeded();
-        renderTab(stage);
+    // 修正④: レースコンディション対策
+    if (modalOpenTimerId) clearTimeout(modalOpenTimerId);
+    modalOpenTimerId = setTimeout(() => {
+        modalOpenTimerId = null;
+        if (!practiceModal.classList.contains("hidden")) {
+            initAlphaTabIfNeeded();
+            renderTab(stage);
+        }
     }, 150);
 }
 
 function closePracticeModal() {
+    // 修正④: 開くタイマーを破棄
+    if (modalOpenTimerId) {
+        clearTimeout(modalOpenTimerId);
+        modalOpenTimerId = null;
+    }
+
     if (isPracticing) {
         stopPractice();
     }
@@ -460,6 +490,13 @@ function closePracticeModal() {
     collapseVolumeBar();
     stopScoreContinuousScroll();
     resetScoreFocusState();
+
+    // 修正⑥: マイクストリームを完全停止
+    if (microphoneStream) {
+        microphoneStream.getTracks().forEach(t => t.stop());
+        microphoneStream = null;
+    }
+    stopMicrophoneStream();
 
     if (api) {
         try {
@@ -488,9 +525,14 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ==========================================
-// ★ 練習 & 録音 シーケンス制御（完全同期タイマー） ★
+// ★ 練習 & 録音 シーケンス制御 ★
 // ==========================================
 async function startPractice() {
+    // 修正③: 連打防止
+    if (isPracticing || isStartingPractice) return;
+    isStartingPractice = true;
+    mainActionBtn.disabled = true;
+
     if (isStandaloneMetroPlaying) {
         stopStandaloneMetronome();
     }
@@ -505,7 +547,7 @@ async function startPractice() {
     resetScoreFocusState();
 
     try {
-        if (!microphoneStream) {
+        if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
             });
@@ -514,10 +556,14 @@ async function startPractice() {
     } catch (err) {
         console.error("マイク取得エラー:", err);
         alert("マイクへのアクセスが拒否されました。ブラウザの設定でマイクを許可してください。");
+        isStartingPractice = false;
+        mainActionBtn.disabled = false;
         return;
     }
 
     isPracticing = true;
+    isStartingPractice = false;
+    mainActionBtn.disabled = false;
     mainActionBtn.innerText = "⏹️ 練習中止";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
@@ -525,6 +571,9 @@ async function startPractice() {
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = true;
 
     setupMediaRecorder(microphoneStream);
+    // 修正①＆⑧: iOS制限対策＆カウント4拍を残すため、開始と同時に録音スタート
+    startRecording();
+    visualMetronomeBox.classList.add("recording");
 
     const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
     const countInBars = currentStage.countInBars || 1;
@@ -536,18 +585,17 @@ async function startPractice() {
     const totalSteps = totalBeats + ringOutBeats;
 
     const beatSec = 60 / currentBpm;
-    const offsetSec = 0.25; // 250msの安定オフセット
+    const offsetSec = 0.25;
     const startTime = audioContext.currentTime + offsetSec;
 
     buildScoreBarLayouts(api, practiceBars);
 
-    // 1. メトロノーム発音スケジュール（Web Audio API クロックで厳密に確定）
     for (let b = 0; b < totalBeats; b++) {
         const isAccent = (b % beatsPerBar === 0);
         scheduleTick(startTime + (b * beatSec), isAccent);
     }
 
-    // 2. 音声時刻と厳密に同期したビジュアルステップタイマー（ドリフト補正付き）
+    practiceTimerIds = [];
     for (let step = 0; step < totalSteps; step++) {
         const stepTime = startTime + (step * beatSec);
         const delayMs = Math.max(0, (stepTime - audioContext.currentTime) * 1000);
@@ -559,7 +607,6 @@ async function startPractice() {
         practiceTimerIds.push(timerId);
     }
 
-    // 3. 終了タイマー
     const finishTime = startTime + (totalSteps * beatSec) + 0.1;
     const finishDelayMs = Math.max(0, (finishTime - audioContext.currentTime) * 1000);
     const endTimerId = setTimeout(() => {
@@ -577,12 +624,6 @@ function handleBeatStep(step, config) {
     if (step < countInBeats) {
         // --- カウントインフェーズ ---
         const currentCountInBar = Math.floor(step / beatsPerBar) + 1;
-        const recStartStep = Math.max(0, countInBeats - 2);
-        if (step === recStartStep) {
-            startRecording();
-            visualMetronomeBox.classList.add("recording");
-        }
-        
         const countInText = countInBars > 1 
             ? `COUNT IN (${currentCountInBar}/${countInBars})` 
             : "COUNT IN";
@@ -599,7 +640,6 @@ function handleBeatStep(step, config) {
 
         updateVisualMetronome(beatInBar, isAccent, recText, "rec");
 
-        // 演奏開始の最初の1拍目で、滑らかなスイーっと自動スクロールループを開始
         if (noteIndex === 0) {
             startScoreContinuousScroll({
                 api,
@@ -622,6 +662,7 @@ function handleBeatStep(step, config) {
 
 function stopPractice() {
     isPracticing = false;
+    isStartingPractice = false;
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -636,10 +677,12 @@ function stopPractice() {
 
     mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
     mainActionBtn.classList.remove("btn-stop");
+    mainActionBtn.disabled = false;
 }
 
 function finishPractice() {
     isPracticing = false;
+    isStartingPractice = false;
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -655,6 +698,7 @@ function finishPractice() {
 
     mainActionBtn.innerText = "▶ もう一度練習する";
     mainActionBtn.classList.remove("btn-stop");
+    mainActionBtn.disabled = false;
 
     if (recordResultCard) {
         recordResultCard.classList.remove("hidden");
@@ -702,7 +746,7 @@ function stopRecording() {
 }
 
 // ==========================================
-// ★ 簡易チューナー（多重ループ完全防止） ★
+// ★ 簡易チューナー ★
 // ==========================================
 async function selectTunerString(stringNum, midi, noteName) {
     if (isTuning && currentTunerStringNum === stringNum) { 
@@ -710,12 +754,12 @@ async function selectTunerString(stringNum, midi, noteName) {
         return; 
     }
     
-    // 一旦既存のチューナー処理を完全停止
     stopTuner();
 
     if (isPracticing) stopPractice();
     stopStandaloneMetronome();
     resetTunerSmoothing();
+    tunerSilenceFrames = 0;
 
     currentTunerStringNum = stringNum;
     tunerTargetFreq = midiToFrequency(midi);
@@ -729,7 +773,7 @@ async function selectTunerString(stringNum, midi, noteName) {
     
     await unlockAudioContext();
     try {
-        if (!microphoneStream) {
+        if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
             });
@@ -746,12 +790,22 @@ async function selectTunerString(stringNum, midi, noteName) {
 function stopTuner() {
     isTuning = false;
     currentTunerStringNum = null;
+    tunerSilenceFrames = 0;
     if (tunerAnimFrameId !== null) {
         cancelAnimationFrame(tunerAnimFrameId);
         tunerAnimFrameId = null;
     }
     if (tunerHud) tunerHud.classList.add("hidden");
     tunerStringBtns.forEach(btn => btn.classList.remove("active"));
+
+    // 修正⑥: チューナー停止時にマイクも解放
+    if (!isPracticing) {
+        if (microphoneStream) {
+            microphoneStream.getTracks().forEach(t => t.stop());
+            microphoneStream = null;
+        }
+        stopMicrophoneStream();
+    }
 }
 
 tunerStringBtns.forEach(btn => {
@@ -763,7 +817,11 @@ tunerStringBtns.forEach(btn => {
     });
 });
 
-if (tunerDetails) tunerDetails.addEventListener("toggle", () => { if (!tunerDetails.open) stopTuner(); });
+if (tunerDetails) {
+    tunerDetails.addEventListener("toggle", () => { 
+        if (!tunerDetails.open) stopTuner(); 
+    });
+}
 
 function tunePitchLoop() {
     if (!isTuning || !analyser || !audioBuffer || !audioContext) return;
@@ -772,10 +830,24 @@ function tunePitchLoop() {
     let sum = 0;
     for (let i = 0; i < audioBuffer.length; i++) sum += audioBuffer[i] * audioBuffer[i];
     const rms = Math.sqrt(sum / audioBuffer.length);
+    
     if (rms > 0.003) {
+        tunerSilenceFrames = 0;
         const freq = autoCorrelate(audioBuffer, audioContext.sampleRate, rms);
         if (freq > 50 && freq < 1000) {
             updateTunerUI({ freq, tunerTargetFreq, tunerHzDisplay, tunerMeterPointer, tunerStatusText, onInTunePing: playTunerPing });
+        }
+    } else {
+        // 修正⑦: 無音状態が続いた（約0.3秒）場合は表示を初期状態に戻す
+        tunerSilenceFrames++;
+        if (tunerSilenceFrames > 20) {
+            if (tunerStatusText) {
+                tunerStatusText.innerText = "音をポロンと鳴らしてください";
+                tunerStatusText.style.color = "#fbbf24";
+            }
+            if (tunerMeterPointer) {
+                tunerMeterPointer.style.boxShadow = "none";
+            }
         }
     }
     tunerAnimFrameId = requestAnimationFrame(tunePitchLoop);
@@ -787,24 +859,87 @@ function tunePitchLoop() {
 if (openAboutBtn) {
     openAboutBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "運営者情報";
-        infoModalBody.innerHTML = `<p>超ギタートレーニング 運営事務局</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                    「ギター練習ドットコム」をご利用いただきありがとうございます。当アプリは、ギタリストの基礎トレーニングをブラウザ上で快適にサポートするために開発・運営されています。
+                </p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px;">
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; width: 30%; font-weight: 700;">運営元</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">ギター練習ドットコム 運営事務局</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">主な活動</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">Webオーディオ技術を活用した音楽学習支援ツールの開発、およびメンテナンス</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">公式URL</th>
+                        <td style="padding: 10px 6px; color: #2563eb; word-break: break-all;">（※アプリを公開しているURLをここに記載）</td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">お問い合わせ</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">フッターの「お問い合わせ」リンクよりお寄せください。</td>
+                    </tr>
+                </table>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (openPrivacyBtn) {
     openPrivacyBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "プライバシーポリシー";
-        infoModalBody.innerHTML = `<p>音声データは端末内でのみ処理され、外部送信されません。</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">1. 音声データの取り扱いについて</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリ内の「練習機能（自動録音）」および「簡易チューナー」で使用されるマイク入力音声は、**すべてお客様のご利用端末（ブラウザ内部）でのみリアルタイム処理**されます。音声データが外部のサーバーに送信・蓄積されることは一切ありません。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">2. ローカルストレージの利用</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリでは、お客様が設定されたメトロノームの音量設定などを保持するため、ブラウザのLocalStorage機能を使用しています。このデータも端末内にのみ保存されます。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">3. 免責事項</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリの利用により生じたトラブルや不利益について、運営事務局は一切の責任を負いかねます。あらかじめご了承の上、毎日の楽しい練習にお役立てください。
+                    </p>
+                </div>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (openContactBtn) {
     openContactBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "お問い合わせ";
-        infoModalBody.innerHTML = `<p>ご意見等はフォームよりお寄せください。</p>`;
+        infoModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                    アプリへのご意見、バグ報告、応援メッセージなど、何かございましたら以下の方法でお気軽にご連絡ください！
+                </p>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 12px; color: #334155;">
+                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">📩 連絡先・方法について</strong>
+                    現在は、外部のGoogleフォームや、運営者のSNS（X/GitHub等）のDM・Issueにて個別に対応させていただいております。
+                    <br><br>
+                    <a href="（※ここにGoogleフォームやSNSのリンクを入れる）" target="_blank" rel="noopener noreferrer" 
+                       style="display: inline-block; background: #2563eb; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; margin-top: 4px;">
+                        👉 お問い合わせフォームを開く
+                    </a>
+                </div>
+            </div>
+        `;
         infoModal.classList.remove("hidden");
     });
 }
+
 if (closeInfoModalBtn) closeInfoModalBtn.addEventListener("click", () => infoModal.classList.add("hidden"));
 if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === infoModal) infoModal.classList.add("hidden"); });
 
