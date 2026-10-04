@@ -116,6 +116,10 @@ async function startStandaloneMetronome() {
     stopTuner();
     await unlockAudioContext();
 
+    // ★【追加】消音状態を解除し、現在の設定音量（localStorage等から復元された値）を適用する
+    const currentVol = Number(metroVolSlider?.value || 40) / 100;
+    setMetronomeVolume(currentVol);
+
     isStandaloneMetroPlaying = true;
     standaloneBeat = 0;
 
@@ -223,9 +227,34 @@ function initVolumeControl() {
         } catch (err) {}
     });
 
-    metroVolSlider.addEventListener("touchstart", () => {
+    // ==========================================
+    // ★【ここから変更】スライダー操作中の自動収納タイマー制御
+    // ==========================================
+    
+    // スライダーのつまみを触っている間は、タイマーをストップして勝手に閉じないようにする関数
+    const pauseVolumeTimer = () => {
+        if (volCollapseTimer) {
+            clearTimeout(volCollapseTimer);
+            volCollapseTimer = null;
+        }
+    };
+
+    // つまみから指・マウスを離した瞬間に、そこから新しく3秒のカウントダウンを始める関数
+    const resumeVolumeTimer = () => {
         resetVolumeCollapseTimer();
-    }, { passive: true });
+    };
+
+    // スマホ用（タッチイベント）のリスナー登録
+    metroVolSlider.addEventListener("touchstart", pauseVolumeTimer, { passive: true });
+    metroVolSlider.addEventListener("touchend", resumeVolumeTimer, { passive: true });
+
+    // PC用（マウスイベント）のリスナー登録（ドラッグ中に外に出て離された時の予防策）
+    metroVolSlider.addEventListener("mousedown", pauseVolumeTimer);
+    metroVolSlider.addEventListener("mouseup", resumeVolumeTimer);
+
+    // ==========================================
+    // ★【ここまで変更】
+    // ==========================================
 
     if (metroVolToggleBtn) {
         metroVolToggleBtn.addEventListener("click", (e) => {
@@ -244,6 +273,7 @@ function initVolumeControl() {
         }
     });
 }
+
 
 function updateVolumeDisplay(val) {
     if (metroVolLabel) metroVolLabel.innerText = `${val}%`;
@@ -479,6 +509,11 @@ function openPracticeModal(stage) {
 }
 
 function closePracticeModal() {
+    // ★ 追加: モーダルを閉じるタイミングで、古い録音データのメモリをブラウザから完全に解放する
+    if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+        recordedAudioUrl = null;
+    }
     // 描画タイマーの破棄
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -682,10 +717,14 @@ function handleBeatStep(step, config) {
 function stopPractice() {
     isPracticing = false;
     isStartingPractice = false;
+
+    // 1. JavaScript側のすべてのタイマーを最優先でクリア
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
+    // 2. Web Audio API側の発音予約をすべて強制停止（先ほど強化した関数）
     stopAllScheduledTicks(); 
+    
     stopRecording();
     releaseWakeLock();
     resetVisualMetronome();
@@ -698,6 +737,7 @@ function stopPractice() {
     mainActionBtn.classList.remove("btn-stop");
     mainActionBtn.disabled = false;
 }
+
 
 function finishPractice() {
     isPracticing = false;

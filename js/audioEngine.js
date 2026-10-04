@@ -130,6 +130,9 @@ export function scheduleTick(time, isAccent = false) {
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
+    // ★【重要】停止時に0になったマスター音量を、現在の設定値（metronomeVolume）に一瞬で戻す
+    metroMasterGain.gain.setValueAtTime(metronomeVolume, audioContext.currentTime);
+
     // 40% (0.4) の時に従来の音量になるベースゲイン設計
     const baseGain = isAccent ? 0.40 : 0.225;
 
@@ -153,13 +156,26 @@ export function scheduleTick(time, isAccent = false) {
 
 // スケジュールされたすべての音を即座に強制停止する関数
 export function stopAllScheduledTicks() {
+    // 1. 発音中のオシレーターをすべて停止
     activeOscillators.forEach(osc => {
         try {
             osc.stop();
+            osc.disconnect(); 
         } catch (e) {}
     });
     activeOscillators = [];
+
+    // 2. 音量ノードに予約されている未来の音量変化スケジュールをすべてキャンセル
+    if (metroMasterGain && audioContext) {
+        try {
+            metroMasterGain.gain.cancelScheduledValues(audioContext.currentTime);
+            // 未来の予約音を確実に消音するため、現在の時間で音量を一度0にする
+            metroMasterGain.gain.setValueAtTime(0, audioContext.currentTime);
+        } catch (e) {}
+    }
 }
+
+
 
 // ==========================================
 // ★ チューナー用 ピッチ検出エンジン ★
@@ -218,9 +234,13 @@ export function autoCorrelate(buf, sampleRate, rms) {
     const x3 = corrBuffer[T0 + 1];
     const a = (x1 + x3 - 2 * x2) / 2;
     const b = (x3 - x1) / 2;
-    if (a !== 0) {
+    // ★ 修正: 浮動小数点数の誤差を考慮し、aが極めてゼロに近い場合は安全のために計算をスキップするガード
+    if (Math.abs(a) > 1e-5) {
         T0 = T0 - b / (2 * a);
     }
+
+    // ★ 修正: T0が不正な値（0や負の数、NaNなど）になってサンプリング周波数の割算が壊れるのを防ぐ
+    if (!T0 || T0 <= 0 || !Number.isFinite(T0)) return -1;
 
     return sampleRate / T0;
 }
