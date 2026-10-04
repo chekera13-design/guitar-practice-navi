@@ -527,7 +527,7 @@ body {
     border-radius: 4px;
     pointer-events: none;
     transition: left 0.1s ease, width 0.1s ease;
-    transform: translateX(9px);
+    transform: translateX(7px);
 }
 
 /* ④ 録音結果プレイヤーカード */

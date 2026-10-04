@@ -131,7 +131,10 @@ export function stopMicrophoneStream() {
     }
     analyser = null;
     audioBuffer = null;
+    micSourceNode = null;   // 古いマイクノードの参照を完全にクリア
+    activeMicStream = null; // 古いストリームの参照を完全にクリア
 }
+
 
 // --- メトロノーム音生成 ---
 export function scheduleTick(time, isAccent = false) {
