@@ -19,7 +19,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex01.mxl",
         available: true,
         guide: {
-            title: "💡 6弦開放ピッキングのコツ & 練習のポイント",
+            title: "💡 練習のポイント",
             content: "ギターで最も太い6弦は、ピックに伝わる手応えが大きいため初心者が最も力みやすい弦です。ピックを力いっぱい振り抜くのではなく、手首の重みを利用して上から下へポロンと落とすようにピッキングしてみましょう。隣の5弦に触れてしまわないよう注意してください。",
             points: [
                 "ピックの深さ: 先端2〜3mmだけを弦に当てて、手首をやわらかく使いましょう。",
@@ -44,7 +44,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex02.mxl",
         available: true,
         guide: {
-            title: "💡 5弦開放ピッキングのコツ & 練習のポイント",
+            title: "💡 練習のポイント",
             content: "5弦は6弦よりも少し細く、ピックが引っかかりにくくなります。手首を柔らかく使って、4回とも同じ音量・同じ音色で鳴らせるように意識しましょう。",
             points: [
                 "ピックの角度: 弦に対してピックが斜めになりすぎないよう水平を保ちます。",
@@ -68,7 +68,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex03.mxl",
         available: true,
         guide: {
-            title: "💡 4弦開放ピッキングのコツ & 練習のポイント",
+            title: "💡 練習のポイント",
             content: "4弦は巻き弦の中で最も細い弦です。力任せに弾かず、芯のある澄んだ音を鳴らすことを意識してください。",
             points: [
                 "振り幅のコントロール: 余計な弦を誤って触れてしまわないよう、ピッキングの振り幅をコンパクトに抑えましょう。"
@@ -89,7 +89,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex04.mxl",
         available: true,
         guide: {
-            title: "💡 弦移動ピッキングのコツ & ポイント",
+            title: "💡 練習のポイント",
             content: "1小節ごとに弾く弦が変わります。小節の変わり目で慌てず、手首と前腕を少しずつ下方向（高音弦側）へスライドさせるように移動しましょう。",
             points: [
                 "弦の狙い撃ち: 次の小節に入る直前に、視線を次の弦に移しておくのがスムーズな弦移動の秘訣です。",
@@ -111,7 +111,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex05.mxl",
         available: true,
         guide: {
-            title: "💡 高音弦ピッキングのコツ & 練習のポイント",
+            title: "💡 練習のポイント",
             content: "高音弦は弦が細く、ピッキングの引っかかりが少なくなります。ピックの先端だけを弦に当てて、力まずに粒立ちの良いクリアな音を鳴らしましょう。",
             points: [
                 "右手の固定位置: ブリッジ付近やボディに手の一部を軽く添えて、右手の安定を図りましょう。",
@@ -133,7 +133,7 @@ export const BASIC_STAGES = [
         file: "scores/basic/ex06.mxl",
         available: true,
         guide: {
-            title: "💡 全弦往復ピッキングの攻略ポイント",
+            title: "💡 練習のポイント",
             content: "全弦を大きく行き来するため、腕全体のフォームの安定が試されます。メトロノームのビートをよく聴き、常に落ち着いて一定のストロークを保ちましょう。",
             points: [
                 "フォームの連動: 肘や手首を固めず、腕全体を滑らかに動かしましょう。",

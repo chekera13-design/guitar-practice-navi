@@ -259,7 +259,7 @@ body {
 .practice-modal-content {
     max-width: 840px;
     width: 100%;
-    max-height: 92vh;
+    max-height: var(--practice-modal-max-height, 92vh);
     padding: 16px 20px;
     border-radius: 16px;
     overflow-y: auto;
@@ -664,7 +664,7 @@ button { touch-action: manipulation; }
     .ex-card-action { width: 100%; }
     .ex-start-btn { width: 100%; padding: 11px; font-size: 13px; }
 
-    .practice-modal-content { padding: 12px 12px; max-height: 96vh; }
+    .practice-modal-content { padding: 12px 12px; max-height: var(--practice-modal-max-height, 96vh); }
     .practice-modal-title { font-size: 14px; }
     
     /* 修正: スマホでの食い込み防止 */

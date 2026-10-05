@@ -35,6 +35,8 @@ let standaloneNextTickTime = 0;
 let isScoreRendered = false;
 let modalOpenTimerId = null; // レースコンディション防止用タイマーID
 let scoreResizeObserver = null; // ★【ここに追記します】★
+let practiceModalWasLandscape = false;
+let practiceModalPositionFrame = null;
 
 // 録音ステート
 let mediaRecorder = null;
@@ -507,7 +509,7 @@ function openPracticeModal(stage) {
 
     if (recordResultCard) recordResultCard.classList.add("hidden");
     resetVisualMetronome();
-    mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
+    mainActionBtn.innerText = "▶ 練習する";
     mainActionBtn.classList.remove("btn-stop");
     mainActionBtn.disabled = false;
 
@@ -515,6 +517,8 @@ function openPracticeModal(stage) {
 
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    practiceModalWasLandscape = isPracticeModalLandscape();
+    requestPracticeModalInitialPosition();
 
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -540,6 +544,81 @@ function openPracticeModal(stage) {
         });
         scoreResizeObserver.observe(targetContainer);
     }
+}
+
+function isPracticeModalLandscape() {
+    return window.matchMedia
+        ? window.matchMedia("(orientation: landscape)").matches
+        : window.innerWidth > window.innerHeight;
+}
+
+function getPracticeModalViewportHeight() {
+    return window.visualViewport?.height || window.innerHeight;
+}
+
+function updatePracticeModalAvailableHeight() {
+    if (!practiceModal || practiceModal.classList.contains("hidden") || !isPracticeModalLandscape()) return;
+    const modalContent = practiceModal.querySelector(".practice-modal-content");
+    if (!modalContent) return;
+    modalContent.style.setProperty(
+        "--practice-modal-max-height",
+        `${Math.max(0, getPracticeModalViewportHeight() - 20)}px`
+    );
+}
+
+function adjustPracticeModalInitialPosition() {
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+
+    const modalContent = practiceModal.querySelector(".practice-modal-content");
+    if (!modalContent) return;
+
+    if (!isPracticeModalLandscape()) return;
+
+    // Use the visible viewport (including mobile browser chrome) for the modal's available height.
+    updatePracticeModalAvailableHeight();
+
+    if (modalContent.scrollHeight <= modalContent.clientHeight) return;
+
+    const score = modalContent.querySelector(".score-wrapper");
+    if (!score) return;
+
+    // Center the score in the visible scroll area; clamp to valid scroll bounds.
+    const contentRect = modalContent.getBoundingClientRect();
+    const scoreRect = score.getBoundingClientRect();
+    const scoreTop = modalContent.scrollTop + scoreRect.top - contentRect.top - modalContent.clientTop;
+    const target = scoreTop - (modalContent.clientHeight - scoreRect.height) / 2;
+    const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
+    modalContent.scrollTop = Math.max(0, Math.min(maxScroll, target));
+}
+
+function requestPracticeModalInitialPosition() {
+    if (practiceModalPositionFrame !== null) cancelAnimationFrame(practiceModalPositionFrame);
+    // Wait for display/layout and alphaTab's initial sizing to settle before measuring DOM dimensions.
+    practiceModalPositionFrame = requestAnimationFrame(() => {
+        practiceModalPositionFrame = requestAnimationFrame(() => {
+            practiceModalPositionFrame = null;
+            adjustPracticeModalInitialPosition();
+        });
+    });
+}
+
+window.addEventListener("orientationchange", () => {
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+    const isLandscape = isPracticeModalLandscape();
+    if (isLandscape && !practiceModalWasLandscape) requestPracticeModalInitialPosition();
+    practiceModalWasLandscape = isLandscape;
+});
+
+window.addEventListener("resize", () => {
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+    const isLandscape = isPracticeModalLandscape();
+    if (isLandscape && !practiceModalWasLandscape) requestPracticeModalInitialPosition();
+    else if (isLandscape) updatePracticeModalAvailableHeight();
+    practiceModalWasLandscape = isLandscape;
+});
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updatePracticeModalAvailableHeight);
 }
 
 
@@ -600,6 +679,12 @@ function closePracticeModal() {
 
     practiceModal.classList.add("hidden");
     document.body.style.overflow = "";
+    const modalContent = practiceModal.querySelector(".practice-modal-content");
+    if (modalContent) modalContent.style.removeProperty("--practice-modal-max-height");
+    if (practiceModalPositionFrame !== null) {
+        cancelAnimationFrame(practiceModalPositionFrame);
+        practiceModalPositionFrame = null;
+    }
 }
 
 
@@ -667,7 +752,7 @@ async function startPractice() {
     isPracticing = true;
     isStartingPractice = false;
     mainActionBtn.disabled = false;
-    mainActionBtn.innerText = "⏹️ 練習中止";
+    mainActionBtn.innerText = "⏹️ 練習を終了";
     mainActionBtn.classList.add("btn-stop");
     if (recordResultCard) recordResultCard.classList.add("hidden");
 
@@ -789,7 +874,7 @@ function stopPractice() {
 
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
 
-    mainActionBtn.innerText = "▶ 練習スタート (カウントイン & 録音)";
+    mainActionBtn.innerText = "▶ 練習する";
     mainActionBtn.classList.remove("btn-stop");
     mainActionBtn.disabled = false;
 }
