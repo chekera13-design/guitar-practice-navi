@@ -564,7 +564,7 @@ function openPracticeModal(stage) {
                     <div class="knowledge-item" style="margin-top: 10px;">
                         <h4>🎯 意識するポイント</h4>
                         <ul class="faq-list">
-                             ${stage.guide.points.map(pt => `<li>\${pt}</li>`).join("")}
+                             ${stage.guide.points.map(pt => `<li>${pt}</li>`).join("")}
                         </ul>
                     </div>
                 `;

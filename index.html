@@ -23,7 +23,7 @@
     <header class="card hero-dashboard-card">
         <div class="dashboard-header-row">
             <div class="dashboard-title-group">
-                <h1 class="app-title">🎸 ギター練習ドットコム</h1>
+                <h1 class="app-title">🎸 ギター練習.com</h1>
             </div>
             
             <!-- 横並びトグルバー -->
@@ -75,18 +75,56 @@
         </div>
     </header>
 
-    <!-- 🔰 基礎編 トレーニング一覧カード -->
+    <!-- 🔰 基礎練習ジャンル一覧 -->
     <main class="card stages-container-card">
         <div class="stages-header">
             <div class="stages-header-title-row">
                 <h2 class="stages-title">🔰 基礎練習</h2>
-                <span class="stages-count-badge">タップして開始</span>
+                <span class="stages-count-badge">5つの練習ジャンル</span>
             </div>
-            <p class="stages-desc">練習したいメニューを選んで、すぐに練習を始められます。</p>
+            <p class="stages-desc">ギターの基本を身につけよう</p>
         </div>
 
-        <!-- ★ JavaScript (app.js) により動的自動生成されるグリッド ★ -->
-        <div id="exerciseGrid" class="exercise-grid"></div>
+        <section class="practice-category-grid" aria-label="基礎練習のジャンル">
+            <a class="practice-category-card tutorial-category-card" href="#tutorialExercises">
+                <span class="category-icon" aria-hidden="true">🎓</span>
+                <span class="category-copy">
+                    <strong>チュートリアル</strong>
+                    <span>アプリの使い方を覚える</span>
+                </span>
+                <span class="category-status tutorial-status">未完了</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
+            <div class="practice-category-card category-coming-soon">
+                <span class="category-icon" aria-hidden="true">🎵</span>
+                <span class="category-copy"><strong>クロマチック</strong><span>ピッキングと運指</span></span>
+                <span class="category-status">準備中</span>
+            </div>
+            <div class="practice-category-card category-coming-soon">
+                <span class="category-icon" aria-hidden="true">🎸</span>
+                <span class="category-copy"><strong>コード</strong><span>コードを押さえて鳴らす</span></span>
+                <span class="category-status">準備中</span>
+            </div>
+            <div class="practice-category-card category-coming-soon">
+                <span class="category-icon" aria-hidden="true">🎯</span>
+                <span class="category-copy"><strong>コードトーン</strong><span>コードの構成音を覚える</span></span>
+                <span class="category-status">準備中</span>
+            </div>
+            <div class="practice-category-card category-coming-soon">
+                <span class="category-icon" aria-hidden="true">🎼</span>
+                <span class="category-copy"><strong>スケール</strong><span>スケールの基本を身につける</span></span>
+                <span class="category-status">準備中</span>
+            </div>
+        </section>
+
+        <section class="current-exercises" aria-labelledby="tutorialExercises">
+            <div class="current-exercises-heading">
+                <h3 id="tutorialExercises">チュートリアル練習</h3>
+                <p>現在利用できる基礎ピッキングのステージです。</p>
+            </div>
+            <!-- 既存ステージを app.js で生成。カードのクリック処理はそのまま維持。 -->
+            <div id="exerciseGrid" class="exercise-grid"></div>
+        </section>
     </main>
 
     <!-- 📢 ボトム広告スペース -->
