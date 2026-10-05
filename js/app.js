@@ -518,7 +518,7 @@ function openPracticeModal(stage) {
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     practiceModalWasLandscape = isPracticeModalLandscape();
-    requestPracticeModalInitialPosition();
+    if (practiceModalWasLandscape) requestPracticeModalInitialPosition();
 
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -566,6 +566,11 @@ function updatePracticeModalAvailableHeight() {
     );
 }
 
+function resetPracticeModalAvailableHeight() {
+    const modalContent = practiceModal?.querySelector(".practice-modal-content");
+    if (modalContent) modalContent.style.removeProperty("--practice-modal-max-height");
+}
+
 function adjustPracticeModalInitialPosition() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
 
@@ -602,20 +607,24 @@ function requestPracticeModalInitialPosition() {
     });
 }
 
-window.addEventListener("orientationchange", () => {
+function handlePracticeModalOrientationChange() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
-    const isLandscape = isPracticeModalLandscape();
-    if (isLandscape && !practiceModalWasLandscape) requestPracticeModalInitialPosition();
-    practiceModalWasLandscape = isLandscape;
-});
 
-window.addEventListener("resize", () => {
-    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
     const isLandscape = isPracticeModalLandscape();
-    if (isLandscape && !practiceModalWasLandscape) requestPracticeModalInitialPosition();
-    else if (isLandscape) updatePracticeModalAvailableHeight();
+    if (isLandscape === practiceModalWasLandscape) return;
+
     practiceModalWasLandscape = isLandscape;
-});
+    if (isLandscape) {
+        updatePracticeModalAvailableHeight();
+        requestPracticeModalInitialPosition();
+    } else {
+        // Restore the portrait CSS default without changing the user's scroll position.
+        resetPracticeModalAvailableHeight();
+    }
+}
+
+window.addEventListener("orientationchange", handlePracticeModalOrientationChange);
+window.addEventListener("resize", handlePracticeModalOrientationChange);
 
 if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", updatePracticeModalAvailableHeight);
