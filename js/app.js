@@ -37,6 +37,14 @@ let modalOpenTimerId = null; // レースコンディション防止用タイマ
 let scoreResizeObserver = null; // ★【ここに追記します】★
 let practiceModalWasLandscape = false;
 let practiceModalPositionFrame = null;
+let alphaTabHealthCheckTimerId = null;
+let scoreRenderInProgress = false;
+let scoreLoadPending = false;
+let scoreLoadConfirmed = false;
+let scoreHealthCheckPending = false;
+let scoreRepairAttempted = false;
+let scoreRenderGeneration = 0;
+let activeScoreRenderGeneration = 0;
 
 // 録音ステート
 let mediaRecorder = null;
@@ -310,7 +318,7 @@ function initAlphaTabIfNeeded() {
         if (!container || container.clientWidth === 0) return false;
 
         try {
-            api = new alphaTab.AlphaTabApi(container, {
+            const apiInstance = new alphaTab.AlphaTabApi(container, {
                 core: { engine: "svg" },
                 display: { 
                     layoutMode: "horizontal", 
@@ -328,24 +336,44 @@ function initAlphaTabIfNeeded() {
                     }
                 }
             });
+            api = apiInstance;
 
-            api.scoreLoaded.on((score) => {
+            apiInstance.scoreLoaded.on((score) => {
+                if (api !== apiInstance) return;
+                if (scoreRenderInProgress) scoreLoadConfirmed = true;
                 if (score && score.masterBars && score.masterBars.length > 0) {
                     const bars = score.masterBars.length;
                     if (modalBarsBadge) modalBarsBadge.innerText = `${bars}小節`;
                 }
             });
 
-            api.renderFinished.on(() => {
+            apiInstance.renderFinished.on(() => {
+                if (api !== apiInstance) return;
+                if (scoreRenderInProgress
+                    && activeScoreRenderGeneration === scoreRenderGeneration
+                    && (!scoreLoadPending || scoreLoadConfirmed)) {
+                    scoreRenderInProgress = false;
+                    scoreLoadPending = false;
+                    scoreLoadConfirmed = false;
+                    activeScoreRenderGeneration = 0;
+                }
                 isScoreRendered = true;
                 resetScoreFocusState();
                 const bars = getStagePracticeBars(currentStage);
-                buildScoreBarLayouts(api, bars);
+                buildScoreBarLayouts(apiInstance, bars);
+                scheduleAlphaTabHealthCheck();
             });
 
             // 楽譜ファイルロード失敗時のエラーハンドリング
-            api.error.on((error) => {
+            apiInstance.error.on((error) => {
+                if (api !== apiInstance) return;
                 console.error("alphaTab エラー:", error);
+                if (scoreRenderInProgress) {
+                    scoreRenderInProgress = false;
+                    scoreLoadPending = false;
+                    scoreLoadConfirmed = false;
+                    activeScoreRenderGeneration = 0;
+                }
                 const scoreWrapper = document.querySelector(".score-wrapper");
                 if (scoreWrapper) {
                     const prevErr = scoreWrapper.querySelector(".score-error-msg");
@@ -357,6 +385,7 @@ function initAlphaTabIfNeeded() {
                         scoreWrapper.appendChild(errMsg);
                     }
                 }
+                if (scoreHealthCheckPending) scheduleAlphaTabHealthCheck();
             });
 
             return true;
@@ -383,20 +412,43 @@ function getStagePracticeBars(stage) {
 // ==========================================
 function renderTab(stage = currentStage) {
     if (!stage) return;
-    isScoreRendered = false;
     initAlphaTabIfNeeded();
     if (!api) return;
+    if (scoreRenderInProgress) {
+        scoreHealthCheckPending = true;
+        return;
+    }
 
     const scoreWrapper = document.querySelector(".score-wrapper");
     const prevErr = scoreWrapper?.querySelector(".score-error-msg");
     if (prevErr) prevErr.remove();
 
+    const renderGeneration = ++scoreRenderGeneration;
+    activeScoreRenderGeneration = renderGeneration;
+    scoreRenderInProgress = true;
+    scoreLoadPending = Boolean(stage.file);
+    scoreLoadConfirmed = !scoreLoadPending;
+    isScoreRendered = false;
+
     if (stage.file) {
         try {
-            api.load(stage.file);
+            const loadStarted = api.load(stage.file);
+            if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
+                scoreRenderInProgress = false;
+                scoreLoadPending = false;
+                scoreLoadConfirmed = false;
+                activeScoreRenderGeneration = 0;
+                scoreRepairAttempted = false;
+            }
             return;
         } catch (e) {
             console.error("alphaTab load error:", e);
+            if (activeScoreRenderGeneration === renderGeneration) {
+                scoreRenderInProgress = false;
+                scoreLoadPending = false;
+                scoreLoadConfirmed = false;
+                activeScoreRenderGeneration = 0;
+            }
         }
     }
 
@@ -405,7 +457,18 @@ function renderTab(stage = currentStage) {
             api.tex(stage.tex);
         } catch (e) {
             console.warn("alphaTex レンダリング失敗:", e);
+            if (activeScoreRenderGeneration === renderGeneration) {
+                scoreRenderInProgress = false;
+                scoreLoadPending = false;
+                scoreLoadConfirmed = false;
+                activeScoreRenderGeneration = 0;
+            }
         }
+    } else if (activeScoreRenderGeneration === renderGeneration) {
+        scoreRenderInProgress = false;
+        scoreLoadPending = false;
+        scoreLoadConfirmed = false;
+        activeScoreRenderGeneration = 0;
     }
 }
 
@@ -466,6 +529,12 @@ function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
     isScoreRendered = false;
+    scoreRenderInProgress = false;
+    scoreLoadPending = false;
+    scoreLoadConfirmed = false;
+    scoreHealthCheckPending = false;
+    scoreRepairAttempted = false;
+    activeScoreRenderGeneration = 0;
 
     unlockAudioContext().catch(() => {});
 
@@ -607,9 +676,56 @@ function requestPracticeModalInitialPosition() {
     });
 }
 
+function isAlphaTabDisplayHealthy(container) {
+    if (!container || container.clientWidth <= 0) return false;
+
+    return Array.from(container.querySelectorAll("svg")).some((svg) => {
+        const rect = svg.getBoundingClientRect();
+        const style = window.getComputedStyle(svg);
+        const hasNotation = svg.querySelector("path, text, line, polyline, polygon, rect, circle, use");
+        return svg.isConnected
+            && rect.width > 0
+            && rect.height > 0
+            && svg.childElementCount > 0
+            && hasNotation
+            && style.display !== "none"
+            && style.visibility !== "hidden"
+            && style.opacity !== "0";
+    });
+}
+
+function scheduleAlphaTabHealthCheck() {
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+    scoreHealthCheckPending = true;
+    if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
+
+    alphaTabHealthCheckTimerId = setTimeout(() => {
+        alphaTabHealthCheckTimerId = null;
+        if (!practiceModal || practiceModal.classList.contains("hidden")) {
+            scoreHealthCheckPending = false;
+            return;
+        }
+        if (scoreRenderInProgress) return; // renderFinished will schedule the deferred check.
+
+        scoreHealthCheckPending = false;
+        const container = document.getElementById("alphaTab");
+        if (isAlphaTabDisplayHealthy(container)) {
+            scoreRepairAttempted = false;
+            return;
+        }
+
+        if (scoreRepairAttempted) return;
+        scoreRepairAttempted = true;
+        renderTab(currentStage);
+        if (!api) scoreRepairAttempted = false;
+    }, 300);
+}
+
 function handlePracticeModalOrientationChange() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
 
+    // Coalesce orientationchange/resize bursts into one score health check.
+    scheduleAlphaTabHealthCheck();
     const isLandscape = isPracticeModalLandscape();
     if (isLandscape === practiceModalWasLandscape) return;
 
@@ -654,6 +770,17 @@ function closePracticeModal() {
         scoreResizeObserver.disconnect();
         scoreResizeObserver = null;
     }
+
+    if (alphaTabHealthCheckTimerId !== null) {
+        clearTimeout(alphaTabHealthCheckTimerId);
+        alphaTabHealthCheckTimerId = null;
+    }
+    scoreHealthCheckPending = false;
+    scoreRenderInProgress = false;
+    scoreLoadPending = false;
+    scoreLoadConfirmed = false;
+    activeScoreRenderGeneration = 0;
+    scoreRenderGeneration++;
 
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
