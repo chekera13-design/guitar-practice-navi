@@ -612,6 +612,16 @@ body {
     font-weight: 700;
 }
 .vertical-tab-controls button:disabled { opacity: 0.45; }
+.vertical-tab-notation-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 4px 5px;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.2;
+}
+.vertical-tab-notation-label strong { letter-spacing: 0.08em; }
 .vertical-tab-viewport {
     position: relative;
     width: 100%;
@@ -645,6 +655,7 @@ body {
     will-change: transform, opacity;
 }
 .vertical-tab-card[hidden] { display: none !important; }
+.vertical-tab-viewport.is-dragging .vertical-tab-card { transition: none; }
 .vertical-tab-card.is-current {
     border-color: #2563eb;
     box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);

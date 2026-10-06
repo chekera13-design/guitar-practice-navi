@@ -58,10 +58,11 @@ function preserveAlphaTabStyles(sourceSvg, extractedSvg) {
 }
 
 export class VerticalTabController {
-    constructor(wrapper, { animationMs = 220, onError = console.error } = {}) {
+    constructor(wrapper, { animationMs = 220, onError = console.error, onBarChange = () => {} } = {}) {
         this.wrapper = wrapper;
         this.animationMs = animationMs;
         this.onError = onError;
+        this.onBarChange = onBarChange;
         this.api = null;
         this.scoreUrl = null;
         this.barCount = 0;
@@ -103,6 +104,12 @@ export class VerticalTabController {
             if (Math.max(Math.abs(dx), Math.abs(dy)) < 5) return;
             this.swipe.axis ??= Math.abs(dy) >= Math.abs(dx) ? "vertical" : "horizontal";
             if (this.swipe.axis === "vertical") {
+                const nextIndex = this.currentBarIndex + (dy < 0 ? 1 : -1);
+                if (nextIndex < 0 || nextIndex >= this.barCount) {
+                    // At either end, keep the stack fixed instead of allowing a rubber-band drag.
+                    this.renderPosition(false);
+                    return;
+                }
                 const pitch = Math.max(100, this.viewport.clientHeight / 2.6);
                 const drag = Math.max(-0.75, Math.min(0.75, dy / pitch));
                 this.renderPosition(false, drag);
@@ -116,7 +123,12 @@ export class VerticalTabController {
             const dx = event.clientX - x;
             const dy = event.clientY - y;
             if (Math.abs(dy) >= 38 && Math.abs(dy) > Math.abs(dx)) {
-                this.setCurrentBar(this.currentBarIndex + (dy < 0 ? 1 : -1), "swipe");
+                const nextIndex = this.currentBarIndex + (dy < 0 ? 1 : -1);
+                if (nextIndex >= 0 && nextIndex < this.barCount) {
+                    this.setCurrentBar(nextIndex, "swipe");
+                } else {
+                    this.renderPosition(true);
+                }
             } else {
                 this.renderPosition(true);
             }
@@ -289,6 +301,7 @@ export class VerticalTabController {
         if (next === this.currentBarIndex) return;
         const previous = this.currentBarIndex;
         this.currentBarIndex = next;
+        this.onBarChange(next, source);
         console.info(`[縦型TAB] ${source}: ${previous + 1} → ${next + 1}`);
         this.renderPosition(true);
     }

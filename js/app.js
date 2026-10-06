@@ -72,6 +72,7 @@ const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 const verticalTabWrapper = document.getElementById("verticalTabWrapper");
+const verticalTabTimeSignature = document.getElementById("verticalTabTimeSignature");
 
 // 単体メトロノームボタンDOM
 const standaloneMetroBtn = document.getElementById("standaloneMetroBtn");
@@ -533,6 +534,10 @@ function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
     currentPracticeBarIndex = 0;
+    if (verticalTabTimeSignature) {
+        const [numerator = 4, denominator = 4] = stage.timeSignature || [];
+        verticalTabTimeSignature.textContent = `${numerator}/${denominator}`;
+    }
     isScoreRendered = false;
     scoreRenderInProgress = false;
     scoreLoadPending = false;
@@ -643,6 +648,7 @@ function updatePracticeScoreLayout() {
     if (!verticalTabController) {
         verticalTabController = new VerticalTabController(verticalTabWrapper, {
             onError: (...details) => console.error("[縦型TAB]", ...details),
+            onBarChange: (index) => { currentPracticeBarIndex = index; },
         });
     }
     verticalTabController.load(currentStage.file)
@@ -1047,7 +1053,6 @@ function handleBeatStep(step, config) {
 function stopPractice() {
     isPracticing = false;
     isStartingPractice = false;
-    resetPracticeBar();
 
     // 1. JavaScript側のすべてのタイマーを最優先でクリア
     practiceTimerIds.forEach(id => clearTimeout(id));
@@ -1073,7 +1078,6 @@ function stopPractice() {
 function finishPractice() {
     isPracticing = false;
     isStartingPractice = false;
-    resetPracticeBar();
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
@@ -1101,8 +1105,19 @@ mainActionBtn.addEventListener("click", () => {
     // ★【修正】クリックされた瞬間に最優先で解凍
     unlockAudioContext().catch(() => {});
 
-    if (isPracticing) stopPractice();
-    else startPractice();
+    if (isPracticing) {
+        stopPractice();
+    } else if (recordResultCard && !recordResultCard.classList.contains("hidden")) {
+        recordedAudioPlayer?.pause();
+        if (recordedAudioPlayer) recordedAudioPlayer.currentTime = 0;
+        recordResultCard.classList.add("hidden");
+        practiceModal.querySelector(".practice-modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
+        mainActionBtn.innerText = "▶ 練習する";
+        mainActionBtn.classList.remove("btn-stop");
+        visualMetronomeBox.classList.remove("recording");
+    } else {
+        startPractice();
+    }
 });
 
 // app.js 内の setupMediaRecorder 関数を以下のように書き換えてください
