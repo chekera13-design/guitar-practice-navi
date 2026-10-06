@@ -1,0 +1,65 @@
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  color: #202a36;
+  background: #f4f6f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+html, body { min-width: 0; min-height: 100%; margin: 0; }
+body { min-height: 100svh; }
+.comparison-app { width: min(100%, 820px); margin: 0 auto; padding: max(18px, env(safe-area-inset-top)) 18px max(16px, env(safe-area-inset-bottom)); display: grid; gap: 14px; }
+.page-header { padding: 2px 2px 0; }
+.score-switch { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: #65727d; font-size: 12px; }
+.score-switch select { max-width: 100%; padding: 6px 9px; border: 1px solid #d6dfe4; border-radius: 8px; background: #fff; color: #33434b; font: inherit; }
+.eyebrow { margin: 0 0 5px; color: #7b8793; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+h1 { margin: 0; font-size: clamp(21px, 5vw, 28px); letter-spacing: -.04em; }
+.intro { margin: 6px 0 0; color: #65727d; font-size: 12px; line-height: 1.5; }
+.load-panel, .score-panel, .debug-panel { min-width: 0; padding: 13px; border: 1px solid #e1e7eb; border-radius: 15px; background: #fff; box-shadow: 0 4px 16px #23344708; }
+.load-heading { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.load-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: #d69b39; }
+.load-dot.loading { animation: pulse 1.2s infinite; }
+.load-dot.success { background: #268468; }
+.load-dot.error { background: #c54545; }
+@keyframes pulse { 50% { opacity: .35; } }
+.load-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 0 17px; color: #77848d; font-size: 11px; }
+.load-meta b { color: #33434b; }
+.load-error { margin: 9px 0 0; color: #a33232; font: 11px/1.5 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.panel-heading h2 { margin: 0; font-size: 14px; }
+.panel-heading span { color: #84909a; font-size: 10px; }
+.bar-controls { display: grid; gap: 7px; margin: 0 0 9px; }
+.bar-navigation, .autoplay-controls { display: flex; align-items: center; gap: 8px; }
+.bar-navigation button, .autoplay-controls button, .autoplay-controls select { min-height: 34px; border: 1px solid #d8e1e5; border-radius: 8px; background: #fff; color: #33434b; font: inherit; font-size: 12px; }
+.bar-navigation button { flex: 1; padding: 6px 8px; }
+.autoplay-controls button { padding: 6px 10px; }
+.autoplay-controls button[aria-pressed="true"] { border-color: #268468; background: #eff8f4; color: #17664f; }
+.autoplay-controls label { margin-left: auto; color: #65727d; font-size: 11px; }
+.autoplay-controls select { padding: 4px 8px; }
+.bar-controls button:disabled { opacity: .45; }
+.original-viewport { min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #edf0f2; border-radius: 9px; background: #fff; }
+#alphaTabSource { min-width: 100%; min-height: 120px; }
+#alphaTabSource .at-surface { max-width: none; }
+.vertical-render-source { position: fixed; top: 0; left: -10000px; min-height: 120px; opacity: 0; pointer-events: none; }
+.carousel-viewport { position: relative; height: min(72svh, 640px); min-height: 390px; overflow-x: hidden; overflow-y: hidden; touch-action: none; user-select: none; border: 1px solid #e3e9ed; border-radius: 14px; background: linear-gradient(180deg, #f5f7f8 0%, #fff 28%, #fff 72%, #f5f7f8 100%); }
+.vertical-bars { position: absolute; inset: 0; max-width: 100%; overflow-x: hidden; }
+.bar-card { position: absolute; top: 50%; left: 50%; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden !important; padding: 7px; border: 1px solid #e3e9ed; border-radius: 12px; background: #fff; opacity: var(--card-opacity, .58); transform: translate(-50%, calc(-50% + var(--card-y, 0px))) scale(1); transform-origin: center; transition: transform var(--carousel-duration, 220ms) cubic-bezier(.2, .75, .25, 1), opacity var(--carousel-duration, 220ms) ease, border-color var(--carousel-duration, 220ms) ease, box-shadow var(--carousel-duration, 220ms) ease; }
+.carousel-viewport.is-dragging .bar-card { transition: none; }
+.bar-card.is-current { border: 2px solid #268468; background: #f5fbf8; box-shadow: 0 6px 20px #26846825; }
+.bar-card-title { position: relative; z-index: 1; margin: 0 0 7px; color: #65727d; font-size: 12px; font-weight: 700; }
+.bar-card.is-current .bar-card-title { color: #17664f; font-size: 14px; }
+.bar-card.is-above .bar-card-title, .bar-card.is-below .bar-card-title { position: absolute; right: 10px; left: 10px; margin: 0; padding: 2px 5px; border-radius: 5px; background: #ffffffd9; font-size: 10px; }
+.bar-card.is-above .bar-card-title { top: 7px; }
+.bar-card.is-below .bar-card-title { bottom: 7px; }
+.bar-card svg { display: block; width: 100%; height: auto; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+.carousel-viewport::before, .carousel-viewport::after { position: absolute; z-index: 1; right: 0; left: 0; height: 12%; content: ""; pointer-events: none; }
+.carousel-viewport::before { top: 0; background: linear-gradient(#f5f7f8 0%, #f5f7f8bb 35%, transparent 100%); }
+.carousel-viewport::after { bottom: 0; background: linear-gradient(0deg, #f5f7f8 0%, #f5f7f8bb 35%, transparent 100%); }
+.empty-state { margin: 0; color: #87929a; text-align: center; font-size: 12px; }
+.debug-panel { padding: 10px 13px; color: #65727d; font-size: 11px; }
+.debug-panel summary { cursor: pointer; font-weight: 700; }
+.debug-panel pre { max-height: 260px; overflow: auto; margin: 9px 0 0; color: #45535d; font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+footer { color: #9aa3aa; text-align: center; font-size: 10px; }
+@media (max-width: 430px) { .comparison-app { padding-right: 12px; padding-left: 12px; gap: 10px; } .load-panel, .score-panel, .debug-panel { padding: 11px; } .carousel-viewport { height: min(66svh, 590px); min-height: 390px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; } }

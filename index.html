@@ -34,7 +34,7 @@
                         <span class="dash-arrow">▼</span>
                     </summary>
                     <div class="dashboard-panel about-panel">
-                        <p><strong>「ギター練習ドットコム」</strong>は、メトロノームに合わせたピッキング練習と自動録音チェックがブラウザだけで完結する、無料のギター練習Webアプリです。</p>
+                        <p><strong>「ギター練習.com」</strong>は、メトロノームに合わせた練習と録音チェックがブラウザだけで完結する、無料のギター練習Webアプリです。</p>
                         <ul class="about-points">
                             <li>🎯 <strong>TAB譜 ＆ メトロノーム同期:</strong> 視覚と音でリズムのズレを逃さない！</li>
                             <li>🎧 <strong>即時自動録音:</strong> 弾き終わったらその場で自分の音を聴いて客観的に確認！</li>
@@ -203,6 +203,17 @@
                 <div id="scoreBarHighlight" class="score-bar-highlight hidden" aria-hidden="true"></div>
                 <div id="alphaTab"></div>
             </div>
+
+            <section id="verticalTabWrapper" class="vertical-tab-wrapper" aria-label="縦型TAB譜" hidden>
+                <div class="vertical-tab-controls">
+                    <button type="button" data-action="previous" disabled>← 前の小節</button>
+                    <button type="button" data-action="next" disabled>次の小節 →</button>
+                </div>
+                <div class="vertical-tab-viewport" aria-live="polite">
+                    <div class="vertical-tab-cards"></div>
+                    <p class="vertical-tab-message">譜面を読み込み中です。</p>
+                </div>
+            </section>
 
             <!-- ④ 🎧 録音結果プレイヤーカード -->
             <div id="recordResultCard" class="record-result-card hidden">

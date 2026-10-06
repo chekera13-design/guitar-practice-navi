@@ -3,6 +3,7 @@
 // ==========================================
 
 import { BASIC_STAGES } from "./config.js";
+import { VerticalTabController } from "./verticalTab.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -24,6 +25,8 @@ let isPracticing = false;
 let isStartingPractice = false; // 連打防止ガードフラグ
 let currentBpm = 60;
 let practiceTimerIds = [];
+let verticalTabController = null;
+let currentPracticeBarIndex = 0;
 
 // 単体メトロノーム状態
 let isStandaloneMetroPlaying = false;
@@ -68,6 +71,7 @@ const visualMetronomeBox = document.getElementById("visualMetronomeBox");
 const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
+const verticalTabWrapper = document.getElementById("verticalTabWrapper");
 
 // 単体メトロノームボタンDOM
 const standaloneMetroBtn = document.getElementById("standaloneMetroBtn");
@@ -528,6 +532,7 @@ function renderExerciseCards() {
 function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
+    currentPracticeBarIndex = 0;
     isScoreRendered = false;
     scoreRenderInProgress = false;
     scoreLoadPending = false;
@@ -586,6 +591,7 @@ function openPracticeModal(stage) {
 
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    updatePracticeScoreLayout();
     practiceModalWasLandscape = isPracticeModalLandscape();
     if (practiceModalWasLandscape) requestPracticeModalInitialPosition();
 
@@ -619,6 +625,42 @@ function isPracticeModalLandscape() {
     return window.matchMedia
         ? window.matchMedia("(orientation: landscape)").matches
         : window.innerWidth > window.innerHeight;
+}
+
+function shouldUseVerticalTabLayout() {
+    return !isPracticeModalLandscape()
+        && Boolean(window.matchMedia?.("(max-width: 600px)")?.matches);
+}
+
+function updatePracticeScoreLayout() {
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+
+    const useVertical = Boolean(currentStage?.file && verticalTabWrapper && shouldUseVerticalTabLayout());
+    practiceModal.classList.toggle("vertical-tab-active", useVertical);
+    if (verticalTabWrapper) verticalTabWrapper.hidden = !useVertical;
+
+    if (!useVertical) return;
+    if (!verticalTabController) {
+        verticalTabController = new VerticalTabController(verticalTabWrapper, {
+            onError: (...details) => console.error("[縦型TAB]", ...details),
+        });
+    }
+    verticalTabController.load(currentStage.file)
+        .then(() => {
+            if (isPracticing) verticalTabController?.setCurrentBar(currentPracticeBarIndex, "practice-resume");
+        })
+        .catch((error) => console.error("[縦型TAB] load failed", error));
+}
+
+function setPracticeBar(index, source = "practice") {
+    const maxIndex = Math.max(0, getStagePracticeBars(currentStage) - 1);
+    currentPracticeBarIndex = Math.max(0, Math.min(maxIndex, Math.trunc(index)));
+    verticalTabController?.setCurrentBar(currentPracticeBarIndex, source);
+}
+
+function resetPracticeBar() {
+    currentPracticeBarIndex = 0;
+    verticalTabController?.resetToFirstBar();
 }
 
 function getPracticeModalViewportHeight() {
@@ -696,6 +738,7 @@ function isAlphaTabDisplayHealthy(container) {
 
 function scheduleAlphaTabHealthCheck() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+    if (shouldUseVerticalTabLayout()) return;
     scoreHealthCheckPending = true;
     if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
 
@@ -723,6 +766,8 @@ function scheduleAlphaTabHealthCheck() {
 
 function handlePracticeModalOrientationChange() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+
+    updatePracticeScoreLayout();
 
     // Coalesce orientationchange/resize bursts into one score health check.
     scheduleAlphaTabHealthCheck();
@@ -813,6 +858,12 @@ function closePracticeModal() {
         api = null;
     }
 
+    verticalTabController?.destroy();
+    verticalTabController = null;
+    currentPracticeBarIndex = 0;
+    practiceModal.classList.remove("vertical-tab-active");
+    if (verticalTabWrapper) verticalTabWrapper.hidden = true;
+
     practiceModal.classList.add("hidden");
     document.body.style.overflow = "";
     const modalContent = practiceModal.querySelector(".practice-modal-content");
@@ -843,6 +894,7 @@ window.addEventListener("keydown", (e) => {
 async function startPractice() {
     // ボタン連打による多重起動の完全ガード
     if (isPracticing || isStartingPractice) return;
+    resetPracticeBar();
     isStartingPractice = true;
     mainActionBtn.disabled = true;
 
@@ -966,6 +1018,7 @@ function handleBeatStep(step, config) {
         // --- 演奏練習フェーズ ---
         const noteIndex = step - countInBeats;
         const barIndex = Math.floor(noteIndex / beatsPerBar);
+        setPracticeBar(barIndex, "practice");
         const currentPracticeBar = barIndex + 1;
         const recText = practiceBars > 1 ? `REC ${currentPracticeBar}/${practiceBars}` : "REC";
 
@@ -994,6 +1047,7 @@ function handleBeatStep(step, config) {
 function stopPractice() {
     isPracticing = false;
     isStartingPractice = false;
+    resetPracticeBar();
 
     // 1. JavaScript側のすべてのタイマーを最優先でクリア
     practiceTimerIds.forEach(id => clearTimeout(id));
@@ -1019,6 +1073,7 @@ function stopPractice() {
 function finishPractice() {
     isPracticing = false;
     isStartingPractice = false;
+    resetPracticeBar();
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 

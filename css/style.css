@@ -577,6 +577,109 @@ body {
     z-index: 2;
 }
 
+/* Portrait practice layout: keep the original renderer mounted off-screen and
+   show its independently cropped, practice-synchronised vertical counterpart. */
+.practice-modal.vertical-tab-active .score-wrapper {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: min(840px, 90vw);
+    opacity: 0;
+    pointer-events: none;
+}
+.vertical-tab-wrapper[hidden] { display: none !important; }
+.vertical-tab-wrapper {
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 10px;
+    box-sizing: border-box;
+}
+.vertical-tab-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 8px;
+}
+.vertical-tab-controls button {
+    flex: 1;
+    min-height: 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #1e293b;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+}
+.vertical-tab-controls button:disabled { opacity: 0.45; }
+.vertical-tab-viewport {
+    position: relative;
+    width: 100%;
+    height: clamp(250px, 38svh, 360px);
+    min-height: 250px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f8fafc, #fff 28%, #fff 72%, #f8fafc);
+    touch-action: none;
+    user-select: none;
+    box-sizing: border-box;
+    --vertical-tab-animation: 220ms;
+}
+.vertical-tab-cards { position: absolute; inset: 0; overflow: hidden; }
+.vertical-tab-card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: #fff;
+    opacity: var(--bar-opacity, 0.58);
+    transform: translate(-50%, calc(-50% + var(--bar-y, 0px)));
+    transition: transform var(--vertical-tab-animation) ease, opacity var(--vertical-tab-animation) ease, border-color var(--vertical-tab-animation) ease, box-shadow var(--vertical-tab-animation) ease;
+    overflow: hidden;
+    will-change: transform, opacity;
+}
+.vertical-tab-card[hidden] { display: none !important; }
+.vertical-tab-card.is-current {
+    border-color: #2563eb;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
+    opacity: 1;
+}
+.vertical-tab-card-title {
+    margin: 0 0 2px;
+    color: #475569;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: center;
+}
+.vertical-tab-card svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.vertical-tab-message {
+    position: absolute;
+    inset: 50% 12px auto;
+    margin: 0;
+    transform: translateY(-50%);
+    color: #64748b;
+    text-align: center;
+    font-size: 13px;
+    pointer-events: none;
+}
+.vertical-tab-message[hidden] { display: none; }
+.vertical-tab-render-source {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 1400px;
+    min-height: 260px;
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* 小節全体の控えめな背景ハイライト */
 .score-bar-highlight {
     position: absolute;
