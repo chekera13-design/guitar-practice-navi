@@ -361,11 +361,7 @@ export class VerticalTabController {
             card.className = "vertical-tab-card";
             card.dataset.barIndex = String(index);
 
-            const heading = document.createElement("h3");
-            heading.className = "vertical-tab-card-title";
-            heading.textContent = `小節 ${index + 1} / ${totalBars}`;
-
-            card.append(heading, cardSvg);
+            card.append(cardSvg);
             this.track.append(card);
 
             console.info(`[縦型TAB] 小節 ${index + 1} カード生成完了:`, { x, y, width, height });

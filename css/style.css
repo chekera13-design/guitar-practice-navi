@@ -627,16 +627,6 @@ body {
     text-align: center;
 }
 
-.vertical-tab-notation-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0 4px 5px;
-    color: #475569;
-    font-size: 12px;
-    line-height: 1.2;
-}
-.vertical-tab-notation-label strong { letter-spacing: 0.08em; }
 .vertical-tab-viewport {
     position: relative;
     width: 100%;
@@ -675,14 +665,6 @@ body {
     border-color: #2563eb;
     box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
     opacity: 1;
-}
-.vertical-tab-card-title {
-    margin: 0 0 2px;
-    color: #475569;
-    font-size: 11px;
-    line-height: 1.2;
-    font-weight: 700;
-    text-align: center;
 }
 .vertical-tab-card svg {
     display: block;

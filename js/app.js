@@ -75,7 +75,6 @@ const mainActionBtn = document.getElementById("mainActionBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 const verticalTabWrapper = document.getElementById("verticalTabWrapper");
-const verticalTabTimeSignature = document.getElementById("verticalTabTimeSignature");
 
 // 単体メトロノームボタンDOM
 const standaloneMetroBtn = document.getElementById("standaloneMetroBtn");
@@ -785,10 +784,6 @@ function openPracticeModal(stage) {
     currentPracticeBarIndex = 0;
     detectedSlurPairs = [];
 
-    if (verticalTabTimeSignature) {
-        const [numerator = 4, denominator = 4] = stage.timeSignature || [];
-        verticalTabTimeSignature.textContent = `${numerator}/${denominator}`;
-    }
     isScoreRendered = false;
     scoreRenderInProgress = false;
     scoreLoadPending = false;
