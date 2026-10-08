@@ -215,17 +215,28 @@ export class VerticalTabController {
     }
 
     bindControls() {
-        this.previousButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex - 1, "button"));
-        this.nextButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex + 1, "button"));
+        this.controlEvents = new AbortController();
+        const options = { signal: this.controlEvents.signal };
+        this.previousButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex - 1, "button"), options);
+        this.nextButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex + 1, "button"), options);
         if (!this.viewport) return;
 
         this.viewport.style.setProperty("--vertical-tab-animation", `${this.animationMs}ms`);
+        const finishSwipe = () => {
+            const swipe = this.swipe;
+            this.swipe = null;
+            this.viewport.classList.remove("is-dragging");
+            if (swipe && this.viewport.hasPointerCapture?.(swipe.id)) {
+                this.viewport.releasePointerCapture(swipe.id);
+            }
+            return swipe;
+        };
         this.viewport.addEventListener("pointerdown", (event) => {
             if (event.pointerType === "mouse" && event.button !== 0) return;
-            this.swipe = { x: event.clientX, y: event.clientY, id: event.pointerId, axis: null };
-            this.viewport.classList.add("is-dragging");
+            if (this.swipe) return;
+            this.swipe = { x: event.clientX, y: event.clientY, id: event.pointerId, axis: null, dragged: false };
             this.viewport.setPointerCapture?.(event.pointerId);
-        });
+        }, options);
         this.viewport.addEventListener("pointermove", (event) => {
             if (!this.swipe || this.swipe.id !== event.pointerId) return;
             const dx = event.clientX - this.swipe.x;
@@ -235,40 +246,42 @@ export class VerticalTabController {
             if (this.swipe.axis === "vertical") {
                 const nextIndex = this.currentBarIndex + (dy < 0 ? 1 : -1);
                 if (nextIndex < 0 || nextIndex >= this.barCount) {
-                    this.renderPosition(false);
+                    if (this.swipe.dragged) {
+                        this.renderPosition(false);
+                        this.swipe.dragged = false;
+                    }
                     return;
                 }
                 const pitch = Math.max(100, this.viewport.clientHeight / 2.6);
                 const drag = Math.max(-0.75, Math.min(0.75, dy / pitch));
+                this.viewport.classList.add("is-dragging");
+                this.swipe.dragged = true;
                 this.renderPosition(false, drag);
             }
-        });
+        }, options);
         this.viewport.addEventListener("pointerup", (event) => {
             if (!this.swipe || this.swipe.id !== event.pointerId) return;
-            const { x, y } = this.swipe;
-            this.swipe = null;
-            this.viewport.classList.remove("is-dragging");
+            const { x, y, dragged } = finishSwipe();
             const dx = event.clientX - x;
             const dy = event.clientY - y;
             if (Math.abs(dy) >= 38 && Math.abs(dy) > Math.abs(dx)) {
                 const nextIndex = this.currentBarIndex + (dy < 0 ? 1 : -1);
                 if (nextIndex >= 0 && nextIndex < this.barCount) {
                     this.setCurrentBar(nextIndex, "swipe");
-                } else {
-                    this.renderPosition(true);
+                } else if (dragged) {
+                    this.renderPosition(false);
                 }
-            } else {
+            } else if (dragged) {
                 this.renderPosition(true);
             }
-        });
-        const cancel = () => {
-            if (!this.swipe) return;
-            this.swipe = null;
-            this.viewport.classList.remove("is-dragging");
-            this.renderPosition(true);
+        }, options);
+        const cancel = (event) => {
+            if (!this.swipe || this.swipe.id !== event.pointerId) return;
+            const { dragged } = finishSwipe();
+            if (dragged) this.renderPosition(true);
         };
-        this.viewport.addEventListener("pointercancel", cancel);
-        this.viewport.addEventListener("lostpointercapture", cancel);
+        this.viewport.addEventListener("pointercancel", cancel, options);
+        this.viewport.addEventListener("lostpointercapture", cancel, options);
     }
 
     /**
@@ -422,19 +435,25 @@ export class VerticalTabController {
 
     updateControls() {
         if (this.previousButton) {
-            this.previousButton.disabled = this.currentBarIndex <= 0;
+            const disabled = this.currentBarIndex <= 0;
+            if (this.previousButton.disabled !== disabled) this.previousButton.disabled = disabled;
         }
         if (this.nextButton) {
-            this.nextButton.disabled = this.currentBarIndex >= this.barCount - 1;
+            const disabled = this.currentBarIndex >= this.barCount - 1;
+            if (this.nextButton.disabled !== disabled) this.nextButton.disabled = disabled;
         }
         if (this.indicator) {
-            this.indicator.textContent = this.barCount > 0 
+            const text = this.barCount > 0
                 ? `小節 ${this.currentBarIndex + 1} / ${this.barCount}`
                 : "小節 - / -";
+            if (this.indicator.textContent !== text) this.indicator.textContent = text;
         }
     }
 
     destroy() {
+        this.controlEvents?.abort();
+        this.swipe = null;
+        this.viewport?.classList.remove("is-dragging");
         if (this.track) this.track.replaceChildren();
         this.barCount = 0;
         this.currentBarIndex = 0;

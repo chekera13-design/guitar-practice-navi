@@ -48,6 +48,7 @@ let scoreHealthCheckPending = false;
 let scoreRepairAttempted = false;
 let scoreRenderGeneration = 0;
 let activeScoreRenderGeneration = 0;
+let scoreRenderStartedAt = 0;
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
@@ -498,6 +499,17 @@ function handleWatermark() {
 
 // --- alphaTab 初期化 ---
 let api = null;
+function destroyAlphaTabApi() {
+    const previousApi = api;
+    api = null;
+    try {
+        previousApi?.destroy();
+    } catch (e) {
+        console.warn("alphaTab destroy error:", e);
+    }
+    document.getElementById("alphaTab")?.replaceChildren();
+}
+
 function initAlphaTabIfNeeded() {
     if (!api && window.alphaTab) {
         const container = document.getElementById("alphaTab");
@@ -638,11 +650,17 @@ async function renderTab(stage = currentStage) {
     if (prevErr) prevErr.remove();
 
     const renderGeneration = ++scoreRenderGeneration;
+    const renderApi = api;
+    const isCurrentRender = () => api === renderApi
+        && scoreRenderGeneration === renderGeneration
+        && !practiceModal.classList.contains("hidden");
     activeScoreRenderGeneration = renderGeneration;
+    scoreRenderStartedAt = performance.now();
     scoreRenderInProgress = true;
     scoreLoadPending = Boolean(stage.file);
     scoreLoadConfirmed = !scoreLoadPending;
     isScoreRendered = false;
+    scheduleAlphaTabHealthCheck();
 
     if (stage.file) {
         try {
@@ -672,10 +690,11 @@ async function renderTab(stage = currentStage) {
                 }
             }
 
+            if (!isCurrentRender()) return;
             if (xmlText) {
                 const fixedXml = fixMuseScoreXml(xmlText);
                 const binaryData = new TextEncoder().encode(fixedXml);
-                const loadStarted = api.load(binaryData);
+                const loadStarted = renderApi.load(binaryData);
                 if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
                     scoreRenderInProgress = false;
                     scoreLoadPending = false;
@@ -687,7 +706,7 @@ async function renderTab(stage = currentStage) {
             }
 
             // フォールバック: 通常のパス指定ロード
-            const loadStarted = api.load(stage.file);
+            const loadStarted = renderApi.load(stage.file);
             if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
                 scoreRenderInProgress = false;
                 scoreLoadPending = false;
@@ -697,6 +716,7 @@ async function renderTab(stage = currentStage) {
             }
             return;
         } catch (e) {
+            if (!isCurrentRender()) return;
             console.error("alphaTab load error:", e);
             if (activeScoreRenderGeneration === renderGeneration) {
                 scoreRenderInProgress = false;
@@ -710,7 +730,7 @@ async function renderTab(stage = currentStage) {
     if (stage.tex) {
         try {
             detectedSlurPairs = [];
-            api.tex(stage.tex);
+            renderApi.tex(stage.tex);
         } catch (e) {
             console.warn("alphaTex レンダリング失敗:", e);
             if (activeScoreRenderGeneration === renderGeneration) {
@@ -994,7 +1014,6 @@ function isAlphaTabDisplayHealthy(container) {
 
 function scheduleAlphaTabHealthCheck() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
-    if (shouldUseVerticalTabLayout()) return;
     scoreHealthCheckPending = true;
     if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
 
@@ -1004,17 +1023,32 @@ function scheduleAlphaTabHealthCheck() {
             scoreHealthCheckPending = false;
             return;
         }
-        if (scoreRenderInProgress) return;
+        const container = document.getElementById("alphaTab");
+        if (!container || container.clientWidth <= 0) {
+            scheduleAlphaTabHealthCheck();
+            return;
+        }
+        if (scoreRenderInProgress && performance.now() - scoreRenderStartedAt < 8000) {
+            scheduleAlphaTabHealthCheck();
+            return;
+        }
 
         scoreHealthCheckPending = false;
-        const container = document.getElementById("alphaTab");
-        if (isAlphaTabDisplayHealthy(container)) {
+        if (!scoreRenderInProgress && isAlphaTabDisplayHealthy(container)) {
             scoreRepairAttempted = false;
+            updatePracticeScoreLayout();
             return;
         }
 
         if (scoreRepairAttempted) return;
         scoreRepairAttempted = true;
+        scoreRenderGeneration++;
+        scoreRenderInProgress = false;
+        scoreLoadPending = false;
+        scoreLoadConfirmed = false;
+        activeScoreRenderGeneration = 0;
+        isScoreRendered = false;
+        destroyAlphaTabApi();
         renderTab(currentStage);
         if (!api) scoreRepairAttempted = false;
     }, 300);
@@ -1098,14 +1132,7 @@ function closePracticeModal() {
     }
     stopMicrophoneStream();
 
-    if (api) {
-        try {
-            api.destroy();
-        } catch (e) {
-            console.warn("alphaTab destroy error:", e);
-        }
-        api = null;
-    }
+    destroyAlphaTabApi();
 
     verticalTabController?.destroy();
     verticalTabController = null;
