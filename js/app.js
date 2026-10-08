@@ -24,6 +24,7 @@ import {
 let currentStage = BASIC_STAGES[0]; 
 let isPracticing = false;
 let isStartingPractice = false;
+let practiceStartGeneration = 0;
 let currentBpm = 60;
 let practiceTimerIds = [];
 let verticalTabController = null;
@@ -1082,7 +1083,7 @@ if (window.visualViewport) {
 function closePracticeModal() {
     stopTuner();
 
-    if (isPracticing) {
+    if (isPracticing || isStartingPractice) {
         stopPractice();
     } else {
         stopRecording();
@@ -1168,7 +1169,10 @@ window.addEventListener("keydown", (e) => {
 // ★ 練習 & 録音 シーケンス制御（完全同期タイマー） ★
 // ==========================================
 async function startPractice() {
-    if (isPracticing || isStartingPractice) return;
+    if (isPracticing || isStartingPractice || practiceModal.classList.contains("hidden")) return;
+    const startGeneration = ++practiceStartGeneration;
+    const isCurrentStart = () => startGeneration === practiceStartGeneration
+        && !practiceModal.classList.contains("hidden");
     resetPracticeBar();
     isStartingPractice = true;
     mainActionBtn.disabled = true;
@@ -1183,25 +1187,38 @@ async function startPractice() {
 
     collapseVolumeBar();
     
-    await unlockAudioContext();
-    await requestWakeLock();
-
-    const scoreWrapper = document.querySelector(".score-wrapper");
-    if (scoreWrapper) scoreWrapper.scrollLeft = 0;
-    resetScoreFocusState();
-
     try {
+        await unlockAudioContext();
+        if (!isCurrentStart()) return;
+        await requestWakeLock();
+        if (!isCurrentStart()) return;
+
+        const scoreWrapper = document.querySelector(".score-wrapper");
+        if (scoreWrapper) scoreWrapper.scrollLeft = 0;
+        resetScoreFocusState();
+
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
-            microphoneStream = await navigator.mediaDevices.getUserMedia({
+            const requestedStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
             });
+            if (!isCurrentStart()) {
+                requestedStream.getTracks().forEach(track => track.stop());
+                return;
+            }
+            microphoneStream = requestedStream;
         }
         await setupMicrophoneStream(microphoneStream);
+        if (!isCurrentStart()) return;
     } catch (err) {
+        if (!isCurrentStart()) return;
         console.error("マイク取得またはセットアップエラー:", err);
+        stopPractice();
+        if (microphoneStream) {
+            microphoneStream.getTracks().forEach(track => track.stop());
+            microphoneStream = null;
+        }
+        stopMicrophoneStream();
         alert("マイクへのアクセスに失敗したか、オーディオの初期化が拒否されました。ブラウザの設定でマイクを許可してください。");
-        isStartingPractice = false;
-        mainActionBtn.disabled = false;
         return;
     }
 
@@ -1308,6 +1325,7 @@ function handleBeatStep(step, config) {
 }
 
 function stopPractice() {
+    practiceStartGeneration++;
     isPracticing = false;
     isStartingPractice = false;
 

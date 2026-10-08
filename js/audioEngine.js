@@ -6,6 +6,7 @@ export let audioContext = null;
 export let analyser = null;
 export let audioBuffer = null;
 let wakeLockSentinel = null;
+let wakeLockGeneration = 0;
 let micSourceNode = null;
 let activeMicStream = null;
 
@@ -42,11 +43,20 @@ export function getMetronomeVolume() {
 
 export async function requestWakeLock() {
     if ("wakeLock" in navigator && !wakeLockSentinel) {
-        try { wakeLockSentinel = await navigator.wakeLock.request("screen"); } catch (e) {}
+        const generation = wakeLockGeneration;
+        try {
+            const sentinel = await navigator.wakeLock.request("screen");
+            if (generation !== wakeLockGeneration || wakeLockSentinel) {
+                await sentinel.release();
+                return;
+            }
+            wakeLockSentinel = sentinel;
+        } catch (e) {}
     }
 }
 
 export function releaseWakeLock() {
+    wakeLockGeneration++;
     if (wakeLockSentinel) {
         wakeLockSentinel.release().catch(() => {});
         wakeLockSentinel = null;
