@@ -22,7 +22,7 @@ import {
 // --- 状態管理 ---
 let currentStage = BASIC_STAGES[0]; 
 let isPracticing = false;
-let isStartingPractice = false; // 連打防止ガードフラグ
+let isStartingPractice = false;
 let currentBpm = 60;
 let practiceTimerIds = [];
 let verticalTabController = null;
@@ -36,8 +36,8 @@ let standaloneNextTickTime = 0;
 
 // 譜面描画状態
 let isScoreRendered = false;
-let modalOpenTimerId = null; // レースコンディション防止用タイマーID
-let scoreResizeObserver = null; // ★【ここに追記します】★
+let modalOpenTimerId = null;
+let scoreResizeObserver = null;
 let practiceModalWasLandscape = false;
 let practiceModalPositionFrame = null;
 let alphaTabHealthCheckTimerId = null;
@@ -48,6 +48,9 @@ let scoreHealthCheckPending = false;
 let scoreRepairAttempted = false;
 let scoreRenderGeneration = 0;
 let activeScoreRenderGeneration = 0;
+
+// スラー＆記号（H/P/S/C等）の検出データ
+let detectedSlurPairs = [];
 
 // 録音ステート
 let mediaRecorder = null;
@@ -97,7 +100,7 @@ let isTuning = false;
 let currentTunerStringNum = null;
 let tunerTargetFreq = 82.41;
 let tunerAnimFrameId = null;
-let tunerSilenceFrames = 0; // 無音フレームカウンタ
+let tunerSilenceFrames = 0;
 
 // インフォモーダルDOM
 const infoModal = document.getElementById("infoModal");
@@ -118,11 +121,7 @@ const METRO_SVG_ICON = `
 // ==========================================
 // ★ 単体メトロノーム制御（ドリフトフリー高精度タイマー） ★
 // ==========================================
-// app.js 内の toggleStandaloneMetronome 関数を以下のように書き換えてください
-
 async function toggleStandaloneMetronome() {
-    // ★【修正】イベント直後の最も浅い階層で、非同期処理を挟まず同期的に呼び出す（Safari対策）
-    // unlockAudioContextはPromiseを返しますが、関数自体の呼び出しを1行目に置くことが重要です
     unlockAudioContext().catch(() => {});
 
     if (isPracticing) return;
@@ -130,16 +129,14 @@ async function toggleStandaloneMetronome() {
     if (isStandaloneMetroPlaying) {
         stopStandaloneMetronome();
     } else {
-        await startStandaloneMetronome(); // startStandaloneMetronome内部のunlockAudioContextは削除しても問題ありません
+        await startStandaloneMetronome();
     }
 }
-
 
 async function startStandaloneMetronome() {
     stopTuner();
     await unlockAudioContext();
 
-    // ★【追加】消音状態を解除し、現在の設定音量（localStorage等から復元された値）を適用する
     const currentVol = Number(metroVolSlider?.value || 40) / 100;
     setMetronomeVolume(currentVol);
 
@@ -206,7 +203,7 @@ if (standaloneMetroBtn) {
 }
 
 // ==========================================
-// ★ メトロノーム音量スライダー制御（スマホ展開 ＆ 3秒自動収納） ★
+// ★ メトロノーム音量スライダー制御 ★
 // ==========================================
 function expandVolumeBar() {
     if (!metroVolContainer) return;
@@ -233,7 +230,6 @@ function resetVolumeCollapseTimer() {
 function initVolumeControl() {
     if (!metroVolSlider) return;
 
-    // 1. ローカルストレージから前回の音量を復元、または初期値（40%）を適用
     const savedVol = localStorage.getItem("chogita_metro_vol");
     const initialVol = (savedVol !== null) ? Number(savedVol) : 40;
 
@@ -241,8 +237,6 @@ function initVolumeControl() {
     setMetronomeVolume(initialVol / 100);
     updateVolumeDisplay(initialVol);
 
-    // 2. 自動収納タイマーを管理する関数群（一時停止 と 再開）
-    // スライダーのつまみを触っている間は、タイマーをストップして勝手に閉じないようにする
     const pauseVolumeTimer = () => {
         if (volCollapseTimer) {
             clearTimeout(volCollapseTimer);
@@ -250,18 +244,14 @@ function initVolumeControl() {
         }
     };
 
-    // つまみから指・マウスを離した瞬間に、そこから新しく3秒のカウントダウンを始める
     const resumeVolumeTimer = () => {
         resetVolumeCollapseTimer();
     };
 
-    // 3. スライダーの値が変更された（ドラッグ中・キーボード操作中）ときの処理
     metroVolSlider.addEventListener("input", (e) => {
         const val = Number(e.target.value);
         setMetronomeVolume(val / 100);
         updateVolumeDisplay(val);
-        
-        // ★【追加】値が動いている（ドラッグ中）間も、徹底してタイマーを一時停止させて勝手に閉じるのを防ぐ
         pauseVolumeTimer(); 
         
         try {
@@ -269,22 +259,16 @@ function initVolumeControl() {
         } catch (err) {}
     });
 
-    // 4. スマホ用（タッチイベント）のリスナー登録
     metroVolSlider.addEventListener("touchstart", pauseVolumeTimer, { passive: true });
     metroVolSlider.addEventListener("touchend", resumeVolumeTimer, { passive: true });
-
-    // 5. PC用（マウスイベント）のリスナー登録
     metroVolSlider.addEventListener("mousedown", pauseVolumeTimer);
     
-    // ★【バグ修正】metroVolSlider単体のmouseupではなく、document（画面全体）のmouseupを監視する
-    // これにより、つまみを掴んだままマウスをスライダーの外側に大きく外して指を離しても、確実に「離した」ことを検知して3秒後に閉じます
     document.addEventListener("mouseup", () => {
         if (metroVolContainer && metroVolContainer.classList.contains("expanded")) {
             resumeVolumeTimer();
         }
     });
 
-    // 6. 音量展開ボタン（スピーカーアイコン）が押されたときの開閉制御
     if (metroVolToggleBtn) {
         metroVolToggleBtn.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -296,15 +280,12 @@ function initVolumeControl() {
         });
     }
 
-    // 7. スライダー以外の画面の適当な場所をクリックしたときに閉じる
     document.addEventListener("click", (e) => {
         if (metroVolContainer && !metroVolContainer.contains(e.target)) {
             collapseVolumeBar();
         }
     });
 }
-
-
 
 function updateVolumeDisplay(val) {
     if (metroVolLabel) metroVolLabel.innerText = `${val}%`;
@@ -313,6 +294,207 @@ function updateVolumeDisplay(val) {
         else if (val < 50) metroVolIcon.innerText = "🔉";
         else metroVolIcon.innerText = "🔊";
     }
+}
+
+// ==========================================
+// ★ MuseScore 4 MusicXML 補正 & スラー・演奏記号（H/P/S/C等）の抽出 ★
+// ==========================================
+function fixMuseScoreXml(xmlText) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+    detectedSlurPairs = [];
+    const activeSlurs = new Map();
+    let globalFretIndex = 0;
+
+    const measures = xmlDoc.querySelectorAll('measure');
+
+    measures.forEach((measure, measureIdx) => {
+        let currentDirectionLabel = null;
+
+        Array.from(measure.children).forEach(child => {
+            const tag = child.tagName.toLowerCase();
+
+            if (tag === 'direction') {
+                const words = child.querySelector('words');
+                if (words && words.textContent) {
+                    const text = words.textContent.trim().toUpperCase();
+                    const validLabels = ['H', 'P', 'S', 'C', 'D', 'T', 'SL', 'SLIDE', 'HO', 'PO', 'CHO', 'BEND'];
+                    if (validLabels.includes(text)) {
+                        let displayLabel = text;
+                        if (['SL', 'SLIDE'].includes(text)) displayLabel = 'S';
+                        else if (text === 'HO') displayLabel = 'H';
+                        else if (text === 'PO') displayLabel = 'P';
+                        else if (['CHO', 'BEND'].includes(text)) displayLabel = 'C';
+
+                        currentDirectionLabel = displayLabel;
+                        // 自前でSVG描画するため、XML内のdirectionノードは削除（二重描画防止）
+                        child.remove();
+                    }
+                }
+            } else if (tag === 'note') {
+                const isRest = !!child.querySelector('rest');
+                if (isRest) {
+                    return; // 休符はフレット音符カウントの対象外
+                }
+
+                const currentNoteIndex = globalFretIndex++;
+
+                const notations = child.querySelector('notations');
+                if (notations) {
+                    // スラー開始の検出
+                    const slurStarts = notations.querySelectorAll('slur[type="start"]');
+                    slurStarts.forEach(s => {
+                        const num = s.getAttribute('number') || '1';
+                        let techLabel = null;
+                        const ho = notations.querySelector('hammer-on[type="start"]');
+                        const po = notations.querySelector('pull-off[type="start"]');
+                        if (ho && ho.textContent) techLabel = ho.textContent.trim().toUpperCase();
+                        else if (po && po.textContent) techLabel = po.textContent.trim().toUpperCase();
+
+                        const label = currentDirectionLabel || techLabel || 'H';
+
+                        activeSlurs.set(num, {
+                            startIndex: currentNoteIndex,
+                            measureIndex: measureIdx + 1,
+                            label: label
+                        });
+                    });
+
+                    if (slurStarts.length > 0) {
+                        currentDirectionLabel = null;
+                    }
+
+                    // スラー終了の検出
+                    const slurStops = notations.querySelectorAll('slur[type="stop"]');
+                    slurStops.forEach(s => {
+                        const num = s.getAttribute('number') || '1';
+                        if (activeSlurs.has(num)) {
+                            const slurInfo = activeSlurs.get(num);
+                            activeSlurs.delete(num);
+
+                            detectedSlurPairs.push({
+                                startIndex: slurInfo.startIndex,
+                                endIndex: currentNoteIndex,
+                                measureIndex: slurInfo.measureIndex,
+                                label: slurInfo.label
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    });
+
+    console.info('[MusicXML解析完了] 検出されたスラーペア:', detectedSlurPairs);
+
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(xmlDoc);
+}
+
+// ==========================================
+// ★ スラー弧線（上向き三日月）＆ 記号（H/P/S/C）の確実なSVG描画 ★
+// ==========================================
+function renderSlursAndLabelsInSvg() {
+    const container = document.getElementById("alphaTab");
+    if (!container) return;
+
+    const svgs = container.querySelectorAll('svg');
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    svgs.forEach(svg => {
+        svg.querySelectorAll('.alphatab-custom-slur, .alphaTab-slur-label').forEach(el => el.remove());
+
+        // フレット数字テキスト（0-9）をすべて抽出
+        const allTexts = Array.from(svg.querySelectorAll('text'));
+        const fretTexts = allTexts.filter(el => {
+            const text = el.textContent.trim();
+            if (!/^[0-9]+$/.test(text)) return false;
+            const fill = (el.getAttribute('fill') || el.style.fill || '').toLowerCase();
+            if (fill.includes('red') || fill.includes('c8') || fill.includes('rgb(200')) return false;
+            return true;
+        });
+
+        // X座標昇順にソート（音符の時系列順）
+        fretTexts.sort((a, b) => {
+            try {
+                return a.getBBox().x - b.getBBox().x;
+            } catch (e) {
+                return 0;
+            }
+        });
+
+        // 解析された各スラーペアを描画
+        detectedSlurPairs.forEach(pair => {
+            const { startIndex, endIndex, label } = pair;
+            if (startIndex >= fretTexts.length || endIndex >= fretTexts.length) return;
+
+            try {
+                const b1 = fretTexts[startIndex].getBBox();
+                const b2 = fretTexts[endIndex].getBBox();
+
+                const x1 = b1.x + b1.width * 0.5;
+                const y1 = b1.y - 1;
+                const x2 = b2.x + b2.width * 0.5;
+                const y2 = b2.y - 1;
+
+                const midX = (x1 + x2) * 0.5;
+                const span = Math.abs(x2 - x1);
+
+                // スラー弧線のアーチ高さ（音符間隔に応じて自然な高さを算出）
+                const arch = Math.max(12, Math.min(22, span * 0.22));
+                const topY = Math.min(y1, y2) - arch;
+                const thickness = 2.0;
+
+                // 上向きの三日月型スラー弧線パス（ベジェ曲線）
+                const pathData = `M ${x1.toFixed(1)} ${y1.toFixed(1)} ` +
+                                 `Q ${midX.toFixed(1)} ${(topY - thickness * 0.6).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)} ` +
+                                 `Q ${midX.toFixed(1)} ${(topY + thickness * 0.6).toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)} Z`;
+
+                const slurPath = document.createElementNS(SVG_NS, 'path');
+                slurPath.setAttribute('d', pathData);
+                slurPath.setAttribute('fill', '#1e293b');
+                slurPath.setAttribute('class', 'alphatab-custom-slur');
+                svg.appendChild(slurPath);
+
+                // スラー弧線の頂点の真上に、H / P / S / C 等の演奏記号を配置
+                if (label) {
+                    const textEl = document.createElementNS(SVG_NS, 'text');
+                    textEl.setAttribute('x', midX.toFixed(1));
+                    textEl.setAttribute('y', (topY - 4).toFixed(1));
+                    textEl.setAttribute('text-anchor', 'middle');
+                    textEl.setAttribute('class', 'alphaTab-slur-label');
+                    textEl.setAttribute('font-family', 'Georgia, "Times New Roman", serif');
+                    textEl.setAttribute('font-style', 'italic');
+                    textEl.setAttribute('font-weight', 'bold');
+                    textEl.setAttribute('font-size', '15px');
+                    textEl.setAttribute('fill', '#0f172a');
+                    textEl.textContent = label;
+                    svg.appendChild(textEl);
+                }
+
+            } catch (e) {
+                console.warn('[スラー描画エラー]', e);
+            }
+        });
+    });
+}
+
+function handleWatermark() {
+    const container = document.getElementById("alphaTab");
+    if (!container) return;
+    const allTexts = container.querySelectorAll('text');
+    allTexts.forEach(el => {
+        if (el.textContent && el.textContent.includes('alphaTab') && !el.dataset.faded) {
+            el.dataset.faded = 'true';
+            el.style.transition = 'opacity 1s ease-out';
+            el.style.opacity = '1';
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 1000);
+            }, 2000);
+        }
+    });
 }
 
 // --- alphaTab 初期化 ---
@@ -324,21 +506,34 @@ function initAlphaTabIfNeeded() {
 
         try {
             const apiInstance = new alphaTab.AlphaTabApi(container, {
-                core: { engine: "svg" },
+                core: { 
+                    engine: "svg",
+                    enableLazyLoading: false
+                },
                 display: { 
                     layoutMode: "horizontal", 
                     staveProfile: "Tab", 
                     scale: 1.0
                 },
                 notation: {
+                    rhythm: {
+                        visible: true // ★ リズム符尾・休符記号を確実に表示
+                    },
                     elements: {
                         trackNames: false,
                         guitarTuning: false,
                         scoreTitle: false,
                         scoreSubTitle: false,
                         chordDiagrams: false,
-                        barNumber: true
+                        barNumber: true,
+                        // 自前で美しい上向きスラー＆記号を描画するため、デフォルトの重なりテキストは無効化
+                        [alphaTab.NotationElement?.EffectHammerOnPullOffText || 'EffectHammerOnPullOffText']: false,
+                        'EffectHammerOnPullOffText': false,
+                        'effectHammerOnPullOffText': false
                     }
+                },
+                player: {
+                    enablePlayer: false // Web Audio APIスケジューラを使用するため無効化
                 }
             });
             api = apiInstance;
@@ -364,12 +559,27 @@ function initAlphaTabIfNeeded() {
                 }
                 isScoreRendered = true;
                 resetScoreFocusState();
+
+                // 1. スラー＆H/P/S/C文字のSVG描画
+                handleWatermark();
+                renderSlursAndLabelsInSvg();
+
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(apiInstance, bars);
+
+                // 2. 完成した本物SVGから縦型TABカードを一括生成
+                const mainSvg = container.querySelector("svg");
+                if (mainSvg && verticalTabController) {
+                    verticalTabController.createCardsFromRenderedSvg(
+                        mainSvg, 
+                        apiInstance.boundsLookup || apiInstance.renderer?.boundsLookup, 
+                        bars
+                    );
+                }
+
                 scheduleAlphaTabHealthCheck();
             });
 
-            // 楽譜ファイルロード失敗時のエラーハンドリング
             apiInstance.error.on((error) => {
                 if (api !== apiInstance) return;
                 console.error("alphaTab エラー:", error);
@@ -413,9 +623,9 @@ function getStagePracticeBars(stage) {
 }
 
 // ==========================================
-// ★ 楽譜レンダリング ★
+// ★ 楽譜レンダリング（MXL解凍・MusicXML補正統合版） ★
 // ==========================================
-function renderTab(stage = currentStage) {
+async function renderTab(stage = currentStage) {
     if (!stage) return;
     initAlphaTabIfNeeded();
     if (!api) return;
@@ -437,6 +647,47 @@ function renderTab(stage = currentStage) {
 
     if (stage.file) {
         try {
+            const fileName = stage.file.toLowerCase();
+            let xmlText = null;
+
+            // .mxl または .xml の場合、フェッチして MusicXML 補正 & スラー解析を実行
+            if (fileName.endsWith('.mxl') || fileName.endsWith('.xml') || fileName.endsWith('.musicxml')) {
+                const res = await fetch(stage.file);
+                if (res.ok) {
+                    if (fileName.endsWith('.mxl') && window.JSZip) {
+                        const arrayBuffer = await res.arrayBuffer();
+                        const zip = await JSZip.loadAsync(arrayBuffer);
+                        let targetEntry = null;
+                        for (const path of Object.keys(zip.files)) {
+                            if (path.endsWith('.xml') && !path.startsWith('META-INF/')) {
+                                targetEntry = zip.files[path];
+                                break;
+                            }
+                        }
+                        if (targetEntry) {
+                            xmlText = await targetEntry.async('text');
+                        }
+                    } else {
+                        xmlText = await res.text();
+                    }
+                }
+            }
+
+            if (xmlText) {
+                const fixedXml = fixMuseScoreXml(xmlText);
+                const binaryData = new TextEncoder().encode(fixedXml);
+                const loadStarted = api.load(binaryData);
+                if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
+                    scoreRenderInProgress = false;
+                    scoreLoadPending = false;
+                    scoreLoadConfirmed = false;
+                    activeScoreRenderGeneration = 0;
+                    scoreRepairAttempted = false;
+                }
+                return;
+            }
+
+            // フォールバック: 通常のパス指定ロード
             const loadStarted = api.load(stage.file);
             if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
                 scoreRenderInProgress = false;
@@ -459,6 +710,7 @@ function renderTab(stage = currentStage) {
 
     if (stage.tex) {
         try {
+            detectedSlurPairs = [];
             api.tex(stage.tex);
         } catch (e) {
             console.warn("alphaTex レンダリング失敗:", e);
@@ -527,13 +779,12 @@ function renderExerciseCards() {
 // ==========================================
 // ★ 練習ポップアップモーダルの制御 ★
 // ==========================================
-// ==========================================
-// ★ 練習ポップアップモーダルの制御 ★
-// ==========================================
 function openPracticeModal(stage) {
     currentStage = stage;
     currentBpm = stage.bpm || 60;
     currentPracticeBarIndex = 0;
+    detectedSlurPairs = [];
+
     if (verticalTabTimeSignature) {
         const [numerator = 4, denominator = 4] = stage.timeSignature || [];
         verticalTabTimeSignature.textContent = `${numerator}/${denominator}`;
@@ -651,11 +902,18 @@ function updatePracticeScoreLayout() {
             onBarChange: (index) => { currentPracticeBarIndex = index; },
         });
     }
-    verticalTabController.load(currentStage.file)
-        .then(() => {
-            if (isPracticing) verticalTabController?.setCurrentBar(currentPracticeBarIndex, "practice-resume");
-        })
-        .catch((error) => console.error("[縦型TAB] load failed", error));
+
+    // 既にSVGが描画されていれば、カードを抽出生成
+    const container = document.getElementById("alphaTab");
+    const mainSvg = container?.querySelector("svg");
+    if (mainSvg && api && (!verticalTabController.hasCards)) {
+        verticalTabController.createCardsFromRenderedSvg(
+            mainSvg, 
+            api.boundsLookup || api.renderer?.boundsLookup, 
+            getStagePracticeBars(currentStage)
+        );
+    }
+    verticalTabController.setCurrentBar(currentPracticeBarIndex, "layout-update");
 }
 
 function setPracticeBar(index, source = "practice") {
@@ -674,7 +932,7 @@ function getPracticeModalViewportHeight() {
 }
 
 function updatePracticeModalAvailableHeight() {
-    if (!practiceModal || practiceModal.classList.contains("hidden") || !isPracticeModalLandscape()) return;
+    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
     const modalContent = practiceModal.querySelector(".practice-modal-content");
     if (!modalContent) return;
     modalContent.style.setProperty(
@@ -696,7 +954,6 @@ function adjustPracticeModalInitialPosition() {
 
     if (!isPracticeModalLandscape()) return;
 
-    // Use the visible viewport (including mobile browser chrome) for the modal's available height.
     updatePracticeModalAvailableHeight();
 
     if (modalContent.scrollHeight <= modalContent.clientHeight) return;
@@ -704,7 +961,6 @@ function adjustPracticeModalInitialPosition() {
     const score = modalContent.querySelector(".score-wrapper");
     if (!score) return;
 
-    // Center the score in the visible scroll area; clamp to valid scroll bounds.
     const contentRect = modalContent.getBoundingClientRect();
     const scoreRect = score.getBoundingClientRect();
     const scoreTop = modalContent.scrollTop + scoreRect.top - contentRect.top - modalContent.clientTop;
@@ -715,7 +971,6 @@ function adjustPracticeModalInitialPosition() {
 
 function requestPracticeModalInitialPosition() {
     if (practiceModalPositionFrame !== null) cancelAnimationFrame(practiceModalPositionFrame);
-    // Wait for display/layout and alphaTab's initial sizing to settle before measuring DOM dimensions.
     practiceModalPositionFrame = requestAnimationFrame(() => {
         practiceModalPositionFrame = requestAnimationFrame(() => {
             practiceModalPositionFrame = null;
@@ -754,7 +1009,7 @@ function scheduleAlphaTabHealthCheck() {
             scoreHealthCheckPending = false;
             return;
         }
-        if (scoreRenderInProgress) return; // renderFinished will schedule the deferred check.
+        if (scoreRenderInProgress) return;
 
         scoreHealthCheckPending = false;
         const container = document.getElementById("alphaTab");
@@ -774,8 +1029,6 @@ function handlePracticeModalOrientationChange() {
     if (!practiceModal || practiceModal.classList.contains("hidden")) return;
 
     updatePracticeScoreLayout();
-
-    // Coalesce orientationchange/resize bursts into one score health check.
     scheduleAlphaTabHealthCheck();
     const isLandscape = isPracticeModalLandscape();
     if (isLandscape === practiceModalWasLandscape) return;
@@ -785,7 +1038,6 @@ function handlePracticeModalOrientationChange() {
         updatePracticeModalAvailableHeight();
         requestPracticeModalInitialPosition();
     } else {
-        // Restore the portrait CSS default without changing the user's scroll position.
         resetPracticeModalAvailableHeight();
     }
 }
@@ -797,9 +1049,7 @@ if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", updatePracticeModalAvailableHeight);
 }
 
-
 function closePracticeModal() {
-    // ★【追加】モーダルを閉じる際は、チューナーの状態やUI選択ハイライトも確実に完全初期化する
     stopTuner();
 
     if (isPracticing) {
@@ -808,7 +1058,6 @@ function closePracticeModal() {
         stopRecording();
     }
     
-    // ★【追加】チューナーも確実に完全停止させ、UIのactiveクラスを消去する
     stopTuner(); 
 
     if (recordedAudioUrl) {
@@ -816,7 +1065,6 @@ function closePracticeModal() {
         recordedAudioUrl = null;
     }
     
-    // ★【追加】モーダルが閉じられたらサイズ監視も強制終了
     if (scoreResizeObserver) {
         scoreResizeObserver.disconnect();
         scoreResizeObserver = null;
@@ -880,7 +1128,6 @@ function closePracticeModal() {
     }
 }
 
-
 if (closePracticeModalBtn) closePracticeModalBtn.addEventListener("click", closePracticeModal);
 if (practiceModal) {
     practiceModal.addEventListener("click", (e) => {
@@ -898,18 +1145,14 @@ window.addEventListener("keydown", (e) => {
 // ★ 練習 & 録音 シーケンス制御（完全同期タイマー） ★
 // ==========================================
 async function startPractice() {
-    // ボタン連打による多重起動の完全ガード
     if (isPracticing || isStartingPractice) return;
     resetPracticeBar();
     isStartingPractice = true;
     mainActionBtn.disabled = true;
 
-    // ★【バグ修正】非同期処理 (await) に入る前の最も浅い階層で、
-    // チューナーと単体メトロノームを同期的かつ最優先で完全停止・クリーンアップする
     stopTuner();
     stopStandaloneMetronome();
 
-    // 前回の録音再生中であれば即座に停止＆巻き戻し（音の被り混入防止）
     if (recordedAudioPlayer) {
         recordedAudioPlayer.pause();
         recordedAudioPlayer.currentTime = 0;
@@ -925,7 +1168,6 @@ async function startPractice() {
     resetScoreFocusState();
 
     try {
-        // ★【バグ修正】マイク取得からセットアップまでを一つの try ブロックで一貫して管理
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -935,14 +1177,11 @@ async function startPractice() {
     } catch (err) {
         console.error("マイク取得またはセットアップエラー:", err);
         alert("マイクへのアクセスに失敗したか、オーディオの初期化が拒否されました。ブラウザの設定でマイクを許可してください。");
-        
-        // 確実にステートを復元する
         isStartingPractice = false;
         mainActionBtn.disabled = false;
         return;
     }
 
-    // --- 録音・演奏ステートの確定 ---
     isPracticing = true;
     isStartingPractice = false;
     mainActionBtn.disabled = false;
@@ -953,15 +1192,11 @@ async function startPractice() {
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = true;
 
     setupMediaRecorder(microphoneStream);
-    
-    // iOS制限対策＆カウント4拍を残すため、練習開始と同時に録音を走らせる
     startRecording();
     visualMetronomeBox.classList.add("recording");
 
-    // ★【バグ修正】startRecording()（MediaRecorderの初期起動に伴うクロックジッター）完了の "後" に、
-    // 最新の currentTime を取得して発音基準時刻を計算することで、2拍目以降の無音バグを完全に防止する
     const beatSec = 60 / currentBpm;
-    const offsetSec = 0.3; // クロック変動を安全に吸収するため少し余裕を持たせる（0.25 -> 0.3）
+    const offsetSec = 0.3;
     const startTime = audioContext.currentTime + offsetSec; 
 
     const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
@@ -1003,7 +1238,6 @@ async function startPractice() {
     }, finishDelayMs);
     practiceTimerIds.push(endTimerId);
 }
-
 
 function handleBeatStep(step, config) {
     const { beatsPerBar, countInBars, countInBeats, practiceBars, totalBeats, totalSteps, beatSec } = config;
@@ -1054,13 +1288,10 @@ function stopPractice() {
     isPracticing = false;
     isStartingPractice = false;
 
-    // 1. JavaScript側のすべてのタイマーを最優先でクリア
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
 
-    // 2. Web Audio API側の発音予約をすべて強制停止（先ほど強化した関数）
     stopAllScheduledTicks(); 
-    
     stopRecording();
     releaseWakeLock();
     resetVisualMetronome();
@@ -1073,7 +1304,6 @@ function stopPractice() {
     mainActionBtn.classList.remove("btn-stop");
     mainActionBtn.disabled = false;
 }
-
 
 function finishPractice() {
     isPracticing = false;
@@ -1102,7 +1332,6 @@ function finishPractice() {
 }
 
 mainActionBtn.addEventListener("click", () => {
-    // ★【修正】クリックされた瞬間に最優先で解凍
     unlockAudioContext().catch(() => {});
 
     if (isPracticing) {
@@ -1120,8 +1349,6 @@ mainActionBtn.addEventListener("click", () => {
     }
 });
 
-// app.js 内の setupMediaRecorder 関数を以下のように書き換えてください
-
 function setupMediaRecorder(stream) {
     if (!window.MediaRecorder || !stream) return;
     recordedChunks = [];
@@ -1137,9 +1364,8 @@ function setupMediaRecorder(stream) {
         };
         
         mediaRecorder.onstop = () => {
-            // ★【修正】データ切り出し時にすでにモーダルが閉じられていたら、後続のUI操作を安全にスキップする
             if (!practiceModal || practiceModal.classList.contains("hidden")) {
-                recordedChunks = []; // メモリ解放
+                recordedChunks = [];
                 return;
             }
 
@@ -1155,7 +1381,6 @@ function setupMediaRecorder(stream) {
     }
 }
 
-
 function startRecording() { 
     if (mediaRecorder && mediaRecorder.state === "inactive") mediaRecorder.start(); 
 }
@@ -1165,17 +1390,14 @@ function stopRecording() {
 }
 
 // ==========================================
-// ★ 簡易チューナー（多重ループ完全防止） ★
+// ★ 簡易チューナー ★
 // ==========================================
-// app.js 内の selectTunerString 関数を以下のようにアップデートしてください
-
 async function selectTunerString(stringNum, midi, noteName) {
     if (isTuning && currentTunerStringNum === stringNum) { 
         stopTuner(); 
         return; 
     }
     
-    // ★【修正】練習中であれば最優先で練習を完全停止する
     if (isPracticing) {
         stopPractice();
     }
@@ -1197,7 +1419,6 @@ async function selectTunerString(stringNum, midi, noteName) {
     
     await unlockAudioContext();
     try {
-        // ★【修正】ストリームを安全に初期化
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
             microphoneStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -1212,7 +1433,6 @@ async function selectTunerString(stringNum, midi, noteName) {
     }
 }
 
-
 function stopTuner() {
     isTuning = false;
     currentTunerStringNum = null;
@@ -1224,7 +1444,6 @@ function stopTuner() {
     if (tunerHud) tunerHud.classList.add("hidden");
     tunerStringBtns.forEach(btn => btn.classList.remove("active"));
 
-    // チューナー停止時にマイクも解放（練習中でなければ）
     if (!isPracticing) {
         if (microphoneStream) {
             microphoneStream.getTracks().forEach(t => t.stop());
@@ -1236,7 +1455,6 @@ function stopTuner() {
 
 tunerStringBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-        // ★【修正】クリックした瞬間に最優先で解凍を走らせる
         unlockAudioContext().catch(() => {});
 
         const sNum = Number(btn.dataset.string);
@@ -1253,7 +1471,6 @@ if (tunerDetails) {
 }
 
 function tunePitchLoop() {
-    // ★【修正】フラグが折れている場合は即座に完全に終了し、再帰予約を遮断する
     if (!isTuning || !analyser || !audioBuffer || !audioContext) {
         return;
     }
@@ -1270,7 +1487,6 @@ function tunePitchLoop() {
             updateTunerUI({ freq, tunerTargetFreq, tunerHzDisplay, tunerMeterPointer, tunerStatusText, onInTunePing: playTunerPing });
         }
     } else {
-        // 無音状態が続いた（約0.3秒）場合は針・ステータスを初期状態に戻す
         tunerSilenceFrames++;
         if (tunerSilenceFrames > 20) {
             if (tunerStatusText) {

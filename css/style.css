@@ -597,6 +597,7 @@ body {
 .vertical-tab-controls {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 10px;
     margin: 0 0 8px;
 }
@@ -610,8 +611,22 @@ body {
     font: inherit;
     font-size: 13px;
     font-weight: 700;
+    cursor: pointer;
+    transition: 0.15s;
 }
-.vertical-tab-controls button:disabled { opacity: 0.45; }
+.vertical-tab-controls button:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+.vertical-tab-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.vertical-bar-indicator {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    min-width: 90px;
+    text-align: center;
+}
+
 .vertical-tab-notation-label {
     display: flex;
     justify-content: space-between;
@@ -641,8 +656,8 @@ body {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 100%;
-    max-width: 100%;
+    width: 96%;
+    max-width: 96%;
     box-sizing: border-box;
     padding: 6px 8px;
     border: 2px solid transparent;
@@ -669,7 +684,13 @@ body {
     font-weight: 700;
     text-align: center;
 }
-.vertical-tab-card svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.vertical-tab-card svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+    margin: 0 auto;
+}
 .vertical-tab-message {
     position: absolute;
     inset: 50% 12px auto;
@@ -681,14 +702,21 @@ body {
     pointer-events: none;
 }
 .vertical-tab-message[hidden] { display: none; }
-.vertical-tab-render-source {
-    position: fixed;
-    left: -10000px;
-    top: 0;
-    width: 1400px;
-    min-height: 260px;
-    opacity: 0;
-    pointer-events: none;
+
+/* ★ 自前描画スラー弧線＆文字記号（H/P/S/C）のスタイル */
+.alphatab-custom-slur {
+    fill: #1e293b !important;
+    pointer-events: none !important;
+}
+
+.alphaTab-slur-label {
+    font-family: Georgia, "Times New Roman", serif !important;
+    font-style: italic !important;
+    font-size: 15px !important;
+    font-weight: bold !important;
+    fill: #0f172a !important;
+    pointer-events: none !important;
+    user-select: none !important;
 }
 
 /* 小節全体の控えめな背景ハイライト */
@@ -848,7 +876,6 @@ button { touch-action: manipulation; }
     .practice-modal-content { padding: 12px 12px; max-height: var(--practice-modal-max-height, 96vh); }
     .practice-modal-title { font-size: 14px; }
     
-    /* 修正: スマホでの食い込み防止 */
     .modal-footer-action {
         bottom: -12px;
         margin: 4px -12px -12px -12px;
@@ -859,7 +886,6 @@ button { touch-action: manipulation; }
     /* メトロノームバー: スマホ向け最適化 */
     .visual-metronome-compact { padding: 4px 6px; min-height: 40px; }
     
-    /* ⏱️ スマホではテキストを隠してメトロノームアイコンのみ表示 */
     .metro-standalone-btn {
         left: 6px;
         padding: 5px;
@@ -870,7 +896,6 @@ button { touch-action: manipulation; }
     .metro-btn-text { display: none; }
     .metro-icon-svg { width: 15px; height: 15px; }
 
-    /* 🎯 中央メトロノーム本体（スペース確保） */
     .metro-center-group { gap: 4px; }
     .metro-phase-badge { font-size: 9px; padding: 2px 4px; min-width: 44px; }
     .metro-count-chip { min-width: 22px; height: 22px; font-size: 12px; }
@@ -878,7 +903,6 @@ button { touch-action: manipulation; }
     .beat-dot { width: 18px; height: 18px; }
     .beat-dot .dot-num { font-size: 9px; }
     
-    /* 🔊 スマホ音量バー: 普段はアイコンのみ、タップで横に展開 ＆ 3秒自動収納 */
     .metro-vol-container {
         right: 6px;
         padding: 4px;
