@@ -4,6 +4,7 @@
 
 import { BASIC_STAGES } from "./config.js";
 import { VerticalTabController } from "./verticalTab.js";
+import { bindButtonActivation } from "./buttonInput.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -1353,7 +1354,7 @@ function finishPractice() {
     }
 }
 
-mainActionBtn.addEventListener("click", () => {
+bindButtonActivation(mainActionBtn, () => {
     unlockAudioContext().catch(() => {});
 
     if (isPracticing) {
@@ -1373,7 +1374,7 @@ mainActionBtn.addEventListener("click", () => {
     } else {
         startPractice();
     }
-});
+}, { touchEnabled: shouldUseVerticalTabLayout });
 
 function setupMediaRecorder(stream) {
     if (!window.MediaRecorder || !stream) return;

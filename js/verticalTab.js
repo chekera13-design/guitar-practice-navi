@@ -3,6 +3,8 @@
 // 統合元アプリ(App 2)完全互換・高精度小節クロップ版
 // ==========================================
 
+import { bindButtonActivation } from "./buttonInput.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function preserveAlphaTabStyles(sourceSvg, extractedSvg) {
@@ -217,8 +219,8 @@ export class VerticalTabController {
     bindControls() {
         this.controlEvents = new AbortController();
         const options = { signal: this.controlEvents.signal };
-        this.previousButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex - 1, "button"), options);
-        this.nextButton?.addEventListener("click", () => this.setCurrentBar(this.currentBarIndex + 1, "button"), options);
+        bindButtonActivation(this.previousButton, () => this.setCurrentBar(this.currentBarIndex - 1, "button"), options);
+        bindButtonActivation(this.nextButton, () => this.setCurrentBar(this.currentBarIndex + 1, "button"), options);
         if (!this.viewport) return;
 
         this.viewport.style.setProperty("--vertical-tab-animation", `${this.animationMs}ms`);

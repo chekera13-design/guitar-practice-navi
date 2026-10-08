@@ -614,8 +614,10 @@ body {
     cursor: pointer;
     transition: 0.15s;
 }
-.vertical-tab-controls button:hover:not(:disabled) {
-    background: #e2e8f0;
+@media (hover: hover) and (pointer: fine) {
+    .vertical-tab-controls button:hover:not(:disabled) {
+        background: #e2e8f0;
+    }
 }
 .vertical-tab-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -792,10 +794,12 @@ body {
     cursor: pointer;
     transition: all 0.15s ease;
 }
-.wide-start-btn:hover { background-color: #059669; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4); }
+@media (hover: hover) and (pointer: fine) {
+    .wide-start-btn:hover { background-color: #059669; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4); }
+    .wide-start-btn.btn-stop:hover { background-color: #dc2626 !important; }
+}
 .wide-start-btn:active { transform: translateY(1px); }
 .wide-start-btn.btn-stop { background-color: #ef4444 !important; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35) !important; }
-.wide-start-btn.btn-stop:hover { background-color: #dc2626 !important; }
 
 /* ==========================================
    フッター & 汎用モーダル
