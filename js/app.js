@@ -1340,7 +1340,11 @@ mainActionBtn.addEventListener("click", () => {
         recordedAudioPlayer?.pause();
         if (recordedAudioPlayer) recordedAudioPlayer.currentTime = 0;
         recordResultCard.classList.add("hidden");
-        practiceModal.querySelector(".practice-modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
+        if (isPracticeModalLandscape()) {
+            requestPracticeModalInitialPosition();
+        } else {
+            practiceModal.querySelector(".practice-modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
+        }
         mainActionBtn.innerText = "▶ 練習する";
         mainActionBtn.classList.remove("btn-stop");
         visualMetronomeBox.classList.remove("recording");
