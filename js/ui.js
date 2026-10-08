@@ -226,7 +226,9 @@ export function startScoreContinuousScroll({
     totalBars,
     beatsPerBar = 4,
     beatSec = 0.5,
-    onProgress
+    onProgress,
+    repeatCount = 1,
+    getElapsedSeconds
 }) {
     stopScoreContinuousScroll();
 
@@ -241,13 +243,16 @@ export function startScoreContinuousScroll({
     const startTime = performance.now();
 
     function frame(now) {
-        const elapsedSec = (now - startTime) / 1000;
+        const elapsedSec = getElapsedSeconds ? getElapsedSeconds() : (now - startTime) / 1000;
         if (elapsedSec < 0) {
             continuousScrollFrameId = requestAnimationFrame(frame);
             return;
         }
 
-        const currentTotalBeats = elapsedSec / beatSec;
+        const finished = elapsedSec >= totalDurationSec * repeatCount;
+        const currentTotalBeats = finished
+            ? totalBars * beatsPerBar - 0.000001
+            : (elapsedSec % totalDurationSec) / beatSec;
         const currentBarIndex = Math.min(totalBars - 1, Math.floor(currentTotalBeats / beatsPerBar));
         const progressInBar = Math.max(0, Math.min(1, (currentTotalBeats % beatsPerBar) / beatsPerBar));
 
@@ -269,7 +274,7 @@ export function startScoreContinuousScroll({
             onProgress(currentBarIndex, Math.floor(currentTotalBeats % beatsPerBar) + 1);
         }
 
-        if (elapsedSec < totalDurationSec + 0.5) {
+        if (elapsedSec < totalDurationSec * repeatCount + 0.5) {
             continuousScrollFrameId = requestAnimationFrame(frame);
         } else {
             continuousScrollFrameId = null;

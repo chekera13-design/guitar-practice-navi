@@ -25,6 +25,9 @@ let currentStage = BASIC_STAGES[0];
 let isPracticing = false;
 let isStartingPractice = false;
 let practiceStartGeneration = 0;
+let practiceSession = null;
+let pendingPracticeMode = null;
+let isFinalizingRecording = false;
 let currentBpm = 60;
 let practiceTimerIds = [];
 let verticalTabController = null;
@@ -56,8 +59,8 @@ let scoreRenderStartedAt = 0;
 let detectedSlurPairs = [];
 
 // 録音ステート
-let mediaRecorder = null;
-let recordedChunks = [];
+let recordingSession = null;
+let recordingGeneration = 0;
 let recordedAudioUrl = null;
 let microphoneStream = null;
 
@@ -75,6 +78,9 @@ const stageGuideBody = document.getElementById("stageGuideBody");
 
 const visualMetronomeBox = document.getElementById("visualMetronomeBox");
 const mainActionBtn = document.getElementById("mainActionBtn");
+const recordPracticeBtn = document.getElementById("recordPracticeBtn");
+const practiceRepeatSelect = document.getElementById("practiceRepeatSelect");
+const practiceStatus = document.getElementById("practiceStatus");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 const verticalTabWrapper = document.getElementById("verticalTabWrapper");
@@ -126,7 +132,7 @@ const METRO_SVG_ICON = `
 async function toggleStandaloneMetronome() {
     unlockAudioContext().catch(() => {});
 
-    if (isPracticing) return;
+    if (isPracticing || isStartingPractice || isFinalizingRecording) return;
 
     if (isStandaloneMetroPlaying) {
         stopStandaloneMetronome();
@@ -138,6 +144,7 @@ async function toggleStandaloneMetronome() {
 async function startStandaloneMetronome() {
     stopTuner();
     await unlockAudioContext();
+    if (isPracticing || isStartingPractice || isFinalizingRecording || practiceModal.classList.contains("hidden")) return;
 
     const currentVol = Number(metroVolSlider?.value || 40) / 100;
     setMetronomeVolume(currentVol);
@@ -579,6 +586,7 @@ function initAlphaTabIfNeeded() {
 
                 const bars = getStagePracticeBars(currentStage);
                 buildScoreBarLayouts(apiInstance, bars);
+                resumePracticeScroll();
 
                 // 2. 完成した本物SVGから縦型TABカードを一括生成
                 const mainSvg = container.querySelector("svg");
@@ -801,6 +809,7 @@ function renderExerciseCards() {
 // ★ 練習ポップアップモーダルの制御 ★
 // ==========================================
 function openPracticeModal(stage) {
+    if (!practiceModal.classList.contains("hidden")) closePracticeModal();
     currentStage = stage;
     currentBpm = stage.bpm || 60;
     currentPracticeBarIndex = 0;
@@ -856,11 +865,8 @@ function openPracticeModal(stage) {
 
     if (recordResultCard) recordResultCard.classList.add("hidden");
     resetVisualMetronome();
-    mainActionBtn.innerText = "▶ 練習する";
-    mainActionBtn.classList.remove("btn-stop");
-    mainActionBtn.disabled = false;
-
-    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
+    showPracticeStatus("");
+    updatePracticeControls();
 
     practiceModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
@@ -1083,11 +1089,7 @@ if (window.visualViewport) {
 function closePracticeModal() {
     stopTuner();
 
-    if (isPracticing || isStartingPractice) {
-        stopPractice();
-    } else {
-        stopRecording();
-    }
+    stopPractice();
     
     stopTuner(); 
 
@@ -1170,25 +1172,76 @@ window.addEventListener("keydown", (e) => {
 // ==========================================
 // ★ 練習 & 録音 シーケンス制御（完全同期タイマー） ★
 // ==========================================
-async function startPractice() {
-    if (isPracticing || isStartingPractice || practiceModal.classList.contains("hidden")) return;
+function showPracticeStatus(text, isError = false) {
+    if (!practiceStatus) return;
+    practiceStatus.innerText = text;
+    practiceStatus.hidden = !text;
+    practiceStatus.classList.toggle("is-error", isError);
+}
+
+function updatePracticeControls() {
+    const mode = practiceSession?.mode || pendingPracticeMode;
+    const busy = isPracticing || isStartingPractice || isFinalizingRecording;
+    for (const [button, buttonMode, label] of [
+        [mainActionBtn, "practice", "▶ 練習"],
+        [recordPracticeBtn, "record", "● 録音練習"]
+    ]) {
+        if (!button) continue;
+        button.classList.toggle("btn-stop", isPracticing && mode === buttonMode);
+        button.disabled = isStartingPractice || isFinalizingRecording
+            || (isPracticing && mode !== buttonMode);
+        if (isPracticing && mode === buttonMode) button.innerText = "⏹ 練習を終了";
+        else if (isStartingPractice && mode === buttonMode) button.innerText = "準備中…";
+        else if (isFinalizingRecording && buttonMode === "record") button.innerText = "録音を処理中…";
+        else if (buttonMode === "record" && !recordResultCard.classList.contains("hidden")) {
+            button.innerText = "▶ もう一度録音練習";
+        } else button.innerText = label;
+    }
+    if (practiceRepeatSelect) practiceRepeatSelect.disabled = busy;
+    if (standaloneMetroBtn) standaloneMetroBtn.disabled = busy;
+}
+
+function clearRecordingResult() {
+    if (recordedAudioPlayer) {
+        recordedAudioPlayer.pause();
+        recordedAudioPlayer.removeAttribute("src");
+        recordedAudioPlayer.load();
+    }
+    if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+    recordedAudioUrl = null;
+    recordResultCard?.classList.add("hidden");
+}
+
+function releasePracticeMicrophone() {
+    if (microphoneStream) {
+        microphoneStream.getTracks().forEach(track => track.stop());
+        microphoneStream = null;
+    }
+    stopMicrophoneStream();
+}
+
+async function startPractice(mode = "practice") {
+    if (isPracticing || isStartingPractice || isFinalizingRecording
+        || practiceModal.classList.contains("hidden")) return;
     const startGeneration = ++practiceStartGeneration;
     const isCurrentStart = () => startGeneration === practiceStartGeneration
         && !practiceModal.classList.contains("hidden");
+    const repeatValue = practiceRepeatSelect?.value;
+    const repeatCount = mode === "record" ? 1
+        : repeatValue === "unlimited" ? Infinity
+        : ["1", "3", "5"].includes(repeatValue) ? Number(repeatValue) : 1;
+
     resetPracticeBar();
     isStartingPractice = true;
-    mainActionBtn.disabled = true;
-
+    pendingPracticeMode = mode;
     stopTuner();
     stopStandaloneMetronome();
-
-    if (recordedAudioPlayer) {
-        recordedAudioPlayer.pause();
-        recordedAudioPlayer.currentTime = 0;
-    }
-
+    discardRecordingSession();
+    clearRecordingResult();
+    showPracticeStatus("");
+    updatePracticeControls();
     collapseVolumeBar();
-    
+
     try {
         await unlockAudioContext();
         if (!isCurrentStart()) return;
@@ -1199,130 +1252,142 @@ async function startPractice() {
         if (scoreWrapper) scoreWrapper.scrollLeft = 0;
         resetScoreFocusState();
 
-        if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
-            const requestedStream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-            });
-            if (!isCurrentStart()) {
-                requestedStream.getTracks().forEach(track => track.stop());
-                return;
+        // マイク取得・Recorder準備は録音練習のみ。
+        if (mode === "record") {
+            if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
+                const requestedStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+                });
+                if (!isCurrentStart()) {
+                    requestedStream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+                microphoneStream = requestedStream;
             }
-            microphoneStream = requestedStream;
+            await setupMicrophoneStream(microphoneStream);
+            if (!isCurrentStart()) return;
+            setupMediaRecorder(microphoneStream, startGeneration);
         }
-        await setupMicrophoneStream(microphoneStream);
-        if (!isCurrentStart()) return;
+
+        const beatSec = 60 / currentBpm;
+        const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
+        const countInBars = currentStage.countInBars || 1;
+        const countInBeats = countInBars * beatsPerBar;
+        const practiceBars = getStagePracticeBars(currentStage);
+        const practiceBeats = practiceBars * beatsPerBar;
+        const totalBeats = countInBeats + practiceBeats * repeatCount;
+        // 録音練習の余韻と停止タイミングは従来どおり。
+        const ringOutBeats = mode === "record" ? Math.min(4, beatsPerBar) : 0;
+        const totalSteps = totalBeats + ringOutBeats;
+        const startTime = audioContext.currentTime + 0.3;
+        practiceSession = {
+            generation: startGeneration, mode, repeatCount, beatSec, beatsPerBar,
+            countInBars, countInBeats, practiceBars, practiceBeats, totalBeats, totalSteps,
+            startTime, finishTime: startTime + totalSteps * beatSec + (mode === "record" ? 0.1 : 0),
+            nextBeat: 0, lastStep: -1, scrollStarted: false
+        };
+        buildScoreBarLayouts(api, practiceBars);
+        isPracticing = true;
+        isStartingPractice = false;
+        pendingPracticeMode = null;
+        updatePracticeControls();
+        runPracticeScheduler(practiceSession);
     } catch (err) {
         if (!isCurrentStart()) return;
-        console.error("マイク取得またはセットアップエラー:", err);
-        stopPractice();
-        if (microphoneStream) {
-            microphoneStream.getTracks().forEach(track => track.stop());
-            microphoneStream = null;
-        }
-        stopMicrophoneStream();
-        alert("マイクへのアクセスに失敗したか、オーディオの初期化が拒否されました。ブラウザの設定でマイクを許可してください。");
-        return;
+        failPractice(mode === "record"
+            ? "録音練習を開始できませんでした。マイクの許可・録音対応を確認して、もう一度お試しください。"
+            : "音声を初期化できませんでした。もう一度お試しください。", err);
     }
-
-    isPracticing = true;
-    isStartingPractice = false;
-    mainActionBtn.disabled = false;
-    mainActionBtn.innerText = "⏹️ 練習を終了";
-    mainActionBtn.classList.add("btn-stop");
-    if (recordResultCard) recordResultCard.classList.add("hidden");
-
-    if (standaloneMetroBtn) standaloneMetroBtn.disabled = true;
-
-    setupMediaRecorder(microphoneStream);
-    startRecording();
-    visualMetronomeBox.classList.add("recording");
-
-    const beatSec = 60 / currentBpm;
-    const offsetSec = 0.3;
-    const startTime = audioContext.currentTime + offsetSec; 
-
-    const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
-    const countInBars = currentStage.countInBars || 1;
-    const countInBeats = countInBars * beatsPerBar;
-    const practiceBars = getStagePracticeBars(currentStage);
-    const practiceBeats = practiceBars * beatsPerBar;
-    const totalBeats = countInBeats + practiceBeats;
-    const ringOutBeats = Math.min(4, beatsPerBar);
-    const totalSteps = totalBeats + ringOutBeats;
-
-    buildScoreBarLayouts(api, practiceBars);
-
-    // 1. メトロノーム発音スケジュール
-    for (let b = 0; b < totalBeats; b++) {
-        const isAccent = (b % beatsPerBar === 0);
-        scheduleTick(startTime + (b * beatSec), isAccent);
-    }
-
-    // 2. 音声時刻と厳密に同期したビジュアルステップタイマー
-    practiceTimerIds = [];
-    for (let step = 0; step < totalSteps; step++) {
-        const stepTime = startTime + (step * beatSec);
-        const delayMs = Math.max(0, (stepTime - audioContext.currentTime) * 1000);
-
-        const timerId = setTimeout(() => {
-            if (!isPracticing) return;
-            handleBeatStep(step, { beatsPerBar, countInBars, countInBeats, practiceBars, practiceBeats, totalBeats, totalSteps, beatSec });
-        }, delayMs);
-        practiceTimerIds.push(timerId);
-    }
-
-    // 3. 終了タイマー
-    const finishTime = startTime + (totalSteps * beatSec) + 0.1;
-    const finishDelayMs = Math.max(0, (finishTime - audioContext.currentTime) * 1000);
-    const endTimerId = setTimeout(() => {
-        if (!isPracticing) return;
-        finishPractice();
-    }, finishDelayMs);
-    practiceTimerIds.push(endTimerId);
 }
 
-function handleBeatStep(step, config) {
-    const { beatsPerBar, countInBars, countInBeats, practiceBars, totalBeats, totalSteps, beatSec } = config;
-    const beatInBar = (step % beatsPerBar) + 1;
-    const isAccent = (beatInBar === 1);
-
-    if (step < countInBeats) {
-        // --- カウントインフェーズ ---
-        const currentCountInBar = Math.floor(step / beatsPerBar) + 1;
-        const countInText = countInBars > 1 
-            ? `COUNT IN (${currentCountInBar}/${countInBars})` 
-            : "COUNT IN";
-
-        updateVisualMetronome(beatInBar, isAccent, countInText, "count-in");
-        updateHighlightBar(-1);
-    } 
-    else if (step < totalBeats) {
-        // --- 演奏練習フェーズ ---
-        const noteIndex = step - countInBeats;
-        const barIndex = Math.floor(noteIndex / beatsPerBar);
-        setPracticeBar(barIndex, "practice");
-        const currentPracticeBar = barIndex + 1;
-        const recText = practiceBars > 1 ? `REC ${currentPracticeBar}/${practiceBars}` : "REC";
-
-        updateVisualMetronome(beatInBar, isAccent, recText, "rec");
-
-        if (noteIndex === 0) {
-            startScoreContinuousScroll({
-                api,
-                totalBars: practiceBars,
-                beatsPerBar,
-                beatSec
-            });
+// 周回をまたいでも同じ時刻原点と、1本の先読みタイマーを使う。
+function runPracticeScheduler(session) {
+    if (practiceSession !== session || !isPracticing
+        || session.generation !== practiceStartGeneration) return;
+    practiceTimerIds = [];
+    try {
+        const now = audioContext.currentTime;
+        const elapsed = now - session.startTime;
+        const step = Math.floor((elapsed + 1e-8) / session.beatSec);
+        const lookAheadSec = Math.max(1, session.beatSec * session.beatsPerBar);
+        // 遅れて起床したとき、過去のクリックをまとめて鳴らさない。
+        if (session.startTime + session.nextBeat * session.beatSec < now - 0.05) {
+            session.nextBeat = Math.max(session.nextBeat, Math.ceil(elapsed / session.beatSec));
         }
-    } 
-    else {
-        // --- 余韻・録音完了フェーズ ---
-        setPlayFinishedVisual("演奏終了");
+        while (session.nextBeat < session.totalBeats
+            && session.startTime + session.nextBeat * session.beatSec < now + lookAheadSec) {
+            scheduleTick(session.startTime + session.nextBeat * session.beatSec,
+                session.nextBeat % session.beatsPerBar === 0);
+            session.nextBeat++;
+        }
 
-        if (step === totalSteps - 1) {
+        if (session.mode === "record" && step >= session.countInBeats
+            && recordingSession?.status === "ready") {
+            if (step >= session.totalBeats) throw new Error("録音開始前に演奏時間を過ぎました");
+            startRecording(recordingSession);
+            if (practiceSession !== session) return;
+            visualMetronomeBox.classList.add("recording");
+        }
+        if (step >= 0 && step !== session.lastStep) {
+            session.lastStep = step;
+            handleBeatStep(step, session);
+        }
+        if (practiceSession !== session) return;
+        if (session.mode === "record" && step >= session.totalSteps - 1) {
             stopRecording();
             visualMetronomeBox.classList.remove("recording");
         }
+        if (practiceSession !== session) return;
+        if (now + 1e-8 >= session.finishTime) {
+            finishPractice();
+            return;
+        }
+        practiceTimerIds.push(setTimeout(() => runPracticeScheduler(session), 25));
+    } catch (err) {
+        failPractice(session.mode === "record"
+            ? "録音に失敗しました。もう一度録音練習をお試しください。"
+            : "練習を続けられませんでした。もう一度お試しください。", err);
+    }
+}
+
+function resumePracticeScroll() {
+    const session = practiceSession;
+    if (!session || !isPracticing) return;
+    const performanceStart = session.startTime + session.countInBeats * session.beatSec;
+    if (audioContext.currentTime < performanceStart) return;
+    session.scrollStarted = true;
+    startScoreContinuousScroll({
+        api, totalBars: session.practiceBars, beatsPerBar: session.beatsPerBar,
+        beatSec: session.beatSec, repeatCount: session.repeatCount,
+        getElapsedSeconds: () => audioContext.currentTime - performanceStart
+    });
+}
+
+function handleBeatStep(step, session) {
+    const { beatsPerBar, countInBars, countInBeats, practiceBars, practiceBeats, totalBeats } = session;
+    const beatInBar = step % beatsPerBar + 1;
+    if (step < countInBeats) {
+        const currentCountInBar = Math.floor(step / beatsPerBar) + 1;
+        updateVisualMetronome(beatInBar, beatInBar === 1,
+            countInBars > 1 ? "COUNT IN (" + currentCountInBar + "/" + countInBars + ")" : "COUNT IN",
+            "count-in");
+        updateHighlightBar(-1);
+    } else if (step < totalBeats) {
+        const noteIndex = step - countInBeats;
+        const barIndex = Math.floor((noteIndex % practiceBeats) / beatsPerBar);
+        const lap = Math.floor(noteIndex / practiceBeats) + 1;
+        setPracticeBar(barIndex, "practice");
+        if (session.mode === "record") {
+            updateVisualMetronome(beatInBar, beatInBar === 1,
+                practiceBars > 1 ? "REC " + (barIndex + 1) + "/" + practiceBars : "REC", "rec");
+        } else {
+            const lapText = "練習 " + lap + "/" + (session.repeatCount === Infinity ? "∞" : session.repeatCount);
+            updateVisualMetronome(beatInBar, beatInBar === 1, lapText, "practice");
+            showPracticeStatus(lapText + " · 小節 " + (barIndex + 1) + "/" + practiceBars);
+        }
+        if (!session.scrollStarted) resumePracticeScroll();
+    } else if (session.mode === "record") {
+        setPlayFinishedVisual("演奏終了");
     }
 }
 
@@ -1330,110 +1395,180 @@ function stopPractice() {
     practiceStartGeneration++;
     isPracticing = false;
     isStartingPractice = false;
-
+    isFinalizingRecording = false;
+    practiceSession = null;
+    pendingPracticeMode = null;
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
-
-    stopAllScheduledTicks(); 
-    stopRecording();
+    stopAllScheduledTicks();
+    discardRecordingSession();
+    releasePracticeMicrophone();
     releaseWakeLock();
     resetVisualMetronome();
+    visualMetronomeBox.classList.remove("recording");
     stopScoreContinuousScroll();
     resetScoreFocusState();
-
-    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
-
-    mainActionBtn.innerText = "▶ 練習する";
-    mainActionBtn.classList.remove("btn-stop");
-    mainActionBtn.disabled = false;
+    resetPracticeBar();
+    const wrapper = document.querySelector(".score-wrapper");
+    if (wrapper) wrapper.scrollLeft = 0;
+    showPracticeStatus("");
+    updatePracticeControls();
 }
 
 function finishPractice() {
+    const session = practiceSession;
+    if (!session) return;
+    const recording = session.mode === "record" ? recordingSession : null;
+    if (recording) recording.timelineFinished = true;
     isPracticing = false;
     isStartingPractice = false;
+    practiceSession = null;
+    isFinalizingRecording = session.mode === "record";
     practiceTimerIds.forEach(id => clearTimeout(id));
     practiceTimerIds = [];
-
-    stopRecording();
-    visualMetronomeBox.classList.remove("recording");
-
+    stopAllScheduledTicks();
     releaseWakeLock();
     resetVisualMetronome();
+    visualMetronomeBox.classList.remove("recording");
     stopScoreContinuousScroll();
     resetScoreFocusState();
 
-    if (standaloneMetroBtn) standaloneMetroBtn.disabled = false;
+    if (recording) {
+        stopRecording();
+        publishRecordingResult(recording);
+    } else {
+        showPracticeStatus("練習が終了しました");
+    }
+    updatePracticeControls();
+}
 
-    mainActionBtn.innerText = "▶ もう一度練習する";
-    mainActionBtn.classList.remove("btn-stop");
-    mainActionBtn.disabled = false;
+function handlePracticeAction(mode) {
+    if (isStartingPractice || isFinalizingRecording) return;
+    if (isPracticing) {
+        if (practiceSession?.mode === mode) stopPractice();
+        return;
+    }
+    // 従来の聴き返し後の操作を維持：まず結果カードを閉じて譜面へ戻す。
+    if (mode === "record" && !recordResultCard.classList.contains("hidden")) {
+        clearRecordingResult();
+        discardRecordingSession();
+        if (isPracticeModalLandscape()) requestPracticeModalInitialPosition();
+        else practiceModal.querySelector(".practice-modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
+        updatePracticeControls();
+        return;
+    }
+    startPractice(mode);
+}
 
-    if (recordResultCard) {
+bindButtonActivation(mainActionBtn, () => handlePracticeAction("practice"),
+    { touchEnabled: shouldUseVerticalTabLayout });
+bindButtonActivation(recordPracticeBtn, () => handlePracticeAction("record"),
+    { touchEnabled: shouldUseVerticalTabLayout });
+
+function isCurrentRecording(session) {
+    return recordingSession === session && session.id === recordingGeneration
+        && session.generation === practiceStartGeneration
+        && !practiceModal.classList.contains("hidden");
+}
+
+function setupMediaRecorder(stream, generation) {
+    discardRecordingSession();
+    if (!window.MediaRecorder || !stream) throw new Error("MediaRecorderを利用できません");
+    let mimeType = "";
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
+    else if (MediaRecorder.isTypeSupported("audio/webm")) mimeType = "audio/webm";
+    else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
+    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    const session = {
+        id: ++recordingGeneration, generation, recorder, chunks: [], status: "ready",
+        blob: null, timelineFinished: false, stopTimerId: null
+    };
+    recordingSession = session;
+    recorder.ondataavailable = event => {
+        if (isCurrentRecording(session) && event.data?.size > 0) session.chunks.push(event.data);
+    };
+    recorder.onstop = () => {
+        if (!isCurrentRecording(session)) return;
+        clearTimeout(session.stopTimerId);
+        session.stopTimerId = null;
+        try {
+            if (session.status !== "stopping") throw new Error("録音が予定より前に停止しました");
+            const blob = new Blob(session.chunks, { type: recorder.mimeType || "audio/webm" });
+            if (!blob.size) throw new Error("録音データが生成されませんでした");
+            session.blob = blob;
+            session.chunks = [];
+            session.status = "complete";
+            releasePracticeMicrophone();
+            publishRecordingResult(session);
+        } catch (err) {
+            failPractice("録音データを保存できませんでした。もう一度録音練習をお試しください。", err, session);
+        }
+    };
+    recorder.onerror = event => {
+        failPractice("録音に失敗しました。もう一度録音練習をお試しください。",
+            event.error || new Error("MediaRecorderエラー"), session);
+    };
+}
+
+function startRecording(session) {
+    if (!isCurrentRecording(session) || session.status !== "ready") return;
+    session.recorder.start();
+    if (isCurrentRecording(session)) session.status = "recording";
+}
+
+function stopRecording() {
+    const session = recordingSession;
+    if (!session || !isCurrentRecording(session) || session.status !== "recording") return;
+    session.status = "stopping";
+    // stopが成功してもイベントが届かない場合に操作不能のまま残さない。
+    session.stopTimerId = setTimeout(() => {
+        failPractice("録音データの確定に失敗しました。もう一度録音練習をお試しください。",
+            new Error("MediaRecorder stop timeout"), session);
+    }, 5000);
+    session.recorder.stop();
+}
+
+function discardRecordingSession() {
+    const session = recordingSession;
+    recordingSession = null;
+    recordingGeneration++;
+    if (!session) return;
+    clearTimeout(session.stopTimerId);
+    session.recorder.ondataavailable = null;
+    session.recorder.onstop = null;
+    session.recorder.onerror = null;
+    try {
+        if (session.recorder.state !== "inactive") session.recorder.stop();
+    } catch (err) {
+        console.warn("録音の破棄時に停止できませんでした:", err);
+    }
+    session.chunks = [];
+    session.blob = null;
+}
+
+function publishRecordingResult(session) {
+    if (!isCurrentRecording(session) || session.status !== "complete"
+        || !session.timelineFinished || !session.blob?.size) return;
+    try {
+        if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+        recordedAudioUrl = URL.createObjectURL(session.blob);
+        recordedAudioPlayer.src = recordedAudioUrl;
         recordResultCard.classList.remove("hidden");
         recordResultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        isFinalizingRecording = false;
+        showPracticeStatus("");
+        updatePracticeControls();
+    } catch (err) {
+        failPractice("録音結果を表示できませんでした。もう一度録音練習をお試しください。", err, session);
     }
 }
 
-bindButtonActivation(mainActionBtn, () => {
-    unlockAudioContext().catch(() => {});
-
-    if (isPracticing) {
-        stopPractice();
-    } else if (recordResultCard && !recordResultCard.classList.contains("hidden")) {
-        recordedAudioPlayer?.pause();
-        if (recordedAudioPlayer) recordedAudioPlayer.currentTime = 0;
-        recordResultCard.classList.add("hidden");
-        if (isPracticeModalLandscape()) {
-            requestPracticeModalInitialPosition();
-        } else {
-            practiceModal.querySelector(".practice-modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
-        }
-        mainActionBtn.innerText = "▶ 練習する";
-        mainActionBtn.classList.remove("btn-stop");
-        visualMetronomeBox.classList.remove("recording");
-    } else {
-        startPractice();
-    }
-}, { touchEnabled: shouldUseVerticalTabLayout });
-
-function setupMediaRecorder(stream) {
-    if (!window.MediaRecorder || !stream) return;
-    recordedChunks = [];
-    try {
-        let mimeType = "";
-        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
-        else if (MediaRecorder.isTypeSupported("audio/webm")) mimeType = "audio/webm";
-        else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
-
-        mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = (e) => { 
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data); 
-        };
-        
-        mediaRecorder.onstop = () => {
-            if (!practiceModal || practiceModal.classList.contains("hidden")) {
-                recordedChunks = [];
-                return;
-            }
-
-            if (recordedChunks.length > 0) {
-                const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
-                if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
-                recordedAudioUrl = URL.createObjectURL(blob);
-                if (recordedAudioPlayer) recordedAudioPlayer.src = recordedAudioUrl;
-            }
-        };
-    } catch (e) { 
-        console.warn("MediaRecorder初期化失敗:", e); 
-    }
-}
-
-function startRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "inactive") mediaRecorder.start(); 
-}
-
-function stopRecording() { 
-    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop(); 
+function failPractice(message, error, recording = null) {
+    if (recording && !isCurrentRecording(recording)) return;
+    console.warn(message, error);
+    stopPractice();
+    clearRecordingResult();
+    showPracticeStatus(message, true);
 }
 
 // ==========================================
@@ -1445,7 +1580,7 @@ async function selectTunerString(stringNum, midi, noteName) {
         return; 
     }
     
-    if (isPracticing) {
+    if (isPracticing || isStartingPractice || isFinalizingRecording) {
         stopPractice();
     }
     
@@ -1591,7 +1726,7 @@ if (openPrivacyBtn) {
                 <div>
                     <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">1. 音声データの取り扱いについて</h4>
                     <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
-                        当アプリ内の「練習機能（自動録音）」および「簡易チューナー」で使用されるマイク入力音声は、**すべてお客様のご利用端末（ブラウザ内部）でのみリアルタイム処理**されます。音声データが外部のサーバーに送信・蓄積されることは一切ありません。
+                        当アプリ内の「録音練習」および「簡易チューナー」で使用されるマイク入力音声は、**すべてお客様のご利用端末（ブラウザ内部）でのみリアルタイム処理**されます。音声データが外部のサーバーに送信・蓄積されることは一切ありません。
                     </p>
                 </div>
                 <div>

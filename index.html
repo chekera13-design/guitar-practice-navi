@@ -36,10 +36,10 @@
                         <span class="dash-arrow">▼</span>
                     </summary>
                     <div class="dashboard-panel about-panel">
-                        <p><strong>「ギター練習.com」</strong>は、メトロノームに合わせた練習と録音チェックがブラウザだけで完結する、無料のギター練習Webアプリです。</p>
+                        <p><strong>「ギター練習.com」</strong>は、メトロノームに合わせた練習と録音チェックがブラウザだけで完結する、無料のギター練習Webアプリです。録音しない「練習」と、聴き返せる「録音練習」を選べます。</p>
                         <ul class="about-points">
                             <li>🎯 <strong>TAB譜 ＆ メトロノーム同期:</strong> 視覚と音でリズムのズレを逃さない！</li>
-                            <li>🎧 <strong>即時自動録音:</strong> 弾き終わったらその場で自分の音を聴いて客観的に確認！</li>
+                            <li>🎧 <strong>録音練習:</strong> 弾き終わったらその場で自分の音を聴いて客観的に確認！</li>
                             <li>⚡ <strong>登録不要ですぐ練習:</strong> スマホ・PCのブラウザで即座に開始できます。</li>
                         </ul>
                     </div>
@@ -246,7 +246,21 @@
 
             <!-- ⑥ スタートボタン -->
             <div class="modal-footer-action">
-                <button id="mainActionBtn" class="wide-start-btn">▶ 練習する</button>
+                <div class="practice-repeat-controls">
+                    <label for="practiceRepeatSelect">練習の繰り返し</label>
+                    <select id="practiceRepeatSelect">
+                        <option value="1" selected>1回</option>
+                        <option value="3">3回</option>
+                        <option value="5">5回</option>
+                        <option value="unlimited">無制限</option>
+                    </select>
+                    <span class="practice-repeat-note">録音練習は1回</span>
+                </div>
+                <p id="practiceStatus" class="practice-status" role="status" hidden></p>
+                <div class="practice-action-buttons">
+                    <button id="mainActionBtn" class="wide-start-btn">▶ 練習</button>
+                    <button id="recordPracticeBtn" class="wide-start-btn record-mode-btn">● 録音練習</button>
+                </div>
             </div>
 
         </div>
