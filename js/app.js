@@ -1152,7 +1152,9 @@ function closePracticeModal() {
     }
 }
 
-if (closePracticeModalBtn) closePracticeModalBtn.addEventListener("click", closePracticeModal);
+bindButtonActivation(closePracticeModalBtn, closePracticeModal, {
+    touchEnabled: shouldUseVerticalTabLayout
+});
 if (practiceModal) {
     practiceModal.addEventListener("click", (e) => {
         if (e.target === practiceModal) closePracticeModal();
