@@ -87,6 +87,7 @@ let cachedBarLayouts = [];
 let cachedScoreEndX = 0;
 let lastFocusedBar = -1;
 let continuousScrollFrameId = null;
+let continuousScrollGeneration = 0;
 
 export function resetScoreFocusState() {
     lastFocusedBar = -1;
@@ -228,7 +229,9 @@ export function startScoreContinuousScroll({
     beatSec = 0.5,
     onProgress,
     repeatCount = 1,
-    getElapsedSeconds
+    getElapsedSeconds,
+    restoreImmediately = false,
+    isActive
 }) {
     stopScoreContinuousScroll();
 
@@ -241,8 +244,12 @@ export function startScoreContinuousScroll({
 
     const totalDurationSec = totalBars * beatsPerBar * beatSec;
     const startTime = performance.now();
+    const generation = continuousScrollGeneration;
 
     function frame(now) {
+        if (generation !== continuousScrollGeneration) return;
+        continuousScrollFrameId = null;
+        if (isActive && !isActive()) return;
         const elapsedSec = getElapsedSeconds ? getElapsedSeconds() : (now - startTime) / 1000;
         if (elapsedSec < 0) {
             continuousScrollFrameId = requestAnimationFrame(frame);
@@ -281,11 +288,13 @@ export function startScoreContinuousScroll({
         }
     }
 
-    continuousScrollFrameId = requestAnimationFrame(frame);
+    if (restoreImmediately) frame(startTime);
+    else continuousScrollFrameId = requestAnimationFrame(frame);
 }
 
 // 連続スクロール停止
 export function stopScoreContinuousScroll() {
+    continuousScrollGeneration++;
     if (continuousScrollFrameId !== null) {
         cancelAnimationFrame(continuousScrollFrameId);
         continuousScrollFrameId = null;

@@ -7,6 +7,7 @@ const vm = require('node:vm');
 // 実際の練習・録音処理を、制御できる音声時刻とRecorderで検証する。
 const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
 const sequence = app.slice(app.indexOf('function showPracticeStatus('), app.indexOf('// ★ 簡易チューナー'));
+const scoreGate = app.slice(app.indexOf('function isScoreReadyForPractice('), app.indexOf('function setScoreLoadState('));
 
 function element(hidden = false) {
     const classes = new Set(hidden ? ['hidden'] : []);
@@ -14,7 +15,7 @@ function element(hidden = false) {
         classList: { contains: c => classes.has(c), add: (...cs) => cs.forEach(c => classes.add(c)),
             remove: (...cs) => cs.forEach(c => classes.delete(c)),
             toggle(c, value) { if (value) classes.add(c); else classes.delete(c); } },
-        disabled: false, hidden, innerText: '', value: '1', scrollLeft: 0,
+        disabled: false, hidden, innerText: '', value: '1', scrollLeft: 0, dataset: {},
         pause() {}, load() {}, removeAttribute(key) { delete this[key]; },
         scrollIntoView() {}, scrollTo() {}, querySelector() { return this; }
     };
@@ -30,10 +31,12 @@ function harness(options = {}) {
         practiceStartGeneration: 0, practiceSession: null, pendingPracticeMode: null,
         practiceTimerIds: [], recordingSession: null, recordingGeneration: 0,
         recordedAudioUrl: null, microphoneStream: null,
+        scoreLoadState: 'ready', isScoreRendered: true, scoreRenderGeneration: 1,
         currentBpm: options.bpm || 60, currentStage: { timeSignature: [4, 4], countInBars: 1 }, api: {},
         practiceModal: element(), mainActionBtn: element(), recordPracticeBtn: element(),
         practiceRepeatSelect: element(), practiceStatus: element(), recordResultCard: element(true),
         recordedAudioPlayer: element(), visualMetronomeBox: element(), standaloneMetroBtn: element(),
+        retryScoreBtn: element(),
         audioContext: { currentTime: 0 }, Blob,
         console: { warn() {} }, window: {},
         setTimeout(fn, ms) { const id = ++timerId; timers.set(id, { fn, time: context.audioContext.currentTime + ms / 1000 }); return id; },
@@ -44,10 +47,11 @@ function harness(options = {}) {
         requestWakeLock: async () => {}, releaseWakeLock() {},
         setupMicrophoneStream: async () => {}, stopMicrophoneStream() {},
         stopTuner() {}, stopStandaloneMetronome() {}, collapseVolumeBar() {},
-        getStagePracticeBars: () => options.bars || 4, buildScoreBarLayouts() {},
+        getStagePracticeBars: () => options.bars || 4, buildScoreBarLayouts() { return true; },
         resetPracticeBar() { bars.push(0); }, setPracticeBar(bar) { bars.push(bar); },
         scheduleTick(time, accent) { ticks.push({ time, accent }); }, stopAllScheduledTicks() {},
         resetVisualMetronome() {}, stopScoreContinuousScroll() {}, resetScoreFocusState() {},
+        markTutorialCompleted() {},
         startScoreContinuousScroll(config) { context.scrollConfig = config; },
         updateVisualMetronome(beat, accent, text, phase) { phases.push({ beat, text, phase }); },
         updateHighlightBar() {}, setPlayFinishedVisual() {},
@@ -88,8 +92,14 @@ function harness(options = {}) {
         }
     }
     context.window.MediaRecorder = context.MediaRecorder = options.unsupported ? undefined : Recorder;
+    function prepareScore() {
+        context.api.score = { masterBars: Array(options.bars || 4).fill({}) };
+        context.preparedScore = { generation: context.scoreRenderGeneration,
+            stage: context.currentStage, api: context.api, bars: options.bars || 4 };
+    }
+    prepareScore();
     vm.createContext(context);
-    vm.runInContext(sequence, context);
+    vm.runInContext(scoreGate + sequence, context);
     function advance(to) {
         let safety = 0;
         while (true) {
@@ -102,7 +112,7 @@ function harness(options = {}) {
         context.audioContext.currentTime = to;
     }
     return { context, advance, timers, ticks, bars, phases, recorders, urls, revoked, streams,
-        makeStream, micRequests: () => micRequests, options };
+        makeStream, micRequests: () => micRequests, options, prepareScore };
 }
 
 for (const repeats of [1, 3, 5]) {
@@ -110,6 +120,9 @@ for (const repeats of [1, 3, 5]) {
         const h = harness(), c = h.context;
         c.practiceRepeatSelect.value = String(repeats);
         await c.startPractice('practice');
+        h.advance(4.31);
+        assert.equal(c.practiceStatus.hidden, true);
+        assert.equal(c.practiceRepeatSelect.hidden, true);
         h.advance(0.3 + 4 + 16 * repeats + 0.1);
         assert.equal(c.isPracticing, false);
         assert.equal(h.ticks.length, 4 + 16 * repeats);
@@ -120,6 +133,8 @@ for (const repeats of [1, 3, 5]) {
         assert.equal(h.micRequests(), 0); assert.equal(h.recorders.length, 0);
         assert.equal(h.timers.size, 0);
         assert.equal(c.practiceSession, null);
+        assert.equal(c.practiceRepeatSelect.hidden, false);
+        assert.equal(c.practiceStatus.hidden, true);
         assert.equal(c.recordResultCard.classList.contains('hidden'), true);
     });
 }
@@ -129,11 +144,14 @@ test('無制限・途中停止：1本のタイマーで継続し、次回は先�
     c.practiceRepeatSelect.value = 'unlimited';
     await c.startPractice(); h.advance(80);
     assert.equal(c.isPracticing, true); assert.equal(h.timers.size, 1);
-    assert.match(c.practiceStatus.innerText, /練習 5\/∞/);
+    assert.match(h.phases.at(-1).text, /練習 5\/∞/);
+    assert.equal(c.practiceStatus.hidden, true);
     c.stopPractice(); assert.equal(h.timers.size, 0); assert.equal(c.practiceSession, null);
     c.practiceRepeatSelect.value = '1';
     await c.startPractice(); h.advance(84.4);
-    assert.match(c.practiceStatus.innerText, /練習 1\/1 · 小節 1\/4/);
+    assert.match(h.phases.at(-1).text, /練習 1\/1/);
+    assert.equal(h.bars.at(-1), 0);
+    assert.equal(c.practiceStatus.hidden, true);
     assert.equal(h.micRequests(), 0);
 });
 
@@ -171,6 +189,7 @@ test('閉じて別EXを録音：保存済みの古いイベントを遅延配送
     const old = h.recorders[0], oldData = old.ondataavailable, oldStop = old.onstop, oldError = old.onerror;
     c.stopPractice(); c.practiceModal.classList.add('hidden');
     c.practiceModal.classList.remove('hidden'); c.currentStage = { timeSignature: [3, 4], countInBars: 1 };
+    h.prepareScore();
     await c.startPractice('record');
     oldData({ data: new Blob(['OLD']) }); oldStop(); oldError({ error: new Error('old error') });
     assert.equal(c.isPracticing, true); assert.equal(c.recordingSession.chunks.length, 0);
@@ -241,7 +260,8 @@ test('BPMを共通の音声時刻へ反映し、向き変更でスクロール�
     c.resumePracticeScroll();
     assert.equal(c.scrollConfig.beatSec, 0.5); assert.equal(c.scrollConfig.repeatCount, 3);
     assert.ok(Math.abs(c.scrollConfig.getElapsedSeconds() - 8.7) < 1e-8);
-    assert.match(c.practiceStatus.innerText, /練習 2\/3/);
+    assert.match(h.phases.at(-1).text, /練習 2\/3/);
+    assert.equal(c.practiceStatus.hidden, true);
     for (let i = 1; i < h.ticks.length; i++) assert.ok(Math.abs(h.ticks[i].time - h.ticks[i - 1].time - 0.5) < 1e-8);
 });
 

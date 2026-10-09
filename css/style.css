@@ -268,9 +268,13 @@ body {
 .tutorial-status { background: #dbeafe; color: #1d4ed8; }
 .category-arrow { flex: 0 0 auto; color: #2563eb; font-size: 23px; font-weight: 700; }
 .category-coming-soon { background: #fff; }
+.current-exercises + .current-exercises { margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
 .current-exercises-heading { margin-bottom: 12px; }
 .current-exercises-heading h3 { margin: 0; color: #1e293b; font-size: 16px; font-weight: 800; }
 .current-exercises-heading p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.tutorial-completion-badge { color: #047857; background: #d1fae5; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 700; }
+.tutorial-completion-badge:not([hidden]) { display: inline-block; }
+.current-exercises-heading .tutorial-completion-badge { margin-top: 6px; }
 
 .exercise-grid { display: flex; flex-direction: column; gap: 12px; }
 .exercise-card {
@@ -780,16 +784,25 @@ body {
     background: linear-gradient(to top, #ffffff 88%, rgba(255, 255, 255, 0) 100%);
     z-index: 25;
 }
-.practice-repeat-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 8px; font-size: 12px; color: #475569; }
-.practice-repeat-controls select { min-height: 44px; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b; font: inherit; }
-.practice-repeat-note { font-size: 11px; color: #64748b; }
 .practice-action-buttons { display: flex; gap: 8px; }
 .practice-action-buttons .wide-start-btn { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; letter-spacing: 0; }
+.practice-start-control { display: flex; flex: 1.2; min-width: 142px; overflow: hidden; border-radius: 10px; background: #10b981; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3); }
+.practice-start-control .wide-start-btn { border-radius: 0; box-shadow: none !important; white-space: nowrap; }
+.practice-start-control select { flex: 0 0 82px; width: 82px; min-height: 44px; padding: 4px 8px; border: none; border-left: 1px solid rgba(255, 255, 255, 0.4); border-radius: 0; background: #059669; color: white; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.practice-start-control select option { background: white; color: #1e293b; }
+.practice-start-control select[hidden] { display: none; }
+.practice-start-control .wide-start-btn:focus-visible, .practice-start-control select:focus-visible { outline: 2px solid white; outline-offset: -4px; }
 .wide-start-btn.record-mode-btn { background-color: #2563eb; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2); }
 .wide-start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .practice-status { margin: 0 0 8px; color: #475569; font-size: 12px; }
 .practice-status.is-error { color: #b91c1c; }
 .practice-status[hidden] { display: none; }
+.score-load-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: #475569; font-size: 13px; }
+.score-load-status[hidden] { display: none; }
+.score-load-status.is-error { color: #b91c1c; }
+.score-retry-btn { flex-shrink: 0; min-height: 44px; padding: 6px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #2563eb; font: inherit; font-weight: 700; cursor: pointer; }
+.score-retry-btn[hidden] { display: none; }
+.score-retry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .wide-start-btn {
     width: 100%;
     box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);

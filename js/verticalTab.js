@@ -31,7 +31,7 @@ function detectStaffYBounds(svg) {
         const w = parseFloat(r.getAttribute("width"));
         const h = parseFloat(r.getAttribute("height"));
         const y = parseFloat(r.getAttribute("y"));
-        if (!isNaN(w) && !isNaN(h) && !isNaN(y)) {
+        if ([w, h, y].every(Number.isFinite)) {
             // 水平弦ライン: 高さが細く(<=3px)、幅が長い(>=70px)
             if (h <= 3 && w >= 70) {
                 yList.push(y);
@@ -59,8 +59,9 @@ function detectMeasureMarkersFromSvg(svg) {
             const isRed = fill.includes("red") || fill.includes("c8") || fill.includes("c0") || fill.includes("rgb(200") || fill.includes("rgb(192") || fill.includes("#c");
             if (isRed) {
                 const num = parseInt(txt, 10);
-                const x = parseFloat(t.getAttribute("x")) || (t.getBBox ? t.getBBox().x : null);
-                if (x !== null && !isNaN(x)) {
+                const attributeX = parseFloat(t.getAttribute("x"));
+                const x = Number.isFinite(attributeX) ? attributeX : t.getBBox?.().x;
+                if (Number.isFinite(x)) {
                     markers.push({ barNumber: num, x });
                 }
             }
@@ -71,10 +72,37 @@ function detectMeasureMarkersFromSvg(svg) {
 }
 
 /**
+ * TABの水平弦ラインの終端を使い、譜面外の余白やクレジットを除く。
+ * 音符で分割された短い弦ラインも対象にする（1小節譜面でも同じ検出）。
+ */
+function detectContentEndX(sourceSvg, cropY, cropHeight, sourceRight) {
+    const lineEnds = new Map();
+    sourceSvg.querySelectorAll("rect").forEach(rect => {
+        const x = parseFloat(rect.getAttribute("x"));
+        const y = parseFloat(rect.getAttribute("y"));
+        const width = parseFloat(rect.getAttribute("width"));
+        const height = parseFloat(rect.getAttribute("height"));
+        const right = x + width;
+        if (![x, y, width, height, right].every(Number.isFinite)) return;
+        if (height > 0 && height <= 3 && width > height
+            && y >= cropY && y <= cropY + cropHeight && right <= sourceRight) {
+            const key = right.toFixed(1);
+            const group = lineEnds.get(key) || { right, ys: new Set() };
+            group.right = Math.max(group.right, right);
+            group.ys.add(y.toFixed(1));
+            lineEnds.set(key, group);
+        }
+    });
+    // 複数の弦ラインで確認できる場合だけ採用し、終止線用の既存余白を維持。
+    const ends = [...lineEnds.values()].filter(group => group.ys.size >= 4).map(group => group.right);
+    return ends.length ? Math.min(sourceRight, Math.max(...ends) + 12) : sourceRight;
+}
+
+/**
  * 各小節の正確な境界 [startX, endX] を高精度に算出
  * ※ 符幹（音符の棒）を排除し、赤い小節番号と本物の小節線から1小節ずつ美しく切り出す
  */
-function detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight) {
+function detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight, sourceLeft = 0) {
     const staff = detectStaffYBounds(sourceSvg);
     const staffHeight = staff.bottom - staff.top;
 
@@ -82,6 +110,25 @@ function detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight
     const cropY = Math.max(0, staff.top - 38);
     const cropBottom = Math.min(sourceHeight, staff.bottom + 46);
     const cropHeight = Math.max(90, cropBottom - cropY);
+    const sourceRight = sourceLeft + sourceWidth;
+    const endX = detectContentEndX(sourceSvg, cropY, cropHeight, sourceRight);
+
+    const createBoundaries = splitXs => {
+        if (splitXs.some((x, index) => !Number.isFinite(x) || (index > 0 && x <= splitXs[index - 1]))) {
+            throw new Error("縦型TABの小節境界の座標・順序が不正です");
+        }
+        return Array.from({ length: totalBars }, (_, index) => {
+            const startX = index === 0 ? sourceLeft : splitXs[index - 1] - 1;
+            const stopX = splitXs[index] !== undefined ? splitXs[index] + 1 : endX;
+            const width = stopX - startX;
+            if (![startX, stopX, width, cropY, cropHeight].every(Number.isFinite)
+                || startX < sourceLeft || stopX > sourceRight || width <= 0 || cropHeight <= 0
+                || Number(width.toFixed(1)) <= 0) {
+                throw new Error(`縦型TABの小節 ${index + 1} の切り抜き座標が不正です`);
+            }
+            return { x: startX, y: cropY, width, height: cropHeight };
+        });
+    };
 
     // 1. 赤い小節番号の位置
     const measureMarkers = detectMeasureMarkersFromSvg(sourceSvg);
@@ -93,7 +140,7 @@ function detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight
         const h = parseFloat(r.getAttribute("height"));
         const x = parseFloat(r.getAttribute("x"));
         const y = parseFloat(r.getAttribute("y"));
-        if (!isNaN(w) && !isNaN(h) && !isNaN(x) && !isNaN(y)) {
+        if ([w, h, x, y].every(Number.isFinite)) {
             // 幅 <= 4px、Yが五線上端付近、高さが五線の高さ（±5px）
             if (w <= 4 && Math.abs(y - staff.top) <= 5 && Math.abs(h - staffHeight) <= 5) {
                 trueBarlines.push(x);
@@ -121,72 +168,18 @@ function detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight
             const boundaryX = nearBarline !== undefined ? nearBarline : (markerX - 10);
             splitXs.push(boundaryX);
         }
-        // 最終小節の終端：終止線の太い部分まで含める
-        const lastBarline = internalBarlines.find(bx => bx > measureMarkers[totalBars - 1].x);
-        const endX = lastBarline !== undefined
-            ? Math.min(sourceWidth, lastBarline + 12)
-            : sourceWidth;
-
-        const boundaries = [];
-        for (let i = 0; i < totalBars; i++) {
-            let startX, stopX;
-            if (i === 0) {
-                // 第1小節: 左端(0)から、第2小節の開始線まで（TAB記号・4/4を含む）
-                startX = 0;
-                stopX = splitXs[0] + 1;
-            } else {
-                // 第2小節以降: 前の小節線から、次の小節線まで（余計なTAB記号を含めずカード幅いっぱいに拡大）
-                startX = splitXs[i - 1] - 1;
-                stopX = (i < totalBars - 1) ? (splitXs[i] + 1) : endX;
-            }
-            boundaries.push({
-                x: Math.max(0, startX),
-                y: cropY,
-                width: Math.max(60, stopX - startX),
-                height: cropHeight
-            });
-        }
-        return boundaries;
+        return createBoundaries(splitXs);
     }
 
     // ★ パターンB: 本物の小節線から分割
     if (internalBarlines.length >= totalBars - 1 && internalBarlines.length > 0) {
         const splitXs = internalBarlines.slice(0, totalBars - 1);
-        const endX = internalBarlines[totalBars - 1] !== undefined
-            ? Math.min(sourceWidth, internalBarlines[totalBars - 1] + 12)
-            : sourceWidth;
-        const boundaries = [];
-        for (let i = 0; i < totalBars; i++) {
-            let startX, stopX;
-            if (i === 0) {
-                startX = 0;
-                stopX = splitXs[0] + 1;
-            } else {
-                startX = splitXs[i - 1] - 1;
-                stopX = (i < totalBars - 1) ? (splitXs[i] + 1) : endX;
-            }
-            boundaries.push({
-                x: Math.max(0, startX),
-                y: cropY,
-                width: Math.max(60, stopX - startX),
-                height: cropHeight
-            });
-        }
-        return boundaries;
+        return createBoundaries(splitXs);
     }
 
-    // フォールバック
-    const barWidth = sourceWidth / totalBars;
-    const boundaries = [];
-    for (let i = 0; i < totalBars; i++) {
-        boundaries.push({
-            x: i * barWidth,
-            y: cropY,
-            width: barWidth,
-            height: cropHeight
-        });
-    }
-    return boundaries;
+    // 境界が不要な単独小節はコンテンツ終端まで。境界不明の複数小節は捏造しない。
+    if (totalBars === 1) return createBoundaries([]);
+    throw new Error("縦型TABの小節境界を取得できません");
 }
 
 export class VerticalTabController {
@@ -292,17 +285,25 @@ export class VerticalTabController {
     createCardsFromRenderedSvg(sourceSvg, boundsLookup, totalBars) {
         if (!sourceSvg || !this.track) return;
 
-        this.barCount = totalBars;
-        this.currentBarIndex = Math.max(0, Math.min(this.barCount - 1, this.currentBarIndex));
+        this.barCount = 0;
         this.track.replaceChildren();
+        this.updateControls();
 
         const viewBox = sourceSvg.viewBox?.baseVal;
         const sourceWidth = viewBox?.width || Number.parseFloat(sourceSvg.getAttribute("width")) || sourceSvg.getBoundingClientRect().width;
         const sourceHeight = viewBox?.height || Number.parseFloat(sourceSvg.getAttribute("height")) || sourceSvg.getBoundingClientRect().height;
+        const sourceLeft = viewBox?.x ?? 0;
+        if (!Number.isInteger(totalBars) || totalBars <= 0
+            || ![sourceLeft, sourceWidth, sourceHeight, sourceLeft + sourceWidth].every(Number.isFinite)
+            || sourceWidth <= 0 || sourceHeight <= 0) {
+            throw new Error("縦型TABの譜面サイズ・小節数が不正です");
+        }
 
         console.info(`[縦型TAB] ソースSVGからカード生成開始: 全${totalBars}小節, SVGサイズ: ${sourceWidth}x${sourceHeight}`);
 
-        const boundaries = detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight);
+        const boundaries = detectMeasureBoundaries(sourceSvg, totalBars, sourceWidth, sourceHeight, sourceLeft);
+        this.barCount = totalBars;
+        this.currentBarIndex = Math.max(0, Math.min(this.barCount - 1, this.currentBarIndex));
 
         for (let index = 0; index < totalBars; index++) {
             const b = boundaries[index];

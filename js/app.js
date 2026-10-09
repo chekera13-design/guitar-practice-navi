@@ -2,7 +2,7 @@
 // ギター練習ドットコム - メインアプリケーション (js/app.js)
 // ==========================================
 
-import { BASIC_STAGES } from "./config.js";
+import { TUTORIAL_STAGES, BASIC_STAGES } from "./config.js";
 import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
 import { 
@@ -35,7 +35,10 @@ let currentPracticeBarIndex = 0;
 
 // 単体メトロノーム状態
 let isStandaloneMetroPlaying = false;
+let isStartingStandaloneMetro = false;
+let standaloneMetroStartGeneration = 0;
 let standaloneMetroTimerId = null;
+let standaloneMetroDisplayTimerIds = new Set();
 let standaloneBeat = 0;
 let standaloneNextTickTime = 0;
 
@@ -54,6 +57,8 @@ let scoreRepairAttempted = false;
 let scoreRenderGeneration = 0;
 let activeScoreRenderGeneration = 0;
 let scoreRenderStartedAt = 0;
+let scoreLoadState = "idle"; // idle / loading / ready / error
+let preparedScore = null;
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
@@ -64,8 +69,12 @@ let recordingGeneration = 0;
 let recordedAudioUrl = null;
 let microphoneStream = null;
 
+const TUTORIAL_COMPLETION_STORAGE_KEY = "chogita_tutorial_completed";
+let completedTutorialStages = new Set();
+
 // DOM要素取得
 const exerciseGrid = document.getElementById("exerciseGrid");
+const tutorialExerciseGrid = document.getElementById("tutorialExerciseGrid");
 const practiceModal = document.getElementById("practiceModal");
 const closePracticeModalBtn = document.getElementById("closePracticeModalBtn");
 const modalStageBadge = document.getElementById("modalStageBadge");
@@ -81,6 +90,9 @@ const mainActionBtn = document.getElementById("mainActionBtn");
 const recordPracticeBtn = document.getElementById("recordPracticeBtn");
 const practiceRepeatSelect = document.getElementById("practiceRepeatSelect");
 const practiceStatus = document.getElementById("practiceStatus");
+const scoreLoadStatus = document.getElementById("scoreLoadStatus");
+const scoreLoadMessage = document.getElementById("scoreLoadMessage");
+const retryScoreBtn = document.getElementById("retryScoreBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 const verticalTabWrapper = document.getElementById("verticalTabWrapper");
@@ -105,6 +117,9 @@ const tunerMeterPointer = document.getElementById("tunerMeterPointer");
 const tunerHzDisplay = document.getElementById("tunerHzDisplay");
 const tunerStringBtns = document.querySelectorAll(".tuner-string-btn");
 let isTuning = false;
+let isStartingTuner = false;
+let tunerStartGeneration = 0;
+let tunerSession = null;
 let currentTunerStringNum = null;
 let tunerTargetFreq = 82.41;
 let tunerAnimFrameId = null;
@@ -130,11 +145,9 @@ const METRO_SVG_ICON = `
 // ★ 単体メトロノーム制御（ドリフトフリー高精度タイマー） ★
 // ==========================================
 async function toggleStandaloneMetronome() {
-    unlockAudioContext().catch(() => {});
-
     if (isPracticing || isStartingPractice || isFinalizingRecording) return;
 
-    if (isStandaloneMetroPlaying) {
+    if (isStandaloneMetroPlaying || isStartingStandaloneMetro) {
         stopStandaloneMetronome();
     } else {
         await startStandaloneMetronome();
@@ -142,64 +155,98 @@ async function toggleStandaloneMetronome() {
 }
 
 async function startStandaloneMetronome() {
-    stopTuner();
-    await unlockAudioContext();
-    if (isPracticing || isStartingPractice || isFinalizingRecording || practiceModal.classList.contains("hidden")) return;
-
-    const currentVol = Number(metroVolSlider?.value || 40) / 100;
-    setMetronomeVolume(currentVol);
-
-    isStandaloneMetroPlaying = true;
-    standaloneBeat = 0;
-
+    if (isStandaloneMetroPlaying || isStartingStandaloneMetro
+        || isPracticing || isStartingPractice || isFinalizingRecording
+        || practiceModal.classList.contains("hidden")) return;
+    const generation = ++standaloneMetroStartGeneration;
+    const isCurrentStart = () => generation === standaloneMetroStartGeneration
+        && !isPracticing && !isStartingPractice && !isFinalizingRecording
+        && !practiceModal.classList.contains("hidden");
+    const displayTimerIds = new Set();
+    standaloneMetroDisplayTimerIds = displayTimerIds;
+    isStartingStandaloneMetro = true;
     if (standaloneMetroBtn) {
         standaloneMetroBtn.classList.add("active");
-        standaloneMetroBtn.innerHTML = `<span>⏹</span><span class="metro-btn-text">停止</span>`;
+        standaloneMetroBtn.innerHTML = `<span>⏹</span><span class="metro-btn-text">準備を中止</span>`;
+        standaloneMetroBtn.setAttribute("aria-busy", "true");
     }
 
-    const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
-    const beatSec = 60 / currentBpm;
-    
-    standaloneNextTickTime = audioContext.currentTime + 0.05;
+    try {
+        stopTuner();
+        await unlockAudioContext();
+        if (!isCurrentStart()) return;
 
-    function scheduler() {
-        if (!isStandaloneMetroPlaying) return;
+        const currentVol = Number(metroVolSlider?.value || 40) / 100;
+        setMetronomeVolume(currentVol);
 
-        while (standaloneNextTickTime < audioContext.currentTime + 0.1) {
-            const beatInBar = (standaloneBeat % beatsPerBar) + 1;
-            const isAccent = (beatInBar === 1);
+        isStartingStandaloneMetro = false;
+        isStandaloneMetroPlaying = true;
+        standaloneBeat = 0;
 
-            scheduleTick(standaloneNextTickTime, isAccent);
-
-            const delayMs = Math.max(0, (standaloneNextTickTime - audioContext.currentTime) * 1000);
-            setTimeout(() => {
-                if (isStandaloneMetroPlaying) {
-                    updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
-                }
-            }, delayMs);
-
-            standaloneNextTickTime += beatSec;
-            standaloneBeat++;
+        if (standaloneMetroBtn) {
+            standaloneMetroBtn.classList.add("active");
+            standaloneMetroBtn.innerHTML = `<span>⏹</span><span class="metro-btn-text">停止</span>`;
+            standaloneMetroBtn.removeAttribute("aria-busy");
         }
 
-        standaloneMetroTimerId = setTimeout(scheduler, 25);
-    }
+        const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
+        const beatSec = 60 / currentBpm;
+    
+        standaloneNextTickTime = audioContext.currentTime + 0.05;
 
-    scheduler();
+        function scheduler() {
+            if (!isStandaloneMetroPlaying || !isCurrentStart()) return;
+            standaloneMetroTimerId = null;
+
+            while (standaloneNextTickTime < audioContext.currentTime + 0.1) {
+                const beatInBar = (standaloneBeat % beatsPerBar) + 1;
+                const isAccent = (beatInBar === 1);
+
+                scheduleTick(standaloneNextTickTime, isAccent);
+
+                const delayMs = Math.max(0, (standaloneNextTickTime - audioContext.currentTime) * 1000);
+                const displayTimerId = setTimeout(() => {
+                    displayTimerIds.delete(displayTimerId);
+                    if (isStandaloneMetroPlaying && isCurrentStart()) {
+                        updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
+                    }
+                }, delayMs);
+                displayTimerIds.add(displayTimerId);
+
+                standaloneNextTickTime += beatSec;
+                standaloneBeat++;
+            }
+
+            standaloneMetroTimerId = setTimeout(scheduler, 25);
+        }
+
+        scheduler();
+    } catch (error) {
+        if (generation !== standaloneMetroStartGeneration) return;
+        console.warn("単体メトロノームを開始できませんでした:", error);
+        stopStandaloneMetronome();
+    }
 }
 
 function stopStandaloneMetronome() {
+    standaloneMetroStartGeneration++;
+    isStartingStandaloneMetro = false;
     isStandaloneMetroPlaying = false;
-    if (standaloneMetroTimerId) {
+    if (standaloneMetroTimerId !== null) {
         clearTimeout(standaloneMetroTimerId);
         standaloneMetroTimerId = null;
     }
+    standaloneMetroDisplayTimerIds.forEach(id => clearTimeout(id));
+    standaloneMetroDisplayTimerIds.clear();
+    standaloneBeat = 0;
+    standaloneNextTickTime = 0;
 
     stopAllScheduledTicks();
 
     if (standaloneMetroBtn) {
         standaloneMetroBtn.classList.remove("active");
         standaloneMetroBtn.innerHTML = `${METRO_SVG_ICON}<span class="metro-btn-text">クリック</span>`;
+        standaloneMetroBtn.removeAttribute("aria-busy");
     }
 
     if (!isPracticing) {
@@ -239,8 +286,18 @@ function resetVolumeCollapseTimer() {
 function initVolumeControl() {
     if (!metroVolSlider) return;
 
-    const savedVol = localStorage.getItem("chogita_metro_vol");
-    const initialVol = (savedVol !== null) ? Number(savedVol) : 40;
+    let initialVol = 40;
+    try {
+        const savedVol = localStorage.getItem("chogita_metro_vol");
+        if (savedVol !== null && savedVol.trim() !== "") {
+            const parsedVol = Number(savedVol);
+            if (Number.isFinite(parsedVol) && parsedVol >= 0 && parsedVol <= 100) {
+                initialVol = parsedVol;
+            }
+        }
+    } catch (err) {
+        // 保存領域を利用できなくても、既定音量で初期化を続ける。
+    }
 
     metroVolSlider.value = initialVol;
     setMetronomeVolume(initialVol / 100);
@@ -519,6 +576,74 @@ function destroyAlphaTabApi() {
     document.getElementById("alphaTab")?.replaceChildren();
 }
 
+function isScoreReadyForPractice() {
+    return scoreLoadState === "ready" && isScoreRendered
+        && preparedScore?.generation === scoreRenderGeneration
+        && preparedScore.stage === currentStage && preparedScore.api === api
+        && preparedScore.bars > 0 && api?.score?.masterBars?.length === preparedScore.bars;
+}
+
+function setScoreLoadState(state) {
+    scoreLoadState = state;
+    if (state !== "ready") preparedScore = null;
+    // 音声・マイク許可待ちの途中で譜面が無効になった場合も開始を取り消す。
+    if (state !== "ready" && isStartingPractice) stopPractice();
+    if (scoreLoadStatus) {
+        scoreLoadStatus.hidden = state === "idle" || state === "ready";
+        scoreLoadStatus.dataset.state = state;
+        scoreLoadStatus.classList.toggle("is-error", state === "error");
+    }
+    if (scoreLoadMessage) scoreLoadMessage.innerText = state === "error"
+        ? "譜面を読み込めませんでした" : "譜面を読み込んでいます";
+    if (retryScoreBtn) retryScoreBtn.hidden = state !== "error";
+    if (state === "error") verticalTabController?.setMessage("譜面を読み込めませんでした");
+    updatePracticeControls();
+}
+
+function failScoreLoad(error, generation = scoreRenderGeneration) {
+    if (generation !== scoreRenderGeneration || practiceModal.classList.contains("hidden")) return;
+    console.error("譜面の準備に失敗:", error);
+    scoreRenderGeneration++; // 失敗後に届く完了イベントも無効化する。
+    scoreRenderInProgress = false;
+    scoreLoadPending = false;
+    scoreLoadConfirmed = false;
+    activeScoreRenderGeneration = 0;
+    isScoreRendered = false;
+    scoreHealthCheckPending = false;
+    if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
+    alphaTabHealthCheckTimerId = null;
+    setScoreLoadState("error");
+}
+
+function restartScoreLoading() {
+    scoreRenderGeneration++;
+    scoreRenderInProgress = false;
+    scoreLoadPending = false;
+    scoreLoadConfirmed = false;
+    activeScoreRenderGeneration = 0;
+    isScoreRendered = false;
+    if (scoreResizeObserver) scoreResizeObserver.disconnect();
+    scoreResizeObserver = null;
+    if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
+    alphaTabHealthCheckTimerId = null;
+    scoreHealthCheckPending = false;
+    setScoreLoadState("loading");
+    destroyAlphaTabApi();
+    verticalTabController?.destroy();
+    verticalTabController = null;
+    updatePracticeScoreLayout();
+    return renderTab(currentStage);
+}
+
+function retryScoreLoad() {
+    if (scoreLoadState !== "error" || practiceModal.classList.contains("hidden")
+        || isPracticing || isStartingPractice || isFinalizingRecording) return;
+    scoreRepairAttempted = false;
+    return restartScoreLoading();
+}
+
+bindButtonActivation(retryScoreBtn, retryScoreLoad, { touchEnabled: shouldUseVerticalTabLayout });
+
 function initAlphaTabIfNeeded() {
     if (!api && window.alphaTab) {
         const container = document.getElementById("alphaTab");
@@ -557,9 +682,17 @@ function initAlphaTabIfNeeded() {
                 }
             });
             api = apiInstance;
+            const generation = scoreRenderGeneration;
+            const stage = currentStage;
+            const isCurrentApi = () => api === apiInstance && generation === scoreRenderGeneration
+                && stage === currentStage && !practiceModal.classList.contains("hidden");
 
             apiInstance.scoreLoaded.on((score) => {
-                if (api !== apiInstance) return;
+                if (!isCurrentApi()) return;
+                if (!score?.masterBars?.length) {
+                    failScoreLoad(new Error("小節情報がありません"), generation);
+                    return;
+                }
                 if (scoreRenderInProgress) scoreLoadConfirmed = true;
                 if (score && score.masterBars && score.masterBars.length > 0) {
                     const bars = score.masterBars.length;
@@ -567,61 +700,53 @@ function initAlphaTabIfNeeded() {
                 }
             });
 
-            apiInstance.renderFinished.on(() => {
-                if (api !== apiInstance) return;
-                if (scoreRenderInProgress
-                    && activeScoreRenderGeneration === scoreRenderGeneration
-                    && (!scoreLoadPending || scoreLoadConfirmed)) {
+            // renderFinished直後はDOM配置が未完了の場合があるため、後処理完了を待つ。
+            apiInstance.postRenderFinished.on(() => {
+                if (!isCurrentApi() || (scoreLoadState === "loading" && !scoreLoadConfirmed)) return;
+                try {
+                    resetScoreFocusState();
+
+                    // 1. スラー＆H/P/S/C文字のSVG描画
+                    handleWatermark();
+                    renderSlursAndLabelsInSvg();
+
+                    const bars = apiInstance.score?.masterBars?.length;
+                    if (!bars || !isAlphaTabDisplayHealthy(container) || !buildScoreBarLayouts(apiInstance, bars)) {
+                        throw new Error("譜面の描画・小節配置が未確定です");
+                    }
+                    // 2. 完成した本物SVGから縦型TABカードを一括生成
+                    const mainSvg = container.querySelector("svg");
+                    if (mainSvg && verticalTabController) {
+                        verticalTabController.createCardsFromRenderedSvg(
+                            mainSvg,
+                            apiInstance.boundsLookup || apiInstance.renderer?.boundsLookup,
+                            bars
+                        );
+                        if (!verticalTabController.hasCards || verticalTabController.barCount !== bars) {
+                            throw new Error("縦型TABの準備が完了していません");
+                        }
+                    }
+                    if (shouldUseVerticalTabLayout() && stage.file && !verticalTabController?.hasCards) {
+                        throw new Error("縦型TABがありません");
+                    }
                     scoreRenderInProgress = false;
                     scoreLoadPending = false;
                     scoreLoadConfirmed = false;
                     activeScoreRenderGeneration = 0;
+                    isScoreRendered = true;
+                    preparedScore = { generation, stage, api: apiInstance, bars };
+                    setScoreLoadState("ready");
+                    // 新しい座標・TABの準備後、継続中の演奏時刻から位置を復元する。
+                    resumePracticeScroll({ restoreImmediately: true });
+                    scheduleAlphaTabHealthCheck();
+                } catch (error) {
+                    failScoreLoad(error, generation);
                 }
-                isScoreRendered = true;
-                resetScoreFocusState();
-
-                // 1. スラー＆H/P/S/C文字のSVG描画
-                handleWatermark();
-                renderSlursAndLabelsInSvg();
-
-                const bars = getStagePracticeBars(currentStage);
-                buildScoreBarLayouts(apiInstance, bars);
-                resumePracticeScroll();
-
-                // 2. 完成した本物SVGから縦型TABカードを一括生成
-                const mainSvg = container.querySelector("svg");
-                if (mainSvg && verticalTabController) {
-                    verticalTabController.createCardsFromRenderedSvg(
-                        mainSvg, 
-                        apiInstance.boundsLookup || apiInstance.renderer?.boundsLookup, 
-                        bars
-                    );
-                }
-
-                scheduleAlphaTabHealthCheck();
             });
 
             apiInstance.error.on((error) => {
-                if (api !== apiInstance) return;
-                console.error("alphaTab エラー:", error);
-                if (scoreRenderInProgress) {
-                    scoreRenderInProgress = false;
-                    scoreLoadPending = false;
-                    scoreLoadConfirmed = false;
-                    activeScoreRenderGeneration = 0;
-                }
-                const scoreWrapper = document.querySelector(".score-wrapper");
-                if (scoreWrapper) {
-                    const prevErr = scoreWrapper.querySelector(".score-error-msg");
-                    if (!prevErr) {
-                        const errMsg = document.createElement("div");
-                        errMsg.className = "score-error-msg";
-                        errMsg.style.cssText = "color: #ef4444; font-size: 13px; text-align: center; padding: 20px;";
-                        errMsg.innerText = "⚠️ 楽譜の読み込みに失敗しました。通信環境をご確認のうえ再試行してください。";
-                        scoreWrapper.appendChild(errMsg);
-                    }
-                }
-                if (scoreHealthCheckPending) scheduleAlphaTabHealthCheck();
+                if (!isCurrentApi()) return;
+                failScoreLoad(error, generation);
             });
 
             return true;
@@ -647,9 +772,7 @@ function getStagePracticeBars(stage) {
 // ★ 楽譜レンダリング（MXL解凍・MusicXML補正統合版） ★
 // ==========================================
 async function renderTab(stage = currentStage) {
-    if (!stage) return;
-    initAlphaTabIfNeeded();
-    if (!api) return;
+    if (!stage || stage !== currentStage || practiceModal.classList.contains("hidden")) return;
     if (scoreRenderInProgress) {
         scoreHealthCheckPending = true;
         return;
@@ -660,15 +783,22 @@ async function renderTab(stage = currentStage) {
     if (prevErr) prevErr.remove();
 
     const renderGeneration = ++scoreRenderGeneration;
+    setScoreLoadState("loading");
+    if (api) destroyAlphaTabApi();
+    if (!initAlphaTabIfNeeded()) {
+        failScoreLoad(new Error("譜面表示を初期化できませんでした"), renderGeneration);
+        return;
+    }
     const renderApi = api;
     const isCurrentRender = () => api === renderApi
         && scoreRenderGeneration === renderGeneration
+        && currentStage === stage
         && !practiceModal.classList.contains("hidden");
     activeScoreRenderGeneration = renderGeneration;
     scoreRenderStartedAt = performance.now();
     scoreRenderInProgress = true;
     scoreLoadPending = Boolean(stage.file);
-    scoreLoadConfirmed = !scoreLoadPending;
+    scoreLoadConfirmed = false;
     isScoreRendered = false;
     scheduleAlphaTabHealthCheck();
 
@@ -680,6 +810,7 @@ async function renderTab(stage = currentStage) {
             // .mxl または .xml の場合、フェッチして MusicXML 補正 & スラー解析を実行
             if (fileName.endsWith('.mxl') || fileName.endsWith('.xml') || fileName.endsWith('.musicxml')) {
                 const res = await fetch(stage.file);
+                if (!res.ok) throw new Error(`譜面取得エラー: ${res.status}`);
                 if (res.ok) {
                     if (fileName.endsWith('.mxl') && window.JSZip) {
                         const arrayBuffer = await res.arrayBuffer();
@@ -706,11 +837,7 @@ async function renderTab(stage = currentStage) {
                 const binaryData = new TextEncoder().encode(fixedXml);
                 const loadStarted = renderApi.load(binaryData);
                 if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
-                    scoreRenderInProgress = false;
-                    scoreLoadPending = false;
-                    scoreLoadConfirmed = false;
-                    activeScoreRenderGeneration = 0;
-                    scoreRepairAttempted = false;
+                    failScoreLoad(new Error("譜面の読み込みを開始できませんでした"), renderGeneration);
                 }
                 return;
             }
@@ -718,22 +845,13 @@ async function renderTab(stage = currentStage) {
             // フォールバック: 通常のパス指定ロード
             const loadStarted = renderApi.load(stage.file);
             if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
-                scoreRenderInProgress = false;
-                scoreLoadPending = false;
-                scoreLoadConfirmed = false;
-                activeScoreRenderGeneration = 0;
-                scoreRepairAttempted = false;
+                failScoreLoad(new Error("譜面の読み込みを開始できませんでした"), renderGeneration);
             }
             return;
         } catch (e) {
             if (!isCurrentRender()) return;
-            console.error("alphaTab load error:", e);
-            if (activeScoreRenderGeneration === renderGeneration) {
-                scoreRenderInProgress = false;
-                scoreLoadPending = false;
-                scoreLoadConfirmed = false;
-                activeScoreRenderGeneration = 0;
-            }
+            failScoreLoad(e, renderGeneration);
+            return;
         }
     }
 
@@ -742,37 +860,76 @@ async function renderTab(stage = currentStage) {
             detectedSlurPairs = [];
             renderApi.tex(stage.tex);
         } catch (e) {
-            console.warn("alphaTex レンダリング失敗:", e);
-            if (activeScoreRenderGeneration === renderGeneration) {
-                scoreRenderInProgress = false;
-                scoreLoadPending = false;
-                scoreLoadConfirmed = false;
-                activeScoreRenderGeneration = 0;
-            }
+            failScoreLoad(e, renderGeneration);
         }
     } else if (activeScoreRenderGeneration === renderGeneration) {
-        scoreRenderInProgress = false;
-        scoreLoadPending = false;
-        scoreLoadConfirmed = false;
-        activeScoreRenderGeneration = 0;
+        failScoreLoad(new Error("譜面データがありません"), renderGeneration);
     }
 }
 
 // ==========================================
 // ★ 練習カードの動的生成 ★
 // ==========================================
-function renderExerciseCards() {
-    if (!exerciseGrid) return;
+function initTutorialCompletion() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(TUTORIAL_COMPLETION_STORAGE_KEY) || "[]");
+        completedTutorialStages = new Set(Array.isArray(saved)
+            ? saved.filter(key => typeof key === "string" && /^tutorial-[1-9]\d*$/.test(key)) : []);
+    } catch (err) {
+        // 保存領域や保存値が使えない場合も、未完了の状態で起動を続ける。
+        completedTutorialStages = new Set();
+    }
+}
 
-    exerciseGrid.innerHTML = BASIC_STAGES.map(stage => {
+function updateTutorialCompletionDisplay() {
+    for (const stage of TUTORIAL_STAGES) {
+        const badge = document.getElementById(`tutorial-${stage.id}-completion`);
+        if (badge) badge.hidden = !completedTutorialStages.has(`tutorial-${stage.id}`);
+    }
+    const allCompleted = TUTORIAL_STAGES.length > 0
+        && TUTORIAL_STAGES.every(stage => completedTutorialStages.has(`tutorial-${stage.id}`));
+    const status = document.getElementById("tutorialCompletionStatus");
+    if (status) status.hidden = !allCompleted;
+    const categoryStatus = document.getElementById("tutorialCategoryStatus");
+    if (categoryStatus) categoryStatus.innerText = allCompleted ? "✓ 完了" : "未完了";
+}
+
+function markTutorialCompleted(stage, mode) {
+    if (!TUTORIAL_STAGES.includes(stage)) return;
+    const requiredMode = stage.id === 3 ? "record" : (stage.id === 1 || stage.id === 2) ? "practice" : null;
+    if (!requiredMode || mode !== requiredMode) return;
+    const key = `tutorial-${stage.id}`;
+    if (completedTutorialStages.has(key)) return;
+    completedTutorialStages.add(key);
+    try {
+        localStorage.setItem(TUTORIAL_COMPLETION_STORAGE_KEY, JSON.stringify([...completedTutorialStages]));
+    } catch (err) {
+        // 保存できなくても、このセッション中の完了状態は保持する。
+    }
+    updateTutorialCompletionDisplay();
+}
+
+function renderExerciseCards() {
+    renderStageCards(tutorialExerciseGrid, TUTORIAL_STAGES, "tutorial");
+    renderStageCards(exerciseGrid, BASIC_STAGES, "basic");
+    updateTutorialCompletionDisplay();
+}
+
+function renderStageCards(grid, stages, category) {
+    if (!grid) return;
+
+    grid.innerHTML = stages.map(stage => {
         const barsLabel = stage.practiceBars ? `${stage.practiceBars}小節` : "";
         return `
             <div class="exercise-card ${stage.available ? 'exercise-card-available' : 'exercise-card-locked'}"
                  data-stage-id="${stage.id}"
+                 id="${category}-${stage.id}"
+                 data-stage-category="${category}"
                  tabindex="${stage.available ? '0' : '-1'}">
                 <div class="ex-card-content">
                     <div class="ex-badge-row">
                         <span class="ex-badge ${stage.available ? '' : 'badge-muted'}">${stage.code}</span>
+                        ${category === "tutorial" ? `<span id="tutorial-${stage.id}-completion" class="tutorial-completion-badge" ${completedTutorialStages.has(`tutorial-${stage.id}`) ? '' : 'hidden'}>✓ 完了</span>` : ''}
                         ${stage.bpm ? `<span class="bpm-badge">BPM ${stage.bpm}</span>` : ''}
                         ${barsLabel ? `<span class="bars-badge">${barsLabel}</span>` : ''}
                         <span class="badge-tag ${stage.available ? '' : 'badge-tag-muted'}">${stage.subTitle || ''}</span>
@@ -790,9 +947,9 @@ function renderExerciseCards() {
         `;
     }).join("");
 
-    exerciseGrid.querySelectorAll(".exercise-card-available").forEach(card => {
+    grid.querySelectorAll(".exercise-card-available").forEach(card => {
         const stageId = Number(card.dataset.stageId);
-        const stage = BASIC_STAGES.find(s => s.id === stageId);
+        const stage = stages.find(s => s.id === stageId);
         if (!stage) return;
 
         card.addEventListener("click", () => openPracticeModal(stage));
@@ -822,6 +979,8 @@ function openPracticeModal(stage) {
     scoreHealthCheckPending = false;
     scoreRepairAttempted = false;
     activeScoreRenderGeneration = 0;
+    const openGeneration = ++scoreRenderGeneration;
+    setScoreLoadState("loading");
 
     unlockAudioContext().catch(() => {});
 
@@ -885,19 +1044,19 @@ function openPracticeModal(stage) {
     const targetContainer = document.getElementById("alphaTab");
     if (targetContainer) {
         scoreResizeObserver = new ResizeObserver((entries) => {
+            if (currentStage !== stage || scoreRenderGeneration !== openGeneration
+                || practiceModal.classList.contains("hidden")) return;
             for (let entry of entries) {
                 if (entry.contentRect.width > 0 && !isScoreRendered) {
-                    const initialized = initAlphaTabIfNeeded();
-                    if (initialized) {
-                        renderTab(stage);
-                        scoreResizeObserver.disconnect();
-                        scoreResizeObserver = null;
-                    }
+                    scoreResizeObserver.disconnect();
+                    scoreResizeObserver = null;
+                    renderTab(stage);
+                    break;
                 }
             }
         });
         scoreResizeObserver.observe(targetContainer);
-    }
+    } else failScoreLoad(new Error("譜面表示領域がありません"));
 }
 
 function isPracticeModalLandscape() {
@@ -924,17 +1083,26 @@ function updatePracticeScoreLayout() {
             onError: (...details) => console.error("[縦型TAB]", ...details),
             onBarChange: (index) => { currentPracticeBarIndex = index; },
         });
+        verticalTabController.updateControls();
+        if (scoreLoadState === "error") verticalTabController.setMessage("譜面を読み込めませんでした");
     }
 
     // 既にSVGが描画されていれば、カードを抽出生成
     const container = document.getElementById("alphaTab");
     const mainSvg = container?.querySelector("svg");
-    if (mainSvg && api && (!verticalTabController.hasCards)) {
-        verticalTabController.createCardsFromRenderedSvg(
-            mainSvg, 
-            api.boundsLookup || api.renderer?.boundsLookup, 
-            getStagePracticeBars(currentStage)
-        );
+    if (mainSvg && isScoreReadyForPractice() && (!verticalTabController.hasCards)) {
+        try {
+            verticalTabController.createCardsFromRenderedSvg(
+                mainSvg,
+                api.boundsLookup || api.renderer?.boundsLookup,
+                getStagePracticeBars(currentStage)
+            );
+            if (!verticalTabController.hasCards || verticalTabController.barCount !== preparedScore.bars) {
+                throw new Error("縦型TABの準備が完了していません");
+            }
+        } catch (error) {
+            failScoreLoad(error);
+        }
     }
     verticalTabController.setCurrentBar(currentPracticeBarIndex, "layout-update");
 }
@@ -1021,7 +1189,7 @@ function isAlphaTabDisplayHealthy(container) {
 }
 
 function scheduleAlphaTabHealthCheck() {
-    if (!practiceModal || practiceModal.classList.contains("hidden")) return;
+    if (!practiceModal || practiceModal.classList.contains("hidden") || scoreLoadState === "error") return;
     scoreHealthCheckPending = true;
     if (alphaTabHealthCheckTimerId !== null) clearTimeout(alphaTabHealthCheckTimerId);
 
@@ -1048,17 +1216,12 @@ function scheduleAlphaTabHealthCheck() {
             return;
         }
 
-        if (scoreRepairAttempted) return;
+        if (scoreRepairAttempted) {
+            failScoreLoad(new Error("譜面の描画が完了しませんでした"));
+            return;
+        }
         scoreRepairAttempted = true;
-        scoreRenderGeneration++;
-        scoreRenderInProgress = false;
-        scoreLoadPending = false;
-        scoreLoadConfirmed = false;
-        activeScoreRenderGeneration = 0;
-        isScoreRendered = false;
-        destroyAlphaTabApi();
-        renderTab(currentStage);
-        if (!api) scoreRepairAttempted = false;
+        restartScoreLoading();
     }, 300);
 }
 
@@ -1113,6 +1276,7 @@ function closePracticeModal() {
     scoreLoadConfirmed = false;
     activeScoreRenderGeneration = 0;
     scoreRenderGeneration++;
+    setScoreLoadState("idle");
 
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -1189,7 +1353,8 @@ function updatePracticeControls() {
         if (!button) continue;
         button.classList.toggle("btn-stop", isPracticing && mode === buttonMode);
         button.disabled = isStartingPractice || isFinalizingRecording
-            || (isPracticing && mode !== buttonMode);
+            || (isPracticing && mode !== buttonMode)
+            || (!isPracticing && !isScoreReadyForPractice());
         if (isPracticing && mode === buttonMode) button.innerText = "⏹ 練習を終了";
         else if (isStartingPractice && mode === buttonMode) button.innerText = "準備中…";
         else if (isFinalizingRecording && buttonMode === "record") button.innerText = "録音を処理中…";
@@ -1197,8 +1362,12 @@ function updatePracticeControls() {
             button.innerText = "▶ もう一度録音練習";
         } else button.innerText = label;
     }
-    if (practiceRepeatSelect) practiceRepeatSelect.disabled = busy;
+    if (practiceRepeatSelect) {
+        practiceRepeatSelect.disabled = busy || !isScoreReadyForPractice();
+        practiceRepeatSelect.hidden = busy;
+    }
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = busy;
+    if (retryScoreBtn) retryScoreBtn.disabled = busy;
 }
 
 function clearRecordingResult() {
@@ -1222,10 +1391,12 @@ function releasePracticeMicrophone() {
 
 async function startPractice(mode = "practice") {
     if (isPracticing || isStartingPractice || isFinalizingRecording
-        || practiceModal.classList.contains("hidden")) return;
+        || practiceModal.classList.contains("hidden") || !isScoreReadyForPractice()) return;
+    const startScore = preparedScore;
     const startGeneration = ++practiceStartGeneration;
     const isCurrentStart = () => startGeneration === practiceStartGeneration
-        && !practiceModal.classList.contains("hidden");
+        && !practiceModal.classList.contains("hidden")
+        && isScoreReadyForPractice() && preparedScore.generation === startScore.generation;
     const repeatValue = practiceRepeatSelect?.value;
     const repeatCount = mode === "record" ? 1
         : repeatValue === "unlimited" ? Infinity
@@ -1273,7 +1444,7 @@ async function startPractice(mode = "practice") {
         const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
         const countInBars = currentStage.countInBars || 1;
         const countInBeats = countInBars * beatsPerBar;
-        const practiceBars = getStagePracticeBars(currentStage);
+        const practiceBars = startScore.bars;
         const practiceBeats = practiceBars * beatsPerBar;
         const totalBeats = countInBeats + practiceBeats * repeatCount;
         // 録音練習の余韻と停止タイミングは従来どおり。
@@ -1281,7 +1452,7 @@ async function startPractice(mode = "practice") {
         const totalSteps = totalBeats + ringOutBeats;
         const startTime = audioContext.currentTime + 0.3;
         practiceSession = {
-            generation: startGeneration, mode, repeatCount, beatSec, beatsPerBar,
+            generation: startGeneration, stage: startScore.stage, mode, repeatCount, beatSec, beatsPerBar,
             countInBars, countInBeats, practiceBars, practiceBeats, totalBeats, totalSteps,
             startTime, finishTime: startTime + totalSteps * beatSec + (mode === "record" ? 0.1 : 0),
             nextBeat: 0, lastStep: -1, scrollStarted: false
@@ -1350,16 +1521,30 @@ function runPracticeScheduler(session) {
     }
 }
 
-function resumePracticeScroll() {
+function resumePracticeScroll({ restoreImmediately = false } = {}) {
     const session = practiceSession;
-    if (!session || !isPracticing) return;
+    if (!session || !isPracticing || session.generation !== practiceStartGeneration
+        || practiceModal.classList.contains("hidden") || !isScoreReadyForPractice()) return;
     const performanceStart = session.startTime + session.countInBeats * session.beatSec;
-    if (audioContext.currentTime < performanceStart) return;
+    const now = audioContext.currentTime;
+    if (now < performanceStart || now >= session.finishTime) return;
+    if (restoreImmediately) {
+        const beats = (now - performanceStart) / session.beatSec;
+        const barIndex = beats >= session.practiceBeats * session.repeatCount
+            ? session.practiceBars - 1
+            : Math.floor((beats % session.practiceBeats) / session.beatsPerBar);
+        setPracticeBar(barIndex, "render-restore");
+    }
+    const scrollApi = api;
     session.scrollStarted = true;
     startScoreContinuousScroll({
         api, totalBars: session.practiceBars, beatsPerBar: session.beatsPerBar,
         beatSec: session.beatSec, repeatCount: session.repeatCount,
-        getElapsedSeconds: () => audioContext.currentTime - performanceStart
+        getElapsedSeconds: () => audioContext.currentTime - performanceStart,
+        restoreImmediately,
+        isActive: () => practiceSession === session && isPracticing
+            && session.generation === practiceStartGeneration && api === scrollApi
+            && !practiceModal.classList.contains("hidden") && isScoreReadyForPractice()
     });
 }
 
@@ -1383,7 +1568,6 @@ function handleBeatStep(step, session) {
         } else {
             const lapText = "練習 " + lap + "/" + (session.repeatCount === Infinity ? "∞" : session.repeatCount);
             updateVisualMetronome(beatInBar, beatInBar === 1, lapText, "practice");
-            showPracticeStatus(lapText + " · 小節 " + (barIndex + 1) + "/" + practiceBars);
         }
         if (!session.scrollStarted) resumePracticeScroll();
     } else if (session.mode === "record") {
@@ -1437,7 +1621,8 @@ function finishPractice() {
         stopRecording();
         publishRecordingResult(recording);
     } else {
-        showPracticeStatus("練習が終了しました");
+        showPracticeStatus("");
+        if (session.mode === "practice") markTutorialCompleted(session.stage, "practice");
     }
     updatePracticeControls();
 }
@@ -1480,7 +1665,7 @@ function setupMediaRecorder(stream, generation) {
     else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
     const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     const session = {
-        id: ++recordingGeneration, generation, recorder, chunks: [], status: "ready",
+        id: ++recordingGeneration, generation, stage: currentStage, recorder, chunks: [], status: "ready",
         blob: null, timelineFinished: false, stopTimerId: null
     };
     recordingSession = session;
@@ -1558,6 +1743,7 @@ function publishRecordingResult(session) {
         isFinalizingRecording = false;
         showPracticeStatus("");
         updatePracticeControls();
+        markTutorialCompleted(session.stage, "record");
     } catch (err) {
         failPractice("録音結果を表示できませんでした。もう一度録音練習をお試しください。", err, session);
     }
@@ -1574,8 +1760,20 @@ function failPractice(message, error, recording = null) {
 // ==========================================
 // ★ 簡易チューナー ★
 // ==========================================
+function isCurrentTunerSession(session) {
+    return session === tunerSession && session?.generation === tunerStartGeneration
+        && session.stringNum === currentTunerStringNum
+        && (!tunerDetails || tunerDetails.open)
+        && !isPracticing && !isStartingPractice && !isFinalizingRecording;
+}
+
+function releaseStaleTunerStream(stream) {
+    stream?.getTracks().forEach(track => track.stop());
+}
+
 async function selectTunerString(stringNum, midi, noteName) {
-    if (isTuning && currentTunerStringNum === stringNum) { 
+    if (tunerDetails && !tunerDetails.open) return;
+    if ((isTuning || isStartingTuner) && currentTunerStringNum === stringNum) {
         stopTuner(); 
         return; 
     }
@@ -1588,6 +1786,9 @@ async function selectTunerString(stringNum, midi, noteName) {
     stopStandaloneMetronome();
     resetTunerSmoothing();
     tunerSilenceFrames = 0;
+    const session = { generation: ++tunerStartGeneration, stringNum, stream: null };
+    tunerSession = session;
+    isStartingTuner = true;
 
     currentTunerStringNum = stringNum;
     tunerTargetFreq = midiToFrequency(midi);
@@ -1596,26 +1797,49 @@ async function selectTunerString(stringNum, midi, noteName) {
     tunerStatusText.style.color = "#fbbf24";
     tunerMeterPointer.style.left = "50%";
     tunerHud.classList.remove("hidden");
+    tunerHud.setAttribute("aria-busy", "true");
 
     tunerStringBtns.forEach(btn => btn.classList.toggle("active", Number(btn.dataset.string) === stringNum));
     
-    await unlockAudioContext();
     try {
+        await unlockAudioContext();
+        if (!isCurrentTunerSession(session)) return;
+        let stream = microphoneStream;
         if (!microphoneStream || microphoneStream.getTracks().every(t => t.readyState === "ended")) {
-            microphoneStream = await navigator.mediaDevices.getUserMedia({
+            stream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
             });
         }
-        await setupMicrophoneStream(microphoneStream);
+        if (!isCurrentTunerSession(session)) {
+            releaseStaleTunerStream(stream);
+            return;
+        }
+        session.stream = stream;
+        microphoneStream = stream;
+        // 取得済みストリームを渡す。世代確認前に共通関数へマイク取得を任せない。
+        await setupMicrophoneStream(stream);
+        if (!isCurrentTunerSession(session)) {
+            releaseStaleTunerStream(stream);
+            return;
+        }
+        isStartingTuner = false;
         isTuning = true;
-        tunePitchLoop();
-    } catch (err) { 
+        tunerHud.removeAttribute("aria-busy");
+        tunePitchLoop(session);
+    } catch (err) {
+        if (!isCurrentTunerSession(session)) {
+            releaseStaleTunerStream(session.stream);
+            return;
+        }
         alert("マイクの利用を許可してください。"); 
         stopTuner(); 
     }
 }
 
 function stopTuner() {
+    tunerStartGeneration++;
+    tunerSession = null;
+    isStartingTuner = false;
     isTuning = false;
     currentTunerStringNum = null;
     tunerSilenceFrames = 0;
@@ -1623,7 +1847,10 @@ function stopTuner() {
         cancelAnimationFrame(tunerAnimFrameId);
         tunerAnimFrameId = null;
     }
-    if (tunerHud) tunerHud.classList.add("hidden");
+    if (tunerHud) {
+        tunerHud.classList.add("hidden");
+        tunerHud.removeAttribute("aria-busy");
+    }
     tunerStringBtns.forEach(btn => btn.classList.remove("active"));
 
     if (!isPracticing) {
@@ -1637,8 +1864,6 @@ function stopTuner() {
 
 tunerStringBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-        unlockAudioContext().catch(() => {});
-
         const sNum = Number(btn.dataset.string);
         const midi = Number(btn.dataset.midi);
         const note = btn.dataset.note;
@@ -1647,15 +1872,20 @@ tunerStringBtns.forEach(btn => {
 });
 
 if (tunerDetails) {
+    // toggleイベントが閉じる→開くでまとめられても、閉じるクリック時点で無効化する。
+    tunerDetails.querySelector("summary")?.addEventListener("click", () => {
+        if (tunerDetails.open) stopTuner();
+    });
     tunerDetails.addEventListener("toggle", () => { 
         if (!tunerDetails.open) stopTuner(); 
     });
 }
 
-function tunePitchLoop() {
-    if (!isTuning || !analyser || !audioBuffer || !audioContext) {
+function tunePitchLoop(session = tunerSession) {
+    if (!isTuning || !isCurrentTunerSession(session) || !analyser || !audioBuffer || !audioContext) {
         return;
     }
+    tunerAnimFrameId = null;
     
     analyser.getFloatTimeDomainData(audioBuffer);
     let sum = 0;
@@ -1680,7 +1910,7 @@ function tunePitchLoop() {
             }
         }
     }
-    tunerAnimFrameId = requestAnimationFrame(tunePitchLoop);
+    tunerAnimFrameId = requestAnimationFrame(() => tunePitchLoop(session));
 }
 
 // ==========================================
@@ -1775,4 +2005,5 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 
 // --- アプリケーション起動時の初期描画 ---
 initVolumeControl();
+initTutorialCompletion();
 renderExerciseCards();

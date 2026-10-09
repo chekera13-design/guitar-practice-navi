@@ -94,7 +94,7 @@
                     <strong>チュートリアル</strong>
                     <span>アプリの使い方を覚える</span>
                 </span>
-                <span class="category-status tutorial-status">未完了</span>
+                <span id="tutorialCategoryStatus" class="category-status tutorial-status">未完了</span>
                 <span class="category-arrow" aria-hidden="true">→</span>
             </a>
             <div class="practice-category-card category-coming-soon">
@@ -121,10 +121,18 @@
 
         <section class="current-exercises" aria-labelledby="tutorialExercises">
             <div class="current-exercises-heading">
-                <h3 id="tutorialExercises">チュートリアル練習</h3>
-                <p>現在利用できる基礎ピッキングのステージです。</p>
+                <h3 id="tutorialExercises">チュートリアル</h3>
+                <span id="tutorialCompletionStatus" class="tutorial-completion-badge" hidden>✓ チュートリアル完了</span>
+                <p>はじめての方はこちら</p>
             </div>
-            <!-- 既存ステージを app.js で生成。カードのクリック処理はそのまま維持。 -->
+            <div id="tutorialExerciseGrid" class="exercise-grid"></div>
+        </section>
+
+        <section class="current-exercises" aria-labelledby="basicExercises">
+            <div class="current-exercises-heading">
+                <h3 id="basicExercises">基礎編</h3>
+                <p>基礎練習を進めよう</p>
+            </div>
             <div id="exerciseGrid" class="exercise-grid"></div>
         </section>
     </main>
@@ -246,20 +254,22 @@
 
             <!-- ⑥ スタートボタン -->
             <div class="modal-footer-action">
-                <div class="practice-repeat-controls">
-                    <label for="practiceRepeatSelect">練習の繰り返し</label>
-                    <select id="practiceRepeatSelect">
-                        <option value="1" selected>1回</option>
-                        <option value="3">3回</option>
-                        <option value="5">5回</option>
-                        <option value="unlimited">無制限</option>
-                    </select>
-                    <span class="practice-repeat-note">録音練習は1回</span>
+                <div id="scoreLoadStatus" class="score-load-status" role="status" hidden>
+                    <span id="scoreLoadMessage">譜面を読み込んでいます</span>
+                    <button id="retryScoreBtn" class="score-retry-btn" type="button" hidden>再試行</button>
                 </div>
                 <p id="practiceStatus" class="practice-status" role="status" hidden></p>
                 <div class="practice-action-buttons">
-                    <button id="mainActionBtn" class="wide-start-btn">▶ 練習</button>
-                    <button id="recordPracticeBtn" class="wide-start-btn record-mode-btn">● 録音練習</button>
+                    <div class="practice-start-control">
+                        <button id="mainActionBtn" class="wide-start-btn" disabled>▶ 練習</button>
+                        <select id="practiceRepeatSelect" aria-label="練習の繰り返し回数">
+                            <option value="1" selected>1回</option>
+                            <option value="3">3回</option>
+                            <option value="5">5回</option>
+                            <option value="unlimited">無制限</option>
+                        </select>
+                    </div>
+                    <button id="recordPracticeBtn" class="wide-start-btn record-mode-btn" disabled>● 録音練習</button>
                 </div>
             </div>
 
