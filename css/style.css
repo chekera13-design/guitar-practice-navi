@@ -957,19 +957,25 @@ button { touch-action: manipulation; }
     .modal-tempo-controls .bpm-badge { min-width: 30px; }
 
     .visual-metronome-compact {
-        grid-template-columns: 76px minmax(0, 1fr) 76px;
+        grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
         grid-template-areas: "solo tempo volume" "beats beats beats";
     }
     .modal-tempo-controls { justify-self: center; }
-    .metro-standalone-btn { width: 76px; }
-    .metro-btn-text { display: inline; }
+    .metro-standalone-btn { width: 44px; height: 44px; padding: 5px; justify-self: center; }
+    .metro-btn-text { display: none; }
+    .metro-icon-svg { width: 16px; height: 16px; }
     .metro-vol-container {
         position: relative;
         justify-self: center;
         padding: 0;
         gap: 0;
+        border: none;
+        background: none;
     }
-    .metro-vol-icon-btn { width: 44px; height: 44px; }
+    .metro-vol-icon-btn {
+        width: 44px; height: 44px; box-sizing: border-box;
+        background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+    }
     .metro-vol-icon { font-size: 16px; }
     /* ボタンをグリッド内に残し、スライダーだけを浮かせる。 */
     .metro-vol-slider-wrap {
@@ -1004,9 +1010,42 @@ button { touch-action: manipulation; }
 }
 
 @media (orientation: landscape) {
-    .modal-tempo-btn { width: 40px; height: 40px; }
+    /* 幅だけで決まる二段配置より、横向きの一段配置を優先する。 */
+    .visual-metronome-compact {
+        grid-template-columns: auto auto minmax(max-content, 1fr) auto;
+        grid-template-areas: "solo tempo beats volume";
+        padding: 4px 8px;
+        gap: 6px;
+    }
+    .metro-standalone-btn { width: 76px; height: 44px; padding: 5px 6px; gap: 3px; }
+    .metro-btn-text { display: inline; }
+    .metro-icon-svg { width: 13px; height: 13px; }
+    .modal-tempo-controls { gap: 2px; justify-self: start; }
+    .modal-tempo-controls .bpm-badge { min-width: 46px; padding: 2px 5px; }
+    .modal-tempo-btn { width: 40px; height: 44px; }
+    .metro-center-group { gap: 4px; }
+    .metro-phase-badge { min-width: 0; font-size: 11px; padding: 3px 4px; }
+    .metro-count-chip { min-width: 24px; height: 24px; font-size: 14px; }
+    .beat-dots-container { gap: 3px; }
+    .beat-dot { width: 22px; height: 22px; box-sizing: border-box; }
+    .beat-dot .dot-num { font-size: 11px; }
+    .metro-vol-container { padding: 3px 5px; gap: 4px; }
+    .metro-vol-slider-wrap { gap: 4px; }
+    .metro-vol-slider { width: 46px; }
+    .metro-vol-label { min-width: 28px; font-size: 10px; }
+    .modal-tempo-controls, .metro-center-group, .beat-dots-container,
+    .metro-vol-container, .metro-vol-slider-wrap { flex-wrap: nowrap; }
 }
 
-@media (max-width: 600px) and (orientation: landscape) {
-    .visual-metronome-compact { grid-template-columns: 44px minmax(0, 1fr) auto; }
+@media (max-width: 640px) and (orientation: landscape) {
+    .visual-metronome-compact { padding: 4px 6px; gap: 3px; }
+    .metro-standalone-btn { width: 70px; padding: 5px 4px; gap: 2px; }
+    .modal-tempo-controls .bpm-badge { padding: 2px 4px; }
+    .modal-tempo-btn { width: 36px; }
+    .metro-center-group { gap: 2px; }
+    .metro-phase-badge { font-size: 10px; }
+    .metro-count-chip { min-width: 22px; font-size: 12px; }
+    .beat-dots-container { gap: 1px; }
+    .beat-dot { width: 20px; height: 20px; }
+    .metro-vol-container { padding: 3px; }
 }
