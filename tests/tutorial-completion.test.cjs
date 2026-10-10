@@ -63,7 +63,7 @@ for (const id of [2, 3]) {
 }
 
 for (const id of [1,2]) for (const repeat of [1,3,5]) {
-    test(`EX${id}通常練習${repeat}回の正常終了だけで完了・表示・保存`, async () => {
+    test(`EX${id}通常練習${repeat}回の正常終了後も完了・表示・保存を維持`, async () => {
         const {home,h,c} = session(id); c.practiceRepeatSelect.value = String(repeat);
         await c.startPractice('practice'); h.advance(4.31);
         assert.deepEqual(completed(home), []); assert.equal(badge(home,id).hidden, true);
@@ -80,10 +80,10 @@ for (const id of [1,2,3]) for (const at of [1,5]) {
     });
 }
 for (const id of [1,2]) {
-    test(`EX${id}無制限の途中停止では完了せず、次の1回の正常終了で完了`, async () => {
+    test(`EX${id}無制限の1周目途中停止では完了せず、次の1回の正常終了で完了`, async () => {
         const {home,h,c} = session(id); c.practiceRepeatSelect.value = 'unlimited';
-        await c.startPractice(); h.advance(50); c.stopPractice(); assert.deepEqual(completed(home),[]);
-        c.practiceRepeatSelect.value='1'; await c.startPractice(); h.advance(54.3+4*id+0.11);
+        await c.startPractice(); h.advance(5); c.stopPractice(); assert.deepEqual(completed(home),[]);
+        c.practiceRepeatSelect.value='1'; await c.startPractice(); h.advance(9.3+4*id+0.11);
         assert.deepEqual(completed(home),[`tutorial-${id}`]);
     });
     test(`EX${id}録音成功だけでは通常練習の完了条件を満たさない`, async () => {

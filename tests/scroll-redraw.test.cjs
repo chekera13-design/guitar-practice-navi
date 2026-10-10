@@ -45,6 +45,7 @@ async function harness(options = {}) {
         instance.score = { masterBars: Array(4).fill({}) };
         instance.boundsLookup = { findMasterBarByIndex: index => ({ realBounds: { x: offset + index * width, y: 10, w: width, h: 180 } }) };
         container.svg = { isConnected: true, childElementCount: 1,
+            parentElement: { layoutResultId: 'music', renderedResultId: 'music' },
             viewBox: { baseVal: { x: 0, y: 0, width: 2000, height: 200 } },
             getBoundingClientRect: () => ({ width: 2000 * svgScale, height: 200 * svgScale }),
             getAttribute: () => null, querySelector: () => ({}) };
@@ -56,6 +57,8 @@ async function harness(options = {}) {
             c.verticalTabController.setCurrentBar = function(index) { this.currentBar = index; };
         }
         instance.scoreLoaded.emit(instance.score);
+        instance.renderStarted.emit();
+        instance.renderer.partialLayoutFinished.emit({ id: 'music', firstMasterBarIndex: 0, lastMasterBarIndex: 3 });
         instance.renderFinished.emit();
         if (finish) instance.postRenderFinished.emit();
     }

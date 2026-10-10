@@ -21,6 +21,7 @@ function element(hidden = false) {
         style: { setProperty() {}, removeProperty() {} },
         querySelector() { return null; }, querySelectorAll() { return []; }, addEventListener() {},
         replaceChildren() { this.svg = null; }, pause() {}, load() {}, removeAttribute() {},
+        setAttribute(key, value) { this[key] = value; },
         getBoundingClientRect: () => ({ width: 400, height: 200 }),
     };
 }
@@ -37,6 +38,7 @@ function harness(options = {}) {
         alphaTabHealthCheckTimerId: null, modalOpenTimerId: null, practiceModalPositionFrame: null,
         practiceModalWasLandscape: false, verticalTabController: null, detectedSlurPairs: [],
         isPracticing: false, isStartingPractice: false, isFinalizingRecording: false,
+        isStandaloneMetroPlaying: false,
         practiceStartGeneration: 0, practiceSession: null, pendingPracticeMode: null, practiceTimerIds: [],
         recordingSession: null, recordingGeneration: 0, recordedAudioUrl: null, microphoneStream: null,
         Blob, TextEncoder, performance: { now: () => 0 }, console: { error() {}, warn() {} },
@@ -60,6 +62,7 @@ function harness(options = {}) {
     for (const id of ['mainActionBtn', 'recordPracticeBtn', 'practiceRepeatSelect', 'practiceStatus',
         'retryScoreBtn', 'scoreLoadStatus', 'scoreLoadMessage', 'recordedAudioPlayer', 'recordResultCard',
         'visualMetronomeBox', 'standaloneMetroBtn', 'verticalTabWrapper', 'modalStageBadge', 'modalBpmBadge',
+        'modalTempoDownBtn', 'modalTempoUpBtn',
         'modalBarsBadge', 'modalStageTitle', 'modalStageDesc', 'stageGuideTitle', 'stageGuideBody']) c[id] = element();
     c.recordResultCard.classList.add('hidden');
     c.practiceModal = element(true);
@@ -80,7 +83,8 @@ function harness(options = {}) {
     class AlphaTabApi {
         constructor() {
             if (options.constructFail) throw Error('init failure');
-            this.scoreLoaded = event(); this.renderFinished = event(); this.postRenderFinished = event(); this.error = event();
+            this.scoreLoaded = event(); this.renderStarted = event(); this.renderFinished = event(); this.postRenderFinished = event(); this.error = event();
+            this.renderer = { partialLayoutFinished: event() };
             this.loadCalls = []; instances.push(this);
         }
         load(data) { this.loadCalls.push(data); if (options.loadThrows) throw Error('decode'); return !options.loadRejected; }
@@ -93,6 +97,9 @@ function harness(options = {}) {
             if (options.tabThrows) throw Error('TAB failed');
             this.hasCards = !options.noCards; this.barCount = bars;
         }
+        createCardsFromRenderedPartials(partials, bars) {
+            this.createCardsFromRenderedSvg(partials[0].svg, null, bars);
+        }
         setCurrentBar() {} resetToFirstBar() {} updateControls() {}
         setMessage(message) { this.message = message; }
         destroy() { this.hasCards = false; }
@@ -101,9 +108,14 @@ function harness(options = {}) {
     function complete(instance = c.api, bars = 4) {
         instance.score = { masterBars: Array(bars).fill({}) };
         instance.scoreLoaded.emit(instance.score);
+        instance.renderStarted.emit();
+        instance.renderer.partialLayoutFinished.emit({ id: 'music', firstMasterBarIndex: 0, lastMasterBarIndex: bars - 1 });
+        instance.boundsLookup = { findMasterBarByIndex: i => i < bars
+            ? { realBounds: { x: i * 200, y: 0, w: 200, h: 100 } } : null };
         if (instance === c.api && !instance.destroyed && !options.noSvg) {
             container.svg = element(); container.svg.isConnected = true; container.svg.childElementCount = 1;
             container.svg.querySelector = () => ({});
+            container.svg.parentElement = { layoutResultId: 'music', renderedResultId: 'music' };
         }
         instance.renderFinished.emit();
         instance.postRenderFinished.emit();

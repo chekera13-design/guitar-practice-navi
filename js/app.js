@@ -41,6 +41,7 @@ let standaloneMetroTimerId = null;
 let standaloneMetroDisplayTimerIds = new Set();
 let standaloneBeat = 0;
 let standaloneNextTickTime = 0;
+let standaloneIntervalStartTime = 0;
 
 // 譜面描画状態
 let isScoreRendered = false;
@@ -62,6 +63,7 @@ let preparedScore = null;
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
+let detectedSlashChords = [];
 
 // 録音ステート
 let recordingSession = null;
@@ -79,6 +81,8 @@ const practiceModal = document.getElementById("practiceModal");
 const closePracticeModalBtn = document.getElementById("closePracticeModalBtn");
 const modalStageBadge = document.getElementById("modalStageBadge");
 const modalBpmBadge = document.getElementById("modalBpmBadge");
+const modalTempoDownBtn = document.getElementById("modalTempoDownBtn");
+const modalTempoUpBtn = document.getElementById("modalTempoUpBtn");
 const modalBarsBadge = document.getElementById("modalBarsBadge");
 const modalStageTitle = document.getElementById("modalStageTitle");
 const modalStageDesc = document.getElementById("modalStageDesc");
@@ -190,9 +194,8 @@ async function startStandaloneMetronome() {
         }
 
         const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
-        const beatSec = 60 / currentBpm;
-    
         standaloneNextTickTime = audioContext.currentTime + 0.05;
+        standaloneIntervalStartTime = standaloneNextTickTime;
 
         function scheduler() {
             if (!isStandaloneMetroPlaying || !isCurrentStart()) return;
@@ -213,7 +216,8 @@ async function startStandaloneMetronome() {
                 }, delayMs);
                 displayTimerIds.add(displayTimerId);
 
-                standaloneNextTickTime += beatSec;
+                standaloneIntervalStartTime = standaloneNextTickTime;
+                standaloneNextTickTime += 60 / currentBpm;
                 standaloneBeat++;
             }
 
@@ -228,6 +232,19 @@ async function startStandaloneMetronome() {
     }
 }
 
+function retimeStandaloneMetronome() {
+    if (!isStandaloneMetroPlaying) return;
+    const interval = standaloneNextTickTime - standaloneIntervalStartTime;
+    if (!Number.isFinite(interval) || interval <= 0) return;
+    const now = audioContext.currentTime;
+    const beatSec = 60 / currentBpm;
+    // 予約済みの直近クリックは残す。未予約の次拍だけ残りの拍割合を維持して移す。
+    const progress = Math.min(1, Math.max(0, (now - standaloneIntervalStartTime) / interval));
+    standaloneNextTickTime = now < standaloneIntervalStartTime
+        ? standaloneIntervalStartTime + beatSec : now + (1 - progress) * beatSec;
+    standaloneIntervalStartTime = standaloneNextTickTime - beatSec;
+}
+
 function stopStandaloneMetronome() {
     standaloneMetroStartGeneration++;
     isStartingStandaloneMetro = false;
@@ -240,6 +257,7 @@ function stopStandaloneMetronome() {
     standaloneMetroDisplayTimerIds.clear();
     standaloneBeat = 0;
     standaloneNextTickTime = 0;
+    standaloneIntervalStartTime = 0;
 
     stopAllScheduledTicks();
 
@@ -262,14 +280,16 @@ if (standaloneMetroBtn) {
 // ★ メトロノーム音量スライダー制御 ★
 // ==========================================
 function expandVolumeBar() {
-    if (!metroVolContainer) return;
+    if (!metroVolContainer || isPracticeModalLandscape()) return;
     metroVolContainer.classList.add("expanded");
+    metroVolToggleBtn?.setAttribute("aria-expanded", "true");
     resetVolumeCollapseTimer();
 }
 
 function collapseVolumeBar() {
     if (!metroVolContainer) return;
     metroVolContainer.classList.remove("expanded");
+    metroVolToggleBtn?.setAttribute("aria-expanded", "false");
     if (volCollapseTimer) {
         clearTimeout(volCollapseTimer);
         volCollapseTimer = null;
@@ -311,7 +331,7 @@ function initVolumeControl() {
     };
 
     const resumeVolumeTimer = () => {
-        resetVolumeCollapseTimer();
+        if (metroVolContainer?.classList.contains("expanded")) resetVolumeCollapseTimer();
     };
 
     metroVolSlider.addEventListener("input", (e) => {
@@ -346,11 +366,24 @@ function initVolumeControl() {
         });
     }
 
-    document.addEventListener("click", (e) => {
+    const closeVolumeOutside = (e) => {
         if (metroVolContainer && !metroVolContainer.contains(e.target)) {
             collapseVolumeBar();
         }
+    };
+    document.addEventListener("pointerdown", closeVolumeOutside);
+    document.addEventListener("click", closeVolumeOutside);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && metroVolContainer?.classList.contains("expanded")) {
+            e.stopPropagation();
+            collapseVolumeBar();
+            metroVolToggleBtn?.focus();
+        }
     });
+    window.addEventListener("resize", () => {
+        if (isPracticeModalLandscape()) collapseVolumeBar();
+    });
+    window.addEventListener("orientationchange", collapseVolumeBar);
 }
 
 function updateVolumeDisplay(val) {
@@ -370,85 +403,116 @@ function fixMuseScoreXml(xmlText) {
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
 
     detectedSlurPairs = [];
+    detectedSlashChords = [];
+    const harmonyPitch = (step, alter) => {
+        if (!/^[A-G]$/.test(step) || !Number.isInteger(alter) || Math.abs(alter) > 2) return null;
+        return step + (alter > 0 ? '#'.repeat(alter) : 'b'.repeat(-alter));
+    };
     const activeSlurs = new Map();
-    let globalFretIndex = 0;
+    xmlDoc.querySelectorAll('part').forEach((part, partIndex) => {
+        let divisions = 1;
+        part.querySelectorAll('measure').forEach((measure, barIndex) => {
+            let currentDirectionLabel = null;
+            let cursor = 0;
+            let previousOnset = 0;
+            const value = (element, selector, fallback) => {
+                const text = element.querySelector(selector)?.textContent;
+                return text == null ? fallback : Number(text);
+            };
 
-    const measures = xmlDoc.querySelectorAll('measure');
+            Array.from(measure.children).forEach(child => {
+                const tag = child.tagName.toLowerCase();
 
-    measures.forEach((measure, measureIdx) => {
-        let currentDirectionLabel = null;
-
-        Array.from(measure.children).forEach(child => {
-            const tag = child.tagName.toLowerCase();
-
-            if (tag === 'direction') {
-                const words = child.querySelector('words');
-                if (words && words.textContent) {
-                    const text = words.textContent.trim().toUpperCase();
-                    const validLabels = ['H', 'P', 'S', 'C', 'D', 'T', 'SL', 'SLIDE', 'HO', 'PO', 'CHO', 'BEND'];
-                    if (validLabels.includes(text)) {
-                        let displayLabel = text;
-                        if (['SL', 'SLIDE'].includes(text)) displayLabel = 'S';
-                        else if (text === 'HO') displayLabel = 'H';
-                        else if (text === 'PO') displayLabel = 'P';
-                        else if (['CHO', 'BEND'].includes(text)) displayLabel = 'C';
-
-                        currentDirectionLabel = displayLabel;
-                        // 自前でSVG描画するため、XML内のdirectionノードは削除（二重描画防止）
-                        child.remove();
+                if (tag === 'attributes') {
+                    const nextDivisions = value(child, 'divisions', divisions);
+                    if (Number.isFinite(nextDivisions) && nextDivisions > 0) divisions = nextDivisions;
+                } else if (tag === 'backup' || tag === 'forward') {
+                    cursor += (tag === 'backup' ? -1 : 1) * value(child, 'duration', 0) * 960 / divisions;
+                } else if (tag === 'harmony') {
+                    const rootStep = child.querySelector('root-step')?.textContent.trim();
+                    const rootAlter = value(child, 'root-alter', 0);
+                    const bassStep = child.querySelector('bass-step')?.textContent.trim();
+                    const bassAlter = value(child, 'bass-alter', 0);
+                    const root = harmonyPitch(rootStep, rootAlter);
+                    const bass = harmonyPitch(bassStep, bassAlter);
+                    const offsetTicks = cursor + value(child, 'offset', 0) * 960 / divisions;
+                    const staffIndex = value(child, 'staff', 1) - 1;
+                    if (root && bass && Number.isFinite(offsetTicks) && offsetTicks >= 0
+                        && Number.isInteger(staffIndex) && staffIndex >= 0) {
+                        detectedSlashChords.push({ partIndex, barIndex, staffIndex, offsetTicks,
+                            rootStep, rootAlter, root, kind: child.querySelector('kind')?.textContent.trim(),
+                            bassStep, bassAlter, bass });
                     }
-                }
-            } else if (tag === 'note') {
-                const isRest = !!child.querySelector('rest');
-                if (isRest) {
-                    return; // 休符はフレット音符カウントの対象外
-                }
+                } else if (tag === 'direction') {
+                    const words = child.querySelector('words');
+                    if (words && words.textContent) {
+                        const text = words.textContent.trim().toUpperCase();
+                        const validLabels = ['H', 'P', 'S', 'C', 'D', 'T', 'SL', 'SLIDE', 'HO', 'PO', 'CHO', 'BEND'];
+                        if (validLabels.includes(text)) {
+                            let displayLabel = text;
+                            if (['SL', 'SLIDE'].includes(text)) displayLabel = 'S';
+                            else if (text === 'HO') displayLabel = 'H';
+                            else if (text === 'PO') displayLabel = 'P';
+                            else if (['CHO', 'BEND'].includes(text)) displayLabel = 'C';
 
-                const currentNoteIndex = globalFretIndex++;
-
-                const notations = child.querySelector('notations');
-                if (notations) {
-                    // スラー開始の検出
-                    const slurStarts = notations.querySelectorAll('slur[type="start"]');
-                    slurStarts.forEach(s => {
-                        const num = s.getAttribute('number') || '1';
-                        let techLabel = null;
-                        const ho = notations.querySelector('hammer-on[type="start"]');
-                        const po = notations.querySelector('pull-off[type="start"]');
-                        if (ho && ho.textContent) techLabel = ho.textContent.trim().toUpperCase();
-                        else if (po && po.textContent) techLabel = po.textContent.trim().toUpperCase();
-
-                        const label = currentDirectionLabel || techLabel || 'H';
-
-                        activeSlurs.set(num, {
-                            startIndex: currentNoteIndex,
-                            measureIndex: measureIdx + 1,
-                            label: label
-                        });
-                    });
-
-                    if (slurStarts.length > 0) {
-                        currentDirectionLabel = null;
-                    }
-
-                    // スラー終了の検出
-                    const slurStops = notations.querySelectorAll('slur[type="stop"]');
-                    slurStops.forEach(s => {
-                        const num = s.getAttribute('number') || '1';
-                        if (activeSlurs.has(num)) {
-                            const slurInfo = activeSlurs.get(num);
-                            activeSlurs.delete(num);
-
-                            detectedSlurPairs.push({
-                                startIndex: slurInfo.startIndex,
-                                endIndex: currentNoteIndex,
-                                measureIndex: slurInfo.measureIndex,
-                                label: slurInfo.label
-                            });
+                            currentDirectionLabel = displayLabel;
+                            // 自前でSVG描画するため、XML内のdirectionノードは削除（二重描画防止）
+                            child.remove();
                         }
-                    });
+                    }
+                } else if (tag === 'note') {
+                    const onset = child.querySelector('chord') ? previousOnset : cursor;
+                    if (!child.querySelector('chord')) {
+                        previousOnset = onset;
+                        cursor += value(child, 'duration', 0) * 960 / divisions;
+                    }
+                    const isRest = !!child.querySelector('rest');
+                    if (isRest) {
+                        return;
+                    }
+                    // 描画数字の個数ではなく、MusicXMLの演奏位置と弦・フレットを保持する。
+                    const position = { partIndex, barIndex, offsetTicks: onset,
+                        staffIndex: value(child, 'staff', 1) - 1,
+                        voiceIndex: value(child, 'voice', 1) - 1,
+                        string: value(child, 'technical string', NaN),
+                        fret: value(child, 'technical fret', NaN) };
+                    const slurKey = slur => `${partIndex}:${position.staffIndex}:${position.voiceIndex}:${slur.getAttribute('number') || '1'}`;
+
+                    const notations = child.querySelector('notations');
+                    if (notations) {
+                        // 同じ音でstop/startするスラーも、終了を先に確定する。
+                        notations.querySelectorAll('slur[type="stop"]').forEach(s => {
+                            const key = slurKey(s);
+                            const info = activeSlurs.get(key);
+                            if (!info) return;
+                            activeSlurs.delete(key);
+                            detectedSlurPairs.push({ start: info.start, end: position,
+                                measureIndex: info.start.barIndex + 1, label: info.label });
+                        });
+                        // スラー開始の検出
+                        const slurStarts = notations.querySelectorAll('slur[type="start"]');
+                        slurStarts.forEach(s => {
+                            let techLabel = null;
+                            const ho = notations.querySelector('hammer-on[type="start"]');
+                            const po = notations.querySelector('pull-off[type="start"]');
+                            if (ho && ho.textContent) techLabel = ho.textContent.trim().toUpperCase();
+                            else if (po && po.textContent) techLabel = po.textContent.trim().toUpperCase();
+
+                            const label = currentDirectionLabel || techLabel || null;
+
+                            activeSlurs.set(slurKey(s), {
+                                start: position,
+                                label: label
+                            });
+                        });
+
+                        if (slurStarts.length > 0) {
+                            currentDirectionLabel = null;
+                        }
+
+                    }
                 }
-            }
+            });
         });
     });
 
@@ -461,48 +525,39 @@ function fixMuseScoreXml(xmlText) {
 // ==========================================
 // ★ スラー弧線（上向き三日月）＆ 記号（H/P/S/C）の確実なSVG描画 ★
 // ==========================================
-function renderSlursAndLabelsInSvg() {
-    const container = document.getElementById("alphaTab");
-    if (!container) return;
-
-    const svgs = container.querySelectorAll('svg');
+function renderSlursAndLabelsInSvg(instance, partials) {
     const SVG_NS = "http://www.w3.org/2000/svg";
-
-    svgs.forEach(svg => {
+    partials.forEach(({ svg }) => {
         svg.querySelectorAll('.alphatab-custom-slur, .alphaTab-slur-label').forEach(el => el.remove());
+    });
+    const notePoint = position => {
+        const staff = instance.score?.tracks[position.partIndex]?.staves[position.staffIndex];
+        const voice = staff?.bars[position.barIndex]?.voices[position.voiceIndex];
+        const beat = voice?.beats.find(b => Math.abs(b.displayStart - position.offsetTicks) < 0.01);
+        const note = beat?.notes.find(n => n.string === staff.tuning.length - position.string + 1
+            && n.fret === position.fret);
+        if (!note) return null;
+        const bounds = instance.renderer.boundsLookup.findBeat(beat)?.notes
+            ?.find(entry => entry.note?.id === note.id)?.noteHeadBounds;
+        if (!bounds || ![bounds.x, bounds.y, bounds.w, bounds.h].every(Number.isFinite)) return null;
+        // tie後続音もモデルとNoteBoundsは残る（数字省略時は幅・高さ0）。
+        const fontSize = instance.settings.display.resources.tablatureFont.size;
+        const point = { x: bounds.x + bounds.w * 0.5,
+            y: bounds.h > 0 ? bounds.y - 1 : bounds.y - fontSize * 0.5 - 1 };
+        return [point.x, point.y].every(Number.isFinite) ? point : null;
+    };
+    detectedSlurPairs.forEach(pair => {
+        const p1 = notePoint(pair.start), p2 = notePoint(pair.end);
+        if (!p1 || !p2) return;
+        // Boundsは譜面全体座標、SVGはpartialローカル座標。
+        partials.filter(p => p.lastBarIndex >= pair.start.barIndex
+            && p.firstBarIndex <= pair.end.barIndex).forEach(({ svg, x, y }) => {
+            if (![x, y].every(Number.isFinite)) return;
+            const { label } = pair;
 
-        // フレット数字テキスト（0-9）をすべて抽出
-        const allTexts = Array.from(svg.querySelectorAll('text'));
-        const fretTexts = allTexts.filter(el => {
-            const text = el.textContent.trim();
-            if (!/^[0-9]+$/.test(text)) return false;
-            const fill = (el.getAttribute('fill') || el.style.fill || '').toLowerCase();
-            if (fill.includes('red') || fill.includes('c8') || fill.includes('rgb(200')) return false;
-            return true;
-        });
-
-        // X座標昇順にソート（音符の時系列順）
-        fretTexts.sort((a, b) => {
             try {
-                return a.getBBox().x - b.getBBox().x;
-            } catch (e) {
-                return 0;
-            }
-        });
-
-        // 解析された各スラーペアを描画
-        detectedSlurPairs.forEach(pair => {
-            const { startIndex, endIndex, label } = pair;
-            if (startIndex >= fretTexts.length || endIndex >= fretTexts.length) return;
-
-            try {
-                const b1 = fretTexts[startIndex].getBBox();
-                const b2 = fretTexts[endIndex].getBBox();
-
-                const x1 = b1.x + b1.width * 0.5;
-                const y1 = b1.y - 1;
-                const x2 = b2.x + b2.width * 0.5;
-                const y2 = b2.y - 1;
+                const x1 = p1.x - x, y1 = p1.y - y;
+                const x2 = p2.x - x, y2 = p2.y - y;
 
                 const midX = (x1 + x2) * 0.5;
                 const span = Math.abs(x2 - x1);
@@ -524,7 +579,7 @@ function renderSlursAndLabelsInSvg() {
                 svg.appendChild(slurPath);
 
                 // スラー弧線の頂点の真上に、H / P / S / C 等の演奏記号を配置
-                if (label) {
+                if (label && midX >= 0 && midX < parseFloat(svg.getAttribute('width'))) {
                     const textEl = document.createElementNS(SVG_NS, 'text');
                     textEl.setAttribute('x', midX.toFixed(1));
                     textEl.setAttribute('y', (topY - 4).toFixed(1));
@@ -568,6 +623,7 @@ let api = null;
 function destroyAlphaTabApi() {
     const previousApi = api;
     api = null;
+    scorePartialState = null;
     try {
         previousApi?.destroy();
     } catch (e) {
@@ -576,11 +632,78 @@ function destroyAlphaTabApi() {
     document.getElementById("alphaTab")?.replaceChildren();
 }
 
+// alphaTabの描画1回ごとのpartial情報。SVGのローカル座標は横追従へ渡さない。
+let scorePartialState = null;
+
+function applySlashChordNames(score) {
+    if (!score?.tracks?.length) return;
+    for (const harmony of detectedSlashChords) {
+        const staff = score.tracks[harmony.partIndex]?.staves[harmony.staffIndex];
+        const beats = staff?.bars[harmony.barIndex]?.voices.flatMap(voice => voice.beats) || [];
+        const beat = beats.find(beat => Math.abs(beat.displayStart - harmony.offsetTicks) < 0.01
+            && beat.chord?.name.match(/^[A-G](?:bb|##|b|#)?/)?.[0] === harmony.root);
+        const original = beat?.chord;
+        if (!original || original.name.endsWith(`/${harmony.bass}`)) continue;
+        // 同名Chordは他小節と共有される。対象beatだけ別Chordへ接続する。
+        const chord = Object.assign(new alphaTab.model.Chord(), original,
+            { name: `${original.name}/${harmony.bass}` });
+        const chordId = `app-slash-${beat.id}`;
+        staff.addChord(chordId, chord);
+        beat.chordId = chordId;
+    }
+}
+
+function getCompleteScorePartials(container, instance, bars) {
+    const state = scorePartialState;
+    if (!state || state.api !== instance || state.generation !== scoreRenderGeneration
+        || !Number.isInteger(bars) || bars <= 0 || !state.records.size) {
+        throw new Error("譜面のpartial情報がありません");
+    }
+    const lookup = instance.boundsLookup || instance.renderer?.boundsLookup;
+    for (let index = 0; index < bars; index++) {
+        const bounds = lookup?.findMasterBarByIndex(index)?.realBounds;
+        if (!bounds || ![bounds.x, bounds.y, bounds.w, bounds.h].every(Number.isFinite)
+            || bounds.w <= 0 || bounds.h <= 0) {
+            throw new Error("譜面の実小節配置が未確定です");
+        }
+    }
+    // alphaTabのplaceholderに付与される描画IDで、イベントと実DOMを照合する。
+    const svgByResult = new Map();
+    for (const svg of container.querySelectorAll("svg")) {
+        const placeholder = svg.parentElement;
+        if (!placeholder || placeholder.layoutResultId == null) continue;
+        const id = placeholder.layoutResultId;
+        if (placeholder.renderedResultId !== id || svgByResult.has(id)) {
+            throw new Error("譜面のpartial描画が不正です");
+        }
+        svgByResult.set(id, svg);
+    }
+    const partials = [];
+    let nextBar = 0;
+    for (const record of state.records.values()) {
+        const { firstBarIndex, lastBarIndex } = record;
+        // クレジットはalphaTabが明示的に-1/-1を付ける。音楽partialには含めない。
+        if (firstBarIndex === -1 && lastBarIndex === -1) continue;
+        if (!Number.isInteger(firstBarIndex) || !Number.isInteger(lastBarIndex)
+            || firstBarIndex !== nextBar || lastBarIndex < firstBarIndex || lastBarIndex >= bars) {
+            throw new Error("譜面のpartial小節範囲に欠落・重複・順序異常があります");
+        }
+        const svg = svgByResult.get(record.id);
+        if (!isScoreSvgHealthy(svg)) throw new Error("譜面の音楽partialが描画されていません");
+        partials.push({ ...record, svg, partialIndex: partials.length });
+        nextBar = lastBarIndex + 1;
+    }
+    if (nextBar !== bars) throw new Error("譜面の全partialが揃っていません");
+    return partials;
+}
+
 function isScoreReadyForPractice() {
     return scoreLoadState === "ready" && isScoreRendered
         && preparedScore?.generation === scoreRenderGeneration
         && preparedScore.stage === currentStage && preparedScore.api === api
-        && preparedScore.bars > 0 && api?.score?.masterBars?.length === preparedScore.bars;
+        && preparedScore.bars > 0 && api?.score?.masterBars?.length === preparedScore.bars
+        && preparedScore.partials === scorePartialState?.validatedPartials
+        && preparedScore.partials?.every(partial => partial.svg.isConnected);
 }
 
 function setScoreLoadState(state) {
@@ -653,7 +776,8 @@ function initAlphaTabIfNeeded() {
             const apiInstance = new alphaTab.AlphaTabApi(container, {
                 core: { 
                     engine: "svg",
-                    enableLazyLoading: false
+                    enableLazyLoading: false,
+                    includeNoteBounds: true // 奏法markerを描画数字の連番に依存させない。
                 },
                 display: { 
                     layoutMode: "horizontal", 
@@ -687,12 +811,35 @@ function initAlphaTabIfNeeded() {
             const isCurrentApi = () => api === apiInstance && generation === scoreRenderGeneration
                 && stage === currentStage && !practiceModal.classList.contains("hidden");
 
+            apiInstance.renderStarted.on(() => {
+                if (!isCurrentApi()) return;
+                scorePartialState = { api: apiInstance, generation, records: new Map(), collecting: true,
+                    validatedPartials: null };
+                // 同じ譜面の再描画は練習セッションや音声初期化待ちを取り消さない。
+                // 対応表が未検証の間は開始ガードとボタン側でブロックする。
+                updatePracticeControls();
+            });
+            apiInstance.renderer.partialLayoutFinished.on(result => {
+                if (!isCurrentApi() || !scorePartialState?.collecting
+                    || scorePartialState.api !== apiInstance) return;
+                // 同じ描画IDの重複通知は混在として扱い、準備完了にしない。
+                if (!result || result.id == null || scorePartialState.records.has(result.id)) {
+                    failScoreLoad(new Error("譜面のpartial識別情報が不正です"), generation);
+                    return;
+                }
+                scorePartialState.records.set(result.id, { id: result.id,
+                    x: result.x, y: result.y,
+                    firstBarIndex: result.firstMasterBarIndex, lastBarIndex: result.lastMasterBarIndex });
+            });
+
             apiInstance.scoreLoaded.on((score) => {
                 if (!isCurrentApi()) return;
                 if (!score?.masterBars?.length) {
                     failScoreLoad(new Error("小節情報がありません"), generation);
                     return;
                 }
+                // scoreLoadedはrendererへモデルが渡される前に通知される。
+                applySlashChordNames(score);
                 if (scoreRenderInProgress) scoreLoadConfirmed = true;
                 if (score && score.masterBars && score.masterBars.length > 0) {
                     const bars = score.masterBars.length;
@@ -702,26 +849,21 @@ function initAlphaTabIfNeeded() {
 
             // renderFinished直後はDOM配置が未完了の場合があるため、後処理完了を待つ。
             apiInstance.postRenderFinished.on(() => {
-                if (!isCurrentApi() || (scoreLoadState === "loading" && !scoreLoadConfirmed)) return;
+                if (!isCurrentApi() || (scoreLoadPending && !scoreLoadConfirmed)) return;
                 try {
                     resetScoreFocusState();
 
                     // 1. スラー＆H/P/S/C文字のSVG描画
                     handleWatermark();
-                    renderSlursAndLabelsInSvg();
-
                     const bars = apiInstance.score?.masterBars?.length;
-                    if (!bars || !isAlphaTabDisplayHealthy(container) || !buildScoreBarLayouts(apiInstance, bars)) {
+                    const partials = getCompleteScorePartials(container, apiInstance, bars);
+                    renderSlursAndLabelsInSvg(apiInstance, partials);
+                    if (!buildScoreBarLayouts(apiInstance, bars)) {
                         throw new Error("譜面の描画・小節配置が未確定です");
                     }
                     // 2. 完成した本物SVGから縦型TABカードを一括生成
-                    const mainSvg = container.querySelector("svg");
-                    if (mainSvg && verticalTabController) {
-                        verticalTabController.createCardsFromRenderedSvg(
-                            mainSvg,
-                            apiInstance.boundsLookup || apiInstance.renderer?.boundsLookup,
-                            bars
-                        );
+                    if (verticalTabController) {
+                        verticalTabController.createCardsFromRenderedPartials(partials, bars);
                         if (!verticalTabController.hasCards || verticalTabController.barCount !== bars) {
                             throw new Error("縦型TABの準備が完了していません");
                         }
@@ -734,7 +876,9 @@ function initAlphaTabIfNeeded() {
                     scoreLoadConfirmed = false;
                     activeScoreRenderGeneration = 0;
                     isScoreRendered = true;
-                    preparedScore = { generation, stage, api: apiInstance, bars };
+                    scorePartialState.collecting = false;
+                    scorePartialState.validatedPartials = partials;
+                    preparedScore = { generation, stage, api: apiInstance, bars, partials };
                     setScoreLoadState("ready");
                     // 新しい座標・TABの準備後、継続中の演奏時刻から位置を復元する。
                     resumePracticeScroll({ restoreImmediately: true });
@@ -858,6 +1002,7 @@ async function renderTab(stage = currentStage) {
     if (stage.tex) {
         try {
             detectedSlurPairs = [];
+            detectedSlashChords = [];
             renderApi.tex(stage.tex);
         } catch (e) {
             failScoreLoad(e, renderGeneration);
@@ -968,9 +1113,10 @@ function renderStageCards(grid, stages, category) {
 function openPracticeModal(stage) {
     if (!practiceModal.classList.contains("hidden")) closePracticeModal();
     currentStage = stage;
-    currentBpm = stage.bpm || 60;
+    currentBpm = getStageDefaultBpm(stage);
     currentPracticeBarIndex = 0;
     detectedSlurPairs = [];
+    detectedSlashChords = [];
 
     isScoreRendered = false;
     scoreRenderInProgress = false;
@@ -996,7 +1142,7 @@ function openPracticeModal(stage) {
     const practiceBars = getStagePracticeBars(stage);
 
     if (modalStageBadge) modalStageBadge.innerText = stage.stageBadge || "基礎編";
-    if (modalBpmBadge) modalBpmBadge.innerText = `BPM ${currentBpm}`;
+    updateTempoControls();
     if (modalBarsBadge) modalBarsBadge.innerText = `${practiceBars}小節`;
     if (modalStageTitle) modalStageTitle.innerText = stage.title;
     if (modalStageDesc) modalStageDesc.innerText = stage.desc || "";
@@ -1025,9 +1171,9 @@ function openPracticeModal(stage) {
     if (recordResultCard) recordResultCard.classList.add("hidden");
     resetVisualMetronome();
     showPracticeStatus("");
-    updatePracticeControls();
 
     practiceModal.classList.remove("hidden");
+    updatePracticeControls();
     document.body.style.overflow = "hidden";
     updatePracticeScoreLayout();
     practiceModalWasLandscape = isPracticeModalLandscape();
@@ -1089,14 +1235,10 @@ function updatePracticeScoreLayout() {
 
     // 既にSVGが描画されていれば、カードを抽出生成
     const container = document.getElementById("alphaTab");
-    const mainSvg = container?.querySelector("svg");
-    if (mainSvg && isScoreReadyForPractice() && (!verticalTabController.hasCards)) {
+    if (container && isScoreReadyForPractice() && (!verticalTabController.hasCards)) {
         try {
-            verticalTabController.createCardsFromRenderedSvg(
-                mainSvg,
-                api.boundsLookup || api.renderer?.boundsLookup,
-                getStagePracticeBars(currentStage)
-            );
+            const partials = getCompleteScorePartials(container, api, preparedScore.bars);
+            verticalTabController.createCardsFromRenderedPartials(partials, preparedScore.bars);
             if (!verticalTabController.hasCards || verticalTabController.barCount !== preparedScore.bars) {
                 throw new Error("縦型TABの準備が完了していません");
             }
@@ -1172,20 +1314,26 @@ function requestPracticeModalInitialPosition() {
 
 function isAlphaTabDisplayHealthy(container) {
     if (!container || container.clientWidth <= 0) return false;
+    try {
+        return getCompleteScorePartials(container, api, api?.score?.masterBars?.length).length > 0;
+    } catch {
+        return false;
+    }
+}
 
-    return Array.from(container.querySelectorAll("svg")).some((svg) => {
-        const rect = svg.getBoundingClientRect();
-        const style = window.getComputedStyle(svg);
-        const hasNotation = svg.querySelector("path, text, line, polyline, polygon, rect, circle, use");
-        return svg.isConnected
-            && rect.width > 0
-            && rect.height > 0
-            && svg.childElementCount > 0
-            && hasNotation
-            && style.display !== "none"
-            && style.visibility !== "hidden"
-            && style.opacity !== "0";
-    });
+function isScoreSvgHealthy(svg) {
+    if (!svg) return false;
+    const rect = svg.getBoundingClientRect();
+    const style = window.getComputedStyle(svg);
+    const hasNotation = svg.querySelector("path, text, line, polyline, polygon, rect, circle, use");
+    return svg.isConnected
+        && rect.width > 0
+        && rect.height > 0
+        && svg.childElementCount > 0
+        && hasNotation
+        && style.display !== "none"
+        && style.visibility !== "hidden"
+        && style.opacity !== "0";
 }
 
 function scheduleAlphaTabHealthCheck() {
@@ -1294,6 +1442,8 @@ function closePracticeModal() {
     stopScoreContinuousScroll();
     resetScoreFocusState();
 
+    currentBpm = getStageDefaultBpm(currentStage);
+
     if (microphoneStream) {
         microphoneStream.getTracks().forEach(t => t.stop());
         microphoneStream = null;
@@ -1309,6 +1459,7 @@ function closePracticeModal() {
     if (verticalTabWrapper) verticalTabWrapper.hidden = true;
 
     practiceModal.classList.add("hidden");
+    updateTempoControls();
     document.body.style.overflow = "";
     const modalContent = practiceModal.querySelector(".practice-modal-content");
     if (modalContent) modalContent.style.removeProperty("--practice-modal-max-height");
@@ -1343,7 +1494,33 @@ function showPracticeStatus(text, isError = false) {
     practiceStatus.classList.toggle("is-error", isError);
 }
 
+function getStageDefaultBpm(stage) {
+    const bpm = stage?.bpm;
+    return Number.isFinite(bpm) && bpm > 0 ? Math.min(200, Math.max(20, bpm)) : 60;
+}
+
+function updateTempoControls() {
+    const locked = isPracticing || isStartingPractice || isFinalizingRecording
+        || practiceModal.classList.contains("hidden");
+    const displayedBpm = practiceSession?.bpm ?? currentBpm;
+    if (modalBpmBadge) {
+        modalBpmBadge.innerText = String(displayedBpm);
+        modalBpmBadge.setAttribute("aria-label", `現在のテンポ ${displayedBpm} BPM`);
+    }
+    if (modalTempoDownBtn) modalTempoDownBtn.disabled = locked || currentBpm <= 20;
+    if (modalTempoUpBtn) modalTempoUpBtn.disabled = locked || currentBpm >= 200;
+}
+
+function changePracticeTempo(delta) {
+    if (isPracticing || isStartingPractice || isFinalizingRecording
+        || practiceModal.classList.contains("hidden") || ![-5, 5].includes(delta)) return;
+    currentBpm = Math.min(200, Math.max(20, currentBpm + delta));
+    if (isStandaloneMetroPlaying) retimeStandaloneMetronome();
+    updateTempoControls();
+}
+
 function updatePracticeControls() {
+    updateTempoControls();
     const mode = practiceSession?.mode || pendingPracticeMode;
     const busy = isPracticing || isStartingPractice || isFinalizingRecording;
     for (const [button, buttonMode, label] of [
@@ -1393,6 +1570,9 @@ async function startPractice(mode = "practice") {
     if (isPracticing || isStartingPractice || isFinalizingRecording
         || practiceModal.classList.contains("hidden") || !isScoreReadyForPractice()) return;
     const startScore = preparedScore;
+    // 音声・マイク初期化を待つ前に確定し、全周回と録音終了まで同じテンポを使う。
+    const sessionBpm = Number.isFinite(currentBpm) && currentBpm >= 20 && currentBpm <= 200
+        ? currentBpm : getStageDefaultBpm(currentStage);
     const startGeneration = ++practiceStartGeneration;
     const isCurrentStart = () => startGeneration === practiceStartGeneration
         && !practiceModal.classList.contains("hidden")
@@ -1440,7 +1620,7 @@ async function startPractice(mode = "practice") {
             setupMediaRecorder(microphoneStream, startGeneration);
         }
 
-        const beatSec = 60 / currentBpm;
+        const beatSec = 60 / sessionBpm;
         const beatsPerBar = (currentStage.timeSignature && currentStage.timeSignature[0]) || 4;
         const countInBars = currentStage.countInBars || 1;
         const countInBeats = countInBars * beatsPerBar;
@@ -1452,10 +1632,10 @@ async function startPractice(mode = "practice") {
         const totalSteps = totalBeats + ringOutBeats;
         const startTime = audioContext.currentTime + 0.3;
         practiceSession = {
-            generation: startGeneration, stage: startScore.stage, mode, repeatCount, beatSec, beatsPerBar,
+            generation: startGeneration, stage: startScore.stage, mode, repeatCount, bpm: sessionBpm, beatSec, beatsPerBar,
             countInBars, countInBeats, practiceBars, practiceBeats, totalBeats, totalSteps,
             startTime, finishTime: startTime + totalSteps * beatSec + (mode === "record" ? 0.1 : 0),
-            nextBeat: 0, lastStep: -1, scrollStarted: false
+            nextBeat: 0, lastStep: -1, scrollStarted: false, firstLapCompleted: false
         };
         buildScoreBarLayouts(api, practiceBars);
         isPracticing = true;
@@ -1509,6 +1689,12 @@ function runPracticeScheduler(session) {
             visualMetronomeBox.classList.remove("recording");
         }
         if (practiceSession !== session) return;
+        // EXの完了は選択回数の終了と分離し、1周目の演奏区間を通過した時点で記録する。
+        const firstLapEnd = session.startTime + (session.countInBeats + session.practiceBeats) * session.beatSec;
+        if (session.mode === "practice" && !session.firstLapCompleted && now + 1e-8 >= firstLapEnd) {
+            session.firstLapCompleted = true;
+            markTutorialCompleted(session.stage, "practice");
+        }
         if (now + 1e-8 >= session.finishTime) {
             finishPractice();
             return;
@@ -1622,7 +1808,6 @@ function finishPractice() {
         publishRecordingResult(recording);
     } else {
         showPracticeStatus("");
-        if (session.mode === "practice") markTutorialCompleted(session.stage, "practice");
     }
     updatePracticeControls();
 }
@@ -1648,6 +1833,10 @@ function handlePracticeAction(mode) {
 bindButtonActivation(mainActionBtn, () => handlePracticeAction("practice"),
     { touchEnabled: shouldUseVerticalTabLayout });
 bindButtonActivation(recordPracticeBtn, () => handlePracticeAction("record"),
+    { touchEnabled: shouldUseVerticalTabLayout });
+bindButtonActivation(modalTempoDownBtn, () => changePracticeTempo(-5),
+    { touchEnabled: shouldUseVerticalTabLayout });
+bindButtonActivation(modalTempoUpBtn, () => changePracticeTempo(5),
     { touchEnabled: shouldUseVerticalTabLayout });
 
 function isCurrentRecording(session) {

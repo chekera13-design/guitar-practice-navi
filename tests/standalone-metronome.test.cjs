@@ -28,7 +28,7 @@ function harness(options = {}) {
     let nextTimer = 0, audioRequests = 0, cancellations = 0, resetCount = 0;
     const timers = new Map(), ticks = [], sounds = new Set(), updates = [], warnings = [], volume = [];
     const c = { isPracticing: false, isStartingPractice: false, isFinalizingRecording: false,
-        currentStage: { timeSignature: [4, 4], countInBars: 1 }, currentBpm: options.bpm || 60,
+        currentStage: { timeSignature: [4, 4], countInBars: 1, bpm: options.bpm || 60 }, currentBpm: options.bpm || 60,
         practiceModal: element(), standaloneMetroBtn: element(), metroVolSlider: { value: '40' },
         audioContext: { currentTime: 0 },
         unlockAudioContext: async () => { const i = audioRequests++; if (options.unlock) await options.unlock(i); },
@@ -51,6 +51,7 @@ function harness(options = {}) {
         practiceStartGeneration: 0, practiceSession: null, pendingPracticeMode: null, practiceTimerIds: [],
         recordingSession: null, recordingGeneration: 0, Blob, URL: { revokeObjectURL() {} },
         mainActionBtn: element(), recordPracticeBtn: element(), practiceRepeatSelect: element(),
+        modalTempoDownBtn: element(), modalTempoUpBtn: element(), modalBpmBadge: element(),
         practiceStatus: element(), recordResultCard: element(true), retryScoreBtn: element(),
         visualMetronomeBox: element(), api: {},
         isScoreReadyForPractice: () => true, preparedScore: { generation: 1, bars: 4 },
@@ -163,6 +164,17 @@ test('AudioContext時刻とBPM間隔を維持し、停止後の別BPM・拍子�
     assert.equal(second.length, 4); assert.deepEqual(second.map(t => t.accent), [true, false, false, true]);
     for (let i = 1; i < second.length; i++) assert.ok(Math.abs(second[i].time - second[i - 1].time - 1) < 1e-8);
     assert.deepEqual(h.volume, [0.4, 0.4]);
+});
+
+test('単体メトロノームはcurrentBpmで開始し、停止後の最新値で再開始', async () => {
+    const h = harness({ bpm: 80 }), c = h.c;
+    c.changePracticeTempo(-5); assert.equal(c.currentBpm, 75);
+    await c.startStandaloneMetronome(); h.advance(2);
+    for (let i = 1; i < h.ticks.length; i++) assert.ok(Math.abs(h.ticks[i].time - h.ticks[i - 1].time - 60 / 75) < 1e-8);
+    assert.equal(c.currentBpm, 75);
+    c.stopStandaloneMetronome(); c.changePracticeTempo(-5); await c.startStandaloneMetronome(); h.advance(4);
+    const last = h.ticks.slice(-2); assert.ok(Math.abs(last[1].time - last[0].time - 60 / 70) < 1e-8);
+    c.stopStandaloneMetronome();
 });
 
 test('現在の初期化失敗は停止状態へ戻し、再試行可能にする', async () => {

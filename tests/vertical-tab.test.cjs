@@ -31,7 +31,7 @@ class Element {
         if (this.parent) this.parent.childNodes.splice(this.parent.childNodes.indexOf(this), 1);
         this.parent = null;
     }
-    replaceChildren() { [...this.childNodes].forEach(node => node.remove()); }
+    replaceChildren(...nodes) { [...this.childNodes].forEach(node => node.remove()); this.append(...nodes); }
     querySelectorAll(selector) {
         if (selector.includes(',')) return selector.split(',').flatMap(part => this.querySelectorAll(part.trim()));
         const matches = node => selector[0] === '.' ? node.className === selector.slice(1) : node.tagName === selector;
@@ -250,6 +250,10 @@ test('実際のカード座標エラーが既存の準備失敗・開始禁止�
         svg.getBoundingClientRect = () => ({ width: 400, height: 200 });
         c.document.getElementById('alphaTab').svg = svg;
         c.api.score = { masterBars: [{}] };
+        c.api.renderStarted.emit();
+        c.api.renderer.partialLayoutFinished.emit({ id: 'music', firstMasterBarIndex: 0, lastMasterBarIndex: 0 });
+        svg.parentElement = { layoutResultId: 'music', renderedResultId: 'music' };
+        c.api.boundsLookup = { findMasterBarByIndex: () => ({ realBounds: { x: 35, y: 0, w: 131, h: 110 } }) };
         c.api.scoreLoaded.emit(c.api.score); c.api.renderFinished.emit(); c.api.postRenderFinished.emit();
     }
     render(score({ svgEnd: Infinity }));

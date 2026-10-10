@@ -342,6 +342,18 @@ body {
     border-bottom: 1px solid #e2e8f0;
 }
 .modal-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
+.modal-tempo-controls { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; grid-area: tempo; }
+.modal-tempo-controls .bpm-badge { min-width: 48px; text-align: center; white-space: nowrap; }
+#modalBpmBadge::after { content: " BPM"; }
+.modal-tempo-btn {
+    width: 44px; height: 44px; padding: 0; border: 1px solid #475569; border-radius: 8px;
+    background: #1e293b; color: #e2e8f0; font-size: 18px; font-weight: 700; cursor: pointer;
+    touch-action: manipulation;
+}
+.modal-tempo-btn:hover:not(:disabled) { background: #334155; border-color: #64748b; }
+.modal-tempo-btn:active:not(:disabled) { background: #475569; }
+.modal-tempo-btn:disabled { opacity: 0.4; cursor: default; }
+.modal-tempo-btn:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
 .practice-modal-title { margin: 0; font-size: 16px; color: #0f172a; font-weight: 800; width: 100%; }
 .practice-modal-desc { margin: 4px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.4; width: 100%; }
 .app-badge {
@@ -355,13 +367,16 @@ body {
     background: #0f172a;
     border: 2px solid #334155;
     border-radius: 10px;
-    padding: 6px 14px;
+    padding: 6px 10px;
     color: white;
     margin-bottom: 8px;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "solo tempo beats volume";
+    gap: 8px;
     align-items: center;
-    justify-content: center;
     min-height: 44px;
+    flex-shrink: 0;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -371,10 +386,11 @@ body {
 
 /* ⏱️ 左端固定 単体メトロノームボタン */
 .metro-standalone-btn {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    grid-area: solo;
+    width: 96px;
+    min-height: 44px;
+    box-sizing: border-box;
+    justify-content: center;
     background: #1e293b;
     border: 1px solid #475569;
     color: #38bdf8;
@@ -413,6 +429,7 @@ body {
 
 /* 🎯 中央メトロノームグループ */
 .metro-center-group {
+    grid-area: beats;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -457,10 +474,7 @@ body {
 
 /* 🔊 右端固定 音量スライダー */
 .metro-vol-container {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    grid-area: volume;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -479,8 +493,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    outline: none;
 }
+.metro-vol-icon-btn:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; border-radius: 6px; }
 .metro-vol-icon {
     font-size: 13px;
     cursor: pointer;
@@ -894,13 +908,18 @@ button { touch-action: manipulation; }
     .wide-start-btn { font-size: 15px; padding: 12px 14px; }
 
     /* メトロノームバー: スマホ向け最適化 */
-    .visual-metronome-compact { padding: 4px 6px; min-height: 40px; }
+    .visual-metronome-compact {
+        padding: 4px 6px; min-height: 40px; gap: 4px;
+        grid-template-columns: 76px minmax(0, 1fr) 76px;
+        grid-template-areas: "solo tempo volume" "beats beats beats";
+    }
+    .modal-tempo-controls { justify-self: center; }
     
     .metro-standalone-btn {
         left: 6px;
         padding: 5px;
-        width: 28px;
-        height: 28px;
+        width: 44px;
+        height: 44px;
         justify-content: center;
     }
     .metro-btn-text { display: none; }
@@ -914,33 +933,80 @@ button { touch-action: manipulation; }
     .beat-dot .dot-num { font-size: 9px; }
     
     .metro-vol-container {
-        right: 6px;
+        justify-self: end;
         padding: 4px;
-        gap: 0;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .metro-vol-slider-wrap {
-        max-width: 0;
-        opacity: 0;
-        overflow: hidden;
-        pointer-events: none;
-        transition: max-width 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
-        margin-left: 0;
-    }
-    .metro-vol-container.expanded {
-        padding: 3px 8px;
-        background: #0f172a;
-        border-color: #38bdf8;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-    }
-    .metro-vol-container.expanded .metro-vol-slider-wrap {
-        max-width: 95px;
-        opacity: 1;
-        pointer-events: auto;
-        margin-left: 6px;
     }
     .metro-vol-slider { width: 48px; }
     .metro-vol-label { font-size: 9px; min-width: 22px; }
 
     .score-wrapper { min-height: 175px; height: 185px; padding: 8px 6px; }
+}
+
+/* 中間幅でも拍表示が操作ボタンや音量と重ならないようにする。 */
+@media (min-width: 601px) and (max-width: 740px) {
+    .visual-metronome-compact {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "solo tempo volume" "beats beats beats";
+    }
+    .modal-tempo-controls { justify-self: center; }
+}
+
+/* 単位は視覚表示だけ縦画面で省略し、aria-labelには常にBPMを残す。 */
+@media (orientation: portrait) {
+    #modalBpmBadge::after { content: none; }
+    .modal-tempo-controls .bpm-badge { min-width: 30px; }
+
+    .visual-metronome-compact {
+        grid-template-columns: 76px minmax(0, 1fr) 76px;
+        grid-template-areas: "solo tempo volume" "beats beats beats";
+    }
+    .modal-tempo-controls { justify-self: center; }
+    .metro-standalone-btn { width: 76px; }
+    .metro-btn-text { display: inline; }
+    .metro-vol-container {
+        position: relative;
+        justify-self: center;
+        padding: 0;
+        gap: 0;
+    }
+    .metro-vol-icon-btn { width: 44px; height: 44px; }
+    .metro-vol-icon { font-size: 16px; }
+    /* ボタンをグリッド内に残し、スライダーだけを浮かせる。 */
+    .metro-vol-slider-wrap {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 10px);
+        right: 0;
+        width: 180px;
+        box-sizing: border-box;
+        padding: 14px 12px;
+        gap: 10px;
+        background: #0f172a;
+        border: 1px solid #475569;
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
+    }
+    .metro-vol-container.expanded .metro-vol-slider-wrap { display: flex; }
+    .metro-vol-slider-wrap::after {
+        content: "";
+        position: absolute;
+        right: 16px;
+        bottom: -5px;
+        width: 8px;
+        height: 8px;
+        background: #0f172a;
+        border-right: 1px solid #475569;
+        border-bottom: 1px solid #475569;
+        transform: rotate(45deg);
+    }
+    .metro-vol-slider { width: auto; min-width: 0; flex: 1; }
+    .metro-vol-label { font-size: 11px; min-width: 32px; }
+}
+
+@media (orientation: landscape) {
+    .modal-tempo-btn { width: 40px; height: 40px; }
+}
+
+@media (max-width: 600px) and (orientation: landscape) {
+    .visual-metronome-compact { grid-template-columns: 44px minmax(0, 1fr) auto; }
 }

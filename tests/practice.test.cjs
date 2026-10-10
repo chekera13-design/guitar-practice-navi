@@ -17,6 +17,7 @@ function element(hidden = false) {
             toggle(c, value) { if (value) classes.add(c); else classes.delete(c); } },
         disabled: false, hidden, innerText: '', value: '1', scrollLeft: 0, dataset: {},
         pause() {}, load() {}, removeAttribute(key) { delete this[key]; },
+        setAttribute(key, value) { this[key] = value; },
         scrollIntoView() {}, scrollTo() {}, querySelector() { return this; }
     };
 }
@@ -28,6 +29,7 @@ function harness(options = {}) {
     let micRequests = 0;
     const context = {
         isPracticing: false, isStartingPractice: false, isFinalizingRecording: false,
+        isStandaloneMetroPlaying: false,
         practiceStartGeneration: 0, practiceSession: null, pendingPracticeMode: null,
         practiceTimerIds: [], recordingSession: null, recordingGeneration: 0,
         recordedAudioUrl: null, microphoneStream: null,
@@ -37,6 +39,7 @@ function harness(options = {}) {
         practiceRepeatSelect: element(), practiceStatus: element(), recordResultCard: element(true),
         recordedAudioPlayer: element(), visualMetronomeBox: element(), standaloneMetroBtn: element(),
         retryScoreBtn: element(),
+        modalTempoDownBtn: element(), modalTempoUpBtn: element(), modalBpmBadge: element(),
         audioContext: { currentTime: 0 }, Blob,
         console: { warn() {} }, window: {},
         setTimeout(fn, ms) { const id = ++timerId; timers.set(id, { fn, time: context.audioContext.currentTime + ms / 1000 }); return id; },
@@ -94,8 +97,10 @@ function harness(options = {}) {
     context.window.MediaRecorder = context.MediaRecorder = options.unsupported ? undefined : Recorder;
     function prepareScore() {
         context.api.score = { masterBars: Array(options.bars || 4).fill({}) };
+        const partials = [{ svg: { isConnected: true } }];
+        context.scorePartialState = { validatedPartials: partials };
         context.preparedScore = { generation: context.scoreRenderGeneration,
-            stage: context.currentStage, api: context.api, bars: options.bars || 4 };
+            stage: context.currentStage, api: context.api, bars: options.bars || 4, partials };
     }
     prepareScore();
     vm.createContext(context);

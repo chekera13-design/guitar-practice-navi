@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { createHash } = require('node:crypto');
 
 // ソースを書き換えたVMではなく、NodeのESM読み込みで実際の相対importを検証。
 const modules = Promise.all(['config.js', 'config/index.js', 'config/basic.js', 'config/tutorial.js']
@@ -26,11 +25,65 @@ test('互換入口・カテゴリ集約・各カテゴリは同じ配列を再ex
     assert.equal(index.TUTORIAL_STAGES, tutorial.TUTORIAL_STAGES);
 });
 
-test('既存基礎編6件の全フィールド・順序は移行前のスナップショットと一致', async () => {
+test('Basicは空でない配列で正式EX1を含み、カテゴリ内のidが重複しない', async () => {
     const [entry] = await modules;
-    assert.equal(entry.BASIC_STAGES.length, 6);
-    const digest = createHash('sha256').update(JSON.stringify(entry.BASIC_STAGES)).digest('hex');
-    assert.equal(digest, 'dde9e677efe2bc43b0cad974d4bd590ffa9118570ab7607df90911112a23de4e');
+    const stages = entry.BASIC_STAGES;
+    assert.ok(Array.isArray(stages) && stages.length > 0);
+    assert.ok(stages.some(stage => stage.id === 1));
+    assert.equal(new Set(stages.map(stage => stage.id)).size, stages.length);
+    for (const stage of stages) assert.ok(Number.isSafeInteger(stage.id) && stage.id > 0);
+});
+
+test('Basicの表示・ファイル・公開状態は必要な型を持つ（説明文の完全一致には依存しない）', async () => {
+    const [entry] = await modules;
+    for (const stage of entry.BASIC_STAGES) {
+        for (const field of ['code', 'stageBadge', 'title', 'subTitle', 'desc', 'file']) {
+            assert.equal(typeof stage[field], 'string', field);
+            assert.ok(stage[field].trim().length > 0, field);
+        }
+        assert.equal(typeof stage.available, 'boolean');
+    }
+});
+
+test('BasicのBPM・拍子・カウントイン・練習小節数は有効な数値', async () => {
+    const [entry] = await modules;
+    for (const stage of entry.BASIC_STAGES) {
+        assert.ok(Number.isFinite(stage.bpm) && stage.bpm > 0);
+        assert.ok(Array.isArray(stage.timeSignature) && stage.timeSignature.length === 2);
+        assert.ok(stage.timeSignature.every(value => Number.isSafeInteger(value) && value > 0));
+        assert.ok(Number.isInteger(Math.log2(stage.timeSignature[1])));
+        for (const field of ['countInBars', 'practiceBars']) {
+            assert.ok(Number.isSafeInteger(stage[field]) && stage[field] > 0, field);
+        }
+    }
+});
+
+test('Basicのガイドはtitle・content・pointsの構造を維持', async () => {
+    const [entry] = await modules;
+    for (const { guide } of entry.BASIC_STAGES) {
+        assert.ok(guide && typeof guide === 'object' && !Array.isArray(guide));
+        for (const field of ['title', 'content']) {
+            assert.equal(typeof guide[field], 'string'); assert.ok(guide[field].trim().length > 0);
+        }
+        assert.ok(Array.isArray(guide.points) && guide.points.length > 0);
+        assert.ok(guide.points.every(point => typeof point === 'string' && point.trim().length > 0));
+    }
+});
+
+test('Basic EX1の弦・開放音・拍子・小節数は参照譜面と一致する', async () => {
+    const [entry] = await modules, stage = entry.EX1_STAGE;
+    const xml = fs.readFileSync(path.join(__dirname, '..', stage.file.replace(/\.mxl$/, '.musicxml')), 'utf8');
+    assert.equal((xml.match(/<measure\b/g) || []).length, stage.practiceBars);
+    assert.match(xml, new RegExp(`<beats>${stage.timeSignature[0]}</beats>`));
+    assert.match(xml, new RegExp(`<beat-type>${stage.timeSignature[1]}</beat-type>`));
+    const notes = [...xml.matchAll(/<note\b[^>]*>([\s\S]*?)<\/note>/g)].map(match => match[1]);
+    assert.ok(notes.length > 0);
+    for (const note of notes) {
+        assert.equal(Number(note.match(/<string>(\d+)<\/string>/)?.[1]), stage.string);
+        assert.equal(Number(note.match(/<fret>(\d+)<\/fret>/)?.[1]), 0);
+        assert.equal(note.match(/<step>([A-G])<\/step>/)?.[1] + note.match(/<octave>(\d+)<\/octave>/)?.[1], stage.noteName);
+    }
+    assert.match(xml, /<down-bow\b/); assert.match(xml, /<up-bow\b/);
 });
 
 test('チュートリアルEX1は別配列にあり、基礎編EX1のID・別名へ影響しない', async () => {

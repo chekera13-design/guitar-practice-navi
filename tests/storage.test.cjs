@@ -17,6 +17,7 @@ function element() {
         classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
         addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); },
         dispatch(name, event = {}) { this.listeners[name]?.forEach(fn => fn({ target: this, ...event })); },
+        setAttribute(key, value) { this[key] = value; },
         querySelector() { return null; }, querySelectorAll() { return []; }, contains() { return false; },
     };
 }
