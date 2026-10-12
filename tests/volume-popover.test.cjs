@@ -4,11 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
-const volumeCode = app.slice(app.indexOf('function expandVolumeBar()'), app.indexOf('// ★ MuseScore 4'));
+const volumeCode = app.slice(app.indexOf('function usesVolumePopover()'), app.indexOf('// ★ MuseScore 4'));
 
 function harness() {
     const listeners = {}, timers = new Map();
-    let landscape = false, timerId = 0, volume = 0;
+    let landscape = false, width = 390, timerId = 0, volume = 0;
     function node() {
         const classes = new Set();
         return { value: '40', attributes: {}, listeners: {},
@@ -27,13 +27,19 @@ function harness() {
         setMetronomeVolume: value => { volume = value; },
         setTimeout: fn => { timers.set(++timerId, fn); return timerId; }, clearTimeout: id => timers.delete(id),
         document: { addEventListener: (type, fn) => { listeners['document:' + type] = fn; } },
-        window: { addEventListener: (type, fn) => { listeners['window:' + type] = fn; } },
+        window: {
+            addEventListener: (type, fn) => { listeners['window:' + type] = fn; },
+            matchMedia(query) {
+                const min = query.match(/min-width:\s*(\d+)px/);
+                return { matches: min ? width >= Number(min[1]) : false };
+            },
+        },
     };
     vm.createContext(c); vm.runInContext(volumeCode + '\ninitVolumeControl();', c);
     return { c, container, toggle, slider, label, timers,
         click: () => toggle.listeners.click({ stopPropagation() {} }),
         event: (type, e = {}) => listeners[type](e),
-        landscape: value => { landscape = value; }, volume: () => volume,
+        landscape: value => { landscape = value; }, width: value => { width = value; }, volume: () => volume,
         expanded: () => container.classList.contains('expanded'),
     };
 }
@@ -83,4 +89,21 @@ test('操作中は自動収納を止め、操作終了後に従来の収納を�
     const h = harness(); h.click(); h.slider.listeners.touchstart(); assert.equal(h.timers.size, 0);
     h.slider.listeners.touchend(); assert.equal(h.timers.size, 1);
     [...h.timers.values()][0](); assert.equal(h.expanded(), false); assert.equal(h.timers.size, 0);
+});
+
+test('縦向き600pxはポップオーバー、601px以上は常設スライダーとして開閉しない', () => {
+    const h = harness(); h.width(600); h.click(); assert.equal(h.expanded(), true);
+    h.click();
+    for (const width of [601, 640, 768, 1024]) {
+        h.width(width); h.click(); assert.equal(h.expanded(), false); assert.equal(h.timers.size, 0);
+    }
+});
+test('縦向きのまま幅が広がるとポップオーバーを閉じ、音量と狭い画面での再操作を維持', () => {
+    const h = harness(); h.click(); h.slider.value = '72';
+    h.slider.listeners.input({ target: h.slider });
+    h.width(601); h.event('window:resize');
+    assert.equal(h.expanded(), false); assert.equal(h.toggle.attributes['aria-expanded'], 'false');
+    assert.equal(h.timers.size, 0); assert.equal(h.volume(), 0.72); assert.equal(h.label.innerText, '72%');
+    h.width(600); h.event('window:resize'); assert.equal(h.expanded(), false);
+    h.click(); assert.equal(h.expanded(), true); assert.equal(h.slider.value, '72');
 });

@@ -951,11 +951,13 @@ button { touch-action: manipulation; }
     .modal-tempo-controls { justify-self: center; }
 }
 
-/* 単位は視覚表示だけ縦画面で省略し、aria-labelには常にBPMを残す。 */
+/* 狭い縦画面は二段表示。一段表示では後続の指定でBPM単位を戻す。 */
 @media (orientation: portrait) {
     #modalBpmBadge::after { content: none; }
     .modal-tempo-controls .bpm-badge { min-width: 30px; }
+}
 
+@media (max-width: 600px) and (orientation: portrait) {
     .visual-metronome-compact {
         grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
         grid-template-areas: "solo tempo volume" "beats beats beats";
@@ -1009,8 +1011,9 @@ button { touch-action: manipulation; }
     .metro-vol-label { font-size: 11px; min-width: 32px; }
 }
 
-@media (orientation: landscape) {
-    /* 幅だけで決まる二段配置より、横向きの一段配置を優先する。 */
+@media (orientation: landscape), (min-width: 601px) and (orientation: portrait) {
+    /* 横向きと幅に余裕のある縦向きは、同じ一段配置を使う。 */
+    #modalBpmBadge::after { content: " BPM"; }
     .visual-metronome-compact {
         grid-template-columns: auto auto minmax(max-content, 1fr) auto;
         grid-template-areas: "solo tempo beats volume";
@@ -1037,7 +1040,8 @@ button { touch-action: manipulation; }
     .metro-vol-container, .metro-vol-slider-wrap { flex-wrap: nowrap; }
 }
 
-@media (max-width: 640px) and (orientation: landscape) {
+@media (max-width: 640px) and (orientation: landscape),
+       (min-width: 601px) and (max-width: 640px) and (orientation: portrait) {
     .visual-metronome-compact { padding: 4px 6px; gap: 3px; }
     .metro-standalone-btn { width: 70px; padding: 5px 4px; gap: 2px; }
     .modal-tempo-controls .bpm-badge { padding: 2px 4px; }

@@ -279,8 +279,13 @@ if (standaloneMetroBtn) {
 // ==========================================
 // ★ メトロノーム音量スライダー制御 ★
 // ==========================================
+function usesVolumePopover() {
+    return !isPracticeModalLandscape()
+        && !window.matchMedia?.("(min-width: 601px)").matches;
+}
+
 function expandVolumeBar() {
-    if (!metroVolContainer || isPracticeModalLandscape()) return;
+    if (!metroVolContainer || !usesVolumePopover()) return;
     metroVolContainer.classList.add("expanded");
     metroVolToggleBtn?.setAttribute("aria-expanded", "true");
     resetVolumeCollapseTimer();
@@ -381,7 +386,7 @@ function initVolumeControl() {
         }
     });
     window.addEventListener("resize", () => {
-        if (isPracticeModalLandscape()) collapseVolumeBar();
+        if (!usesVolumePopover()) collapseVolumeBar();
     });
     window.addEventListener("orientationchange", collapseVolumeBar);
 }
