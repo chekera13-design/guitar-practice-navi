@@ -753,6 +753,25 @@ body {
 .record-result-desc { margin: 2px 0 0 0; font-size: 11px; color: #15803d; }
 .record-audio-player { width: 100%; max-width: 450px; height: 38px; border-radius: 8px; outline: none; }
 
+/* 攻略動画：初期状態では領域ごと非表示、展開時のみ16:9で表示。 */
+.guide-video { margin-bottom: 10px; flex-shrink: 0; }
+.guide-video[hidden], .guide-video-panel[hidden] { display: none; }
+.guide-video-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; min-height: 44px; padding: 10px 14px; box-sizing: border-box;
+    background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+}
+.guide-video-toggle:hover:not(:disabled) { background: #dbeafe; }
+.guide-video-toggle:active:not(:disabled) { background: #bfdbfe; }
+.guide-video-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.guide-video-toggle:disabled { opacity: 0.45; cursor: default; }
+.guide-video-panel {
+    position: relative; width: 100%; max-width: 680px; aspect-ratio: 16 / 9;
+    margin: 8px auto 0; border-radius: 10px; overflow: hidden; background: #0f172a;
+}
+.guide-video-panel iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
 /* ⑤ 攻略ガイド */
 .guide-details {
     background: #f8fafc;

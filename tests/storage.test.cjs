@@ -10,6 +10,7 @@ const engine = read('js/audioEngine.js').replace(/export /g, '');
 // VMではデータ本体を読み込む。互換入口のESM importはconfig専用テストで確認。
 const config = ['js/config/basic.js', 'js/config/tutorial.js'].map(read).join('\n').replace(/export /g, '');
 const buttons = read('js/buttonInput.js').replace(/export /g, '');
+const video = read('js/guideVideo.js').replace(/export /g, '');
 
 function element() {
     const classes = new Set();
@@ -18,6 +19,7 @@ function element() {
         addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); },
         dispatch(name, event = {}) { this.listeners[name]?.forEach(fn => fn({ target: this, ...event })); },
         setAttribute(key, value) { this[key] = value; },
+        replaceChildren(...children) { this.children = children; },
         querySelector() { return null; }, querySelectorAll() { return []; }, contains() { return false; },
     };
 }
@@ -66,7 +68,7 @@ function boot(options = {}) {
         return storage;
     } });
     vm.createContext(context);
-    vm.runInContext(engine + '\n' + config + '\n' + buttons + '\n' + app, context);
+    vm.runInContext(engine + '\n' + config + '\n' + buttons + '\n' + video + '\n' + app, context);
     const evaluate = code => vm.runInContext(code, context);
     function assertReady(volume = 40) {
         assert.equal(get('metroVolSlider').value, volume);

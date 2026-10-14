@@ -29,7 +29,8 @@ function harness(options = {}) {
     let micRequests = 0;
     const context = {
         isPracticing: false, isStartingPractice: false, isFinalizingRecording: false,
-        isStandaloneMetroPlaying: false,
+        isStandaloneMetroPlaying: false, isStartingStandaloneMetro: false,
+        guideVideo: { close() {}, setDisabled() {} },
         practiceStartGeneration: 0, practiceSession: null, pendingPracticeMode: null,
         practiceTimerIds: [], recordingSession: null, recordingGeneration: 0,
         recordedAudioUrl: null, microphoneStream: null,

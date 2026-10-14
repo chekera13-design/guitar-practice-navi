@@ -13,6 +13,10 @@ export const TUTORIAL_STAGES = [
         practiceBars: 1,
         file: "scores/tutorial/ex01.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "qgk136u2e4M",
+            title: "チュートリアル EX1 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "最初は難しいことを考えなくて大丈夫です。左手では弦を押さえず、右手で6弦から1弦までをゆっくり鳴らして、ギターから音を出してみましょう。すべての弦を完璧に鳴らすことよりも、まずはピックで弦を鳴らす感覚に慣れることが目標です。",

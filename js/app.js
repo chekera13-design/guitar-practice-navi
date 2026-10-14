@@ -5,6 +5,7 @@
 import { TUTORIAL_STAGES, BASIC_STAGES } from "./config.js";
 import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
+import { createGuideVideo } from "./guideVideo.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -100,6 +101,12 @@ const retryScoreBtn = document.getElementById("retryScoreBtn");
 const recordResultCard = document.getElementById("recordResultCard");
 const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
 const verticalTabWrapper = document.getElementById("verticalTabWrapper");
+const guideVideoToggleBtn = document.getElementById("guideVideoToggleBtn");
+const guideVideo = createGuideVideo(document.getElementById("guideVideoSection"),
+    guideVideoToggleBtn, document.getElementById("guideVideoPanel"));
+bindButtonActivation(guideVideoToggleBtn, () => guideVideo.toggle(), {
+    touchEnabled: shouldUseVerticalTabLayout
+});
 
 // 単体メトロノームボタンDOM
 const standaloneMetroBtn = document.getElementById("standaloneMetroBtn");
@@ -162,6 +169,8 @@ async function startStandaloneMetronome() {
     if (isStandaloneMetroPlaying || isStartingStandaloneMetro
         || isPracticing || isStartingPractice || isFinalizingRecording
         || practiceModal.classList.contains("hidden")) return;
+    guideVideo.close();
+    guideVideo.setDisabled(true);
     const generation = ++standaloneMetroStartGeneration;
     const isCurrentStart = () => generation === standaloneMetroStartGeneration
         && !isPracticing && !isStartingPractice && !isFinalizingRecording
@@ -267,6 +276,7 @@ function stopStandaloneMetronome() {
         standaloneMetroBtn.removeAttribute("aria-busy");
     }
 
+    guideVideo.setDisabled(isPracticing || isStartingPractice || isFinalizingRecording);
     if (!isPracticing) {
         resetVisualMetronome();
     }
@@ -1118,6 +1128,7 @@ function renderStageCards(grid, stages, category) {
 function openPracticeModal(stage) {
     if (!practiceModal.classList.contains("hidden")) closePracticeModal();
     currentStage = stage;
+    guideVideo.setStage(stage);
     currentBpm = getStageDefaultBpm(stage);
     currentPracticeBarIndex = 0;
     detectedSlurPairs = [];
@@ -1403,6 +1414,7 @@ if (window.visualViewport) {
 }
 
 function closePracticeModal() {
+    guideVideo.close();
     stopTuner();
 
     stopPractice();
@@ -1528,6 +1540,7 @@ function updatePracticeControls() {
     updateTempoControls();
     const mode = practiceSession?.mode || pendingPracticeMode;
     const busy = isPracticing || isStartingPractice || isFinalizingRecording;
+    guideVideo.setDisabled(busy || isStartingStandaloneMetro || isStandaloneMetroPlaying);
     for (const [button, buttonMode, label] of [
         [mainActionBtn, "practice", "▶ 練習"],
         [recordPracticeBtn, "record", "● 録音練習"]
@@ -1574,6 +1587,7 @@ function releasePracticeMicrophone() {
 async function startPractice(mode = "practice") {
     if (isPracticing || isStartingPractice || isFinalizingRecording
         || practiceModal.classList.contains("hidden") || !isScoreReadyForPractice()) return;
+    guideVideo.close();
     const startScore = preparedScore;
     // 音声・マイク初期化を待つ前に確定し、全周回と録音終了まで同じテンポを使う。
     const sessionBpm = Number.isFinite(currentBpm) && currentBpm >= 20 && currentBpm <= 200

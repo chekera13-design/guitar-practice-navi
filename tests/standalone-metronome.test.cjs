@@ -28,6 +28,7 @@ function harness(options = {}) {
     let nextTimer = 0, audioRequests = 0, cancellations = 0, resetCount = 0;
     const timers = new Map(), ticks = [], sounds = new Set(), updates = [], warnings = [], volume = [];
     const c = { isPracticing: false, isStartingPractice: false, isFinalizingRecording: false,
+        guideVideo: { close() {}, setDisabled() {} },
         currentStage: { timeSignature: [4, 4], countInBars: 1, bpm: options.bpm || 60 }, currentBpm: options.bpm || 60,
         practiceModal: element(), standaloneMetroBtn: element(), metroVolSlider: { value: '40' },
         audioContext: { currentTime: 0 },
