@@ -14,7 +14,7 @@ export const TUTORIAL_STAGES = [
         file: "scores/tutorial/ex01.mxl",
         available: true,
         guideVideo: {
-            youtubeId: "qgk136u2e4M",
+            youtubeId: "-WOoDDath4Y",
             title: "チュートリアル EX1 攻略動画"
         },
         guide: {
