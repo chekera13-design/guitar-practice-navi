@@ -25,10 +25,19 @@ function session(id, options = {}, storage = {}) {
     return { home, h, c, stage };
 }
 
-test('3問の順序・BPM60・EX1全設定の維持・EX3に単音限定設定なし', () => {
+test('3問の順序・BPM60・EX1教材設定の維持・EX3に単音限定設定なし', () => {
     const home = boot(), stages = home.evaluate('TUTORIAL_STAGES');
     assert.deepEqual(Array.from(stages, s => [s.id, s.bpm, s.practiceBars]), [[1,60,1],[2,60,2],[3,60,3]]);
-    assert.equal(createHash('sha256').update(JSON.stringify(stages[0])).digest('hex'),
+    assert.deepEqual(Array.from(stages, s => [s.file, Array.from(s.timeSignature), s.countInBars, s.available]), [
+        ['scores/tutorial/ex01.mxl', [4, 4], 1, true],
+        ['scores/tutorial/ex02.mxl', [4, 4], 1, true],
+        ['scores/tutorial/ex03.mxl', [4, 4], 1, true],
+    ]);
+    // 旧スナップショットの教材内容は引き続き完全一致で保護する。
+    // 後から追加できる任意の動画情報だけ分離し、実configの動画検証はguide-video.test.cjsが受け持つ。
+    const ex1Lesson = JSON.parse(JSON.stringify(stages[0]));
+    delete ex1Lesson.guideVideo;
+    assert.equal(createHash('sha256').update(JSON.stringify(ex1Lesson)).digest('hex'),
         'c3a999c6df6c5d7353dae05a1371bc69f9a521d2bcbce1a6dc2ed24afcfb5b14');
     assert.equal(stages[1].string, 6); assert.equal(stages[1].noteName, 'E2');
     assert.equal('string' in stages[2], false); assert.equal('noteName' in stages[2], false);

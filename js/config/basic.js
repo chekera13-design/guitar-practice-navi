@@ -18,6 +18,10 @@ export const BASIC_STAGES = [
         practiceBars: 4,
         file: "scores/basic/ex01.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "UzCVOsP7p-M",
+            title: "基礎編 EX1 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "ピッキングには、弦を上から下へ弾く「ダウンピッキング」と、下から上へ弾く「アップピッキング」があります。この2つを交互に繰り返して弾く方法を「オルタネイトピッキング」と呼びます。まずは6弦の開放弦だけを使って、右手の上下運動に慣れていきましょう。",
@@ -41,6 +45,10 @@ export const BASIC_STAGES = [
         practiceBars: 4,
         file: "scores/basic/ex02.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "_GqV7oUMXn0",
+            title: "基礎編 EX2 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "この練習では、Em7とAm7を交互に押さえながら、コードチェンジの基本を身につけます。まずはそれぞれのコードフォームを確認し、4拍しっかり鳴らしてから次のコードへ移りましょう。速く切り替えることよりも、すべての弦をきれいに鳴らしながら、リズムを止めずにコードを変えることを意識して練習しましょう。",
@@ -64,6 +72,10 @@ export const BASIC_STAGES = [
         practiceBars: 4,
         file: "scores/basic/ex03.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "1O4qlVF-CS4",
+            title: "基礎編 EX3 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "アルペジオは、コードの音を同時に鳴らすのではなく、弦を1本ずつ順番に鳴らしていく奏法です。この練習ではCとAm7のコードフォームを押さえたまま、低い弦から高い弦へ順番に音を鳴らしていきます。まずは速さよりも、狙った弦を正確に弾き、それぞれの音をきれいに響かせることを意識しましょう。",
@@ -88,6 +100,10 @@ export const BASIC_STAGES = [
         practiceBars: 8,
         file: "scores/basic/ex04.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "uaKXBXylcRQ",
+            title: "基礎編 EX4 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "この練習では、1弦の5・6・7・8フレットを順番に押さえながら、左手の指を1本ずつ動かすフィンガリングの基本を身につけます。前半は5フレットから8フレットへ上がり、後半は8フレットから5フレットへ戻ります。まずは4分音符で指の動きを確認し、8分音符になっても力まず一定のリズムで弾けるように練習しましょう。",
@@ -111,6 +127,10 @@ export const BASIC_STAGES = [
         practiceBars: 13,
         file: "scores/basic/ex05.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "vqKfu7-pU8g",
+            title: "基礎編 EX5 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "この練習では、5・6・7・8フレットのクロマチックを弾きながら、6弦から1弦まで順番に移動し、そのあと1弦から6弦へ戻ります。EX4で練習した左手の指使いを保ちながら、右手と左手を一緒に次の弦へ移動させることがポイントです。最初は速さよりも、弦が変わっても同じフォームとリズムを崩さないことを意識しましょう。",
@@ -134,6 +154,10 @@ export const BASIC_STAGES = [
         practiceBars: 8,
         file: "scores/basic/ex06.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "3WFN0i-xS2Q",
+            title: "基礎編 EX6 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "ハンマリング・オンは、最初の音をピッキングしたあと、次のフレットを左手の指で素早く押さえて音を出す奏法です。プリング・オフは、押さえている指を離す動きで次の低い音へつなげます。この練習では、まず4分音符で動きを確認し、そのあと8分音符でも音が途切れないように練習します。",
@@ -157,6 +181,10 @@ export const BASIC_STAGES = [
         practiceBars: 4,
         file: "scores/basic/ex07.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "HhtPAOL_k04",
+            title: "基礎編 EX7 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "スライドは、弦を押さえたまま指を別のフレットまで滑らせて、音をなめらかにつなぐ奏法です。タイは、同じ高さの音をつなぎ、2つ目の音を弾き直さずにそのまま伸ばす記号です。この練習では、上がるスライドと下がるスライドの両方を練習しながら、タイでつながれた音を正しい長さまで伸ばす感覚も身につけましょう。",
@@ -171,22 +199,26 @@ export const BASIC_STAGES = [
         id: 8,
         code: "EX 8",
         stageBadge: "基礎編 EX 8",
-        title: "EX 8: 休符を正確に弾こう",
+        title: "EX 8: 左手ミュートで休符を練習しよう",
         subTitle: "2分・4分・8分・16分休符",
-        desc: "音を鳴らすだけでなく、休符の長さもしっかり数えて、止まるタイミングと次に入るタイミングを身につけよう！",
-        bpm: 80,
+        desc: "6弦の開放弦を弾き、休符に入るタイミングで左手を使って音を止めよう！ 休符の長さを正確に数えながら、次の音を弾くタイミングも身につけます。",
+        bpm: 70,
         timeSignature: [4, 4],
         countInBars: 1,
         practiceBars: 8,
-        file: "scores/basic/ex08.mxl",
+        file: "scores/basic/ex08_2.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "DUAB4Hfk_Zw",
+            title: "基礎編 EX8 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
-            content: "休符は、ただ音を出さない時間ではなく、リズムの一部です。この練習では、2分休符・4分休符・8分休符・16分休符と、少しずつ短くなる休符を使って、音を止めるタイミングと次の音へ入るタイミングを練習します。休んでいる間も頭の中では拍を数え続け、クリックから外れないようにしましょう。",
+            content: "この練習では、6弦の開放弦を弾いたあと、休符の始まりで左手の指を弦に軽く触れさせ、振動を止める練習をします。2分休符・4分休符・8分休符・16分休符と少しずつ短くなる休符に合わせて、音を止めるタイミングと次の音を弾くタイミングを身につけましょう。休んでいる間もメトロノームの拍を数え続けることが大切です。",
             points: [
-                "休符の間も拍を数えよう: 音を止めてもリズムまで止めず、メトロノームに合わせて頭の中で拍を数え続けましょう。",
-                "音を止めるタイミングを意識しよう: 休符に入ったら、余計に音を伸ばさず、休符の始まりでしっかり音を止めましょう。",
-                "次の音を焦らず待とう: 8分休符や16分休符では特に早く入りやすいので、休符の長さを感じてから次の音を正しい位置で弾きましょう。"
+                "左手で音を止めよう: 開放弦を弾いたあと、休符の始まりで左手の指を6弦に軽く触れさせて音を止めましょう。弦を強く押さえ込む必要はありません。",
+                "休符の間も拍を数えよう: 音を止めてもリズムは続いています。メトロノームに合わせて、休符の長さを正確に数えましょう。",
+                "次の音を正しいタイミングで弾こう: 特に8分休符や16分休符では、焦って早く弾き始めないように注意しましょう。次の音の直前に左手を弦から離し、タイミングよく弾きましょう。"
             ]
         }
     },
@@ -203,6 +235,10 @@ export const BASIC_STAGES = [
         practiceBars: 9,
         file: "scores/basic/ex09.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "J5fNBZxUnLg",
+            title: "基礎編 EX9 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "Cメジャースケールは、C・D・E・F・G・A・Bの7つの音でできた基本的なスケールです。この練習では、まずCから1オクターブ上のCまで上がって戻る動きを繰り返し、そのあとさらに高い音と低い音まで音域を広げていきます。音の順番だけでなく、弦が変わる位置も意識しながら練習しましょう。",
@@ -226,6 +262,10 @@ export const BASIC_STAGES = [
         practiceBars: 9,
         file: "scores/basic/ex10.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "fkL14UYdzC0",
+            title: "基礎編 EX10 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "ここまで練習してきたコードチェンジとアルペジオを組み合わせた総合練習です。C・G/B・Am7・Gのコード進行を使いながら、前半では1音ずつ確実に鳴らしてコードフォームを確認し、後半では8分音符の流れを止めずにアルペジオを続けます。コードが変わるときも、左手と右手の動きを止めずに次の小節へつなげることを意識しましょう。",

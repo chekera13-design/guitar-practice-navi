@@ -8,9 +8,11 @@ const read = file => fs.readFileSync(path.join(__dirname, '../', file), 'utf8');
 const app = read('js/app.js').replace(/import\s+[\s\S]*?from\s+"[^"]+";/g, '');
 const engine = read('js/audioEngine.js').replace(/export /g, '');
 // VMではデータ本体を読み込む。互換入口のESM importはconfig専用テストで確認。
-const config = ['js/config/basic.js', 'js/config/tutorial.js'].map(read).join('\n').replace(/export /g, '');
+const config = ['js/config/basic.js', 'js/config/tutorial.js', 'js/config/solo.js'].map(read).join('\n').replace(/export /g, '');
 const buttons = read('js/buttonInput.js').replace(/export /g, '');
 const video = read('js/guideVideo.js').replace(/export /g, '');
+const genres = read('js/practiceGenres.js').replace(/^export /gm, '');
+const createGraceNotation = vm.runInNewContext(read('js/graceNotation.js').replace(/^export /gm, '') + '\ncreateGraceNotation;');
 
 function element() {
     const classes = new Set();
@@ -36,7 +38,8 @@ function boot(options = {}) {
     };
     const grid = get('exerciseGrid');
     const tutorialGrid = get('tutorialExerciseGrid');
-    let cards = [], tutorialCards = [];
+    const soloGrid = get('soloExerciseGrid');
+    let cards = [], tutorialCards = [], soloCards = [];
     function bindGrid(target, updateCards) {
         Object.defineProperty(target, 'innerHTML', { get: () => target.html || '', set(html) {
             target.html = html;
@@ -50,8 +53,10 @@ function boot(options = {}) {
     }
     bindGrid(grid, rendered => { cards = rendered; });
     bindGrid(tutorialGrid, rendered => { tutorialCards = rendered; });
+    bindGrid(soloGrid, rendered => { soloCards = rendered; });
     grid.querySelectorAll = () => cards.filter(card => card.available);
     tutorialGrid.querySelectorAll = () => tutorialCards.filter(card => card.available);
+    soloGrid.querySelectorAll = () => soloCards.filter(card => card.available);
     const storage = {
         getItem(key) { reads.push(key); if (options.readError) throw options.readError; return saved.get(key) ?? null; },
         setItem(key, value) { writes.push([key, value]); if (options.writeError) throw options.writeError; saved.set(key, value); },
@@ -61,21 +66,21 @@ function boot(options = {}) {
             body: { style: {} }, addEventListener() {} },
         window: { addEventListener() {} }, console,
         setTimeout(fn) { timers.set(++nextTimer, fn); return nextTimer; }, clearTimeout(id) { timers.delete(id); },
-        VerticalTabController: class {},
+        VerticalTabController: class {}, createGraceNotation,
     };
     Object.defineProperty(context, 'localStorage', { get() {
         if (options.accessError) throw options.accessError;
         return storage;
     } });
     vm.createContext(context);
-    vm.runInContext(engine + '\n' + config + '\n' + buttons + '\n' + video + '\n' + app, context);
+    vm.runInContext(engine + '\n' + config + '\n' + buttons + '\n' + video + '\n' + genres + '\n' + app, context);
     const evaluate = code => vm.runInContext(code, context);
     function assertReady(volume = 40) {
         assert.equal(get('metroVolSlider').value, volume);
         assert.equal(get('metroVolLabel').innerText, volume + '%');
         assert.equal(evaluate('getMetronomeVolume()'), volume / 100);
         for (const [target, rendered, stages] of [[grid, cards, evaluate('BASIC_STAGES')],
-            [tutorialGrid, tutorialCards, evaluate('TUTORIAL_STAGES')]]) {
+            [tutorialGrid, tutorialCards, evaluate('TUTORIAL_STAGES')], [soloGrid, soloCards, evaluate('SOLO_STAGES')]]) {
             assert.equal(rendered.length, stages.length);
             stages.forEach(stage => assert.ok(target.html.includes(stage.title)));
             rendered.filter(card => card.available).forEach(card => {
@@ -90,7 +95,7 @@ function boot(options = {}) {
         assert.ok(get('retryScoreBtn').listeners.click.length);
     }
     function changeVolume(volume) { get('metroVolSlider').value = String(volume); get('metroVolSlider').dispatch('input'); }
-    return { options, saved, nodes, cards, tutorialCards, context, writes, reads, evaluate, assertReady, changeVolume, timers };
+    return { options, saved, nodes, cards, tutorialCards, soloCards, context, writes, reads, evaluate, assertReady, changeVolume, timers };
 }
 
 for (const failure of ['getItem-SecurityError', 'getItem-other-error', 'localStorage-getter']) {

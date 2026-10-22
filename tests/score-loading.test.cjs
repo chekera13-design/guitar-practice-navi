@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const createGraceNotation = vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/graceNotation.js'), 'utf8')
+    .replace(/^export /gm, '') + '\ncreateGraceNotation;');
 
 // 実際の読込・モーダル・開始処理へ、制御可能な通信とalphaTabイベントを渡す。
 const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
@@ -30,7 +32,7 @@ function harness(options = {}) {
     const instances = [], observers = [], timers = new Map();
     let audioRequests = 0, micRequests = 0, nextTimer = 0;
     const stage = { id: 1, file: 'one.xml', practiceBars: 99, timeSignature: [4, 4], countInBars: 1 };
-    const c = { currentStage: stage, currentBpm: 60, currentPracticeBarIndex: 0,
+    const c = { currentStage: stage, currentBpm: 60, currentPracticeBarIndex: 0, graceNotation: createGraceNotation(),
         api: null, preparedScore: null, scoreLoadState: 'idle', isScoreRendered: false,
         scoreRenderInProgress: false, scoreLoadPending: false, scoreLoadConfirmed: false,
         scoreHealthCheckPending: false, scoreRepairAttempted: false, scoreRenderGeneration: 0,

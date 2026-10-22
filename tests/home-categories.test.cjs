@@ -30,7 +30,7 @@ test('独立したチュートリアル・基礎編セクションがこの順�
     assert.doesNotMatch(sections[1][2], /id="tutorialExerciseGrid"/);
     assert.match(html, /href="#tutorialExercises"/);
     assert.match(fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8'),
-        /import \{ TUTORIAL_STAGES, BASIC_STAGES \} from "\.\/config.js";/);
+        /import \{ TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES \} from "\.\/config.js";/);
 });
 
 test('アプリ起動でTutorialとBasicを現在のconfig件数・カテゴリIDで別々に生成する', async () => {

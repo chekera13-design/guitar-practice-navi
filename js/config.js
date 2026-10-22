@@ -2,6 +2,7 @@
 export {
     TUTORIAL_STAGES,
     BASIC_STAGES,
+    SOLO_STAGES,
     EX1_STAGE,
     noteStrings,
     defaultTuning

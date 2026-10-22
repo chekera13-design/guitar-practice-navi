@@ -5,24 +5,26 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 // ソースを書き換えたVMではなく、NodeのESM読み込みで実際の相対importを検証。
-const modules = Promise.all(['config.js', 'config/index.js', 'config/basic.js', 'config/tutorial.js']
+const modules = Promise.all(['config.js', 'config/index.js', 'config/basic.js', 'config/tutorial.js', 'config/solo.js']
     .map(file => import(pathToFileURL(path.join(__dirname, '../js', file)).href)));
 
-test('config.jsの互換入口から既存4exportとチュートリアルを読み込める', async () => {
+test('config.jsの互換入口から既存exportとソロギターを読み込める', async () => {
     const [entry] = await modules;
-    assert.deepEqual(Object.keys(entry).sort(), ['BASIC_STAGES', 'EX1_STAGE', 'TUTORIAL_STAGES', 'defaultTuning', 'noteStrings'].sort());
+    assert.deepEqual(Object.keys(entry).sort(), ['BASIC_STAGES', 'EX1_STAGE', 'TUTORIAL_STAGES', 'SOLO_STAGES', 'defaultTuning', 'noteStrings'].sort());
     assert.equal(entry.EX1_STAGE, entry.BASIC_STAGES[0]);
     assert.deepEqual(entry.noteStrings, ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']);
     assert.deepEqual(entry.defaultTuning, { 1: 64, 2: 59, 3: 55, 4: 50, 5: 45, 6: 40 });
 });
 
 test('互換入口・カテゴリ集約・各カテゴリは同じ配列を再exportし、コピーしない', async () => {
-    const [entry, index, basic, tutorial] = await modules;
+    const [entry, index, basic, tutorial, solo] = await modules;
     assert.equal(entry.BASIC_STAGES, index.BASIC_STAGES);
     assert.equal(index.BASIC_STAGES, basic.BASIC_STAGES);
     assert.equal(entry.EX1_STAGE, basic.EX1_STAGE);
     assert.equal(entry.TUTORIAL_STAGES, index.TUTORIAL_STAGES);
     assert.equal(index.TUTORIAL_STAGES, tutorial.TUTORIAL_STAGES);
+    assert.equal(entry.SOLO_STAGES, index.SOLO_STAGES);
+    assert.equal(index.SOLO_STAGES, solo.SOLO_STAGES);
 });
 
 test('Basicは空でない配列で正式EX1を含み、カテゴリ内のidが重複しない', async () => {
@@ -111,7 +113,7 @@ test('正式チュートリアルEX1は全弦開放の設定で、単音用strin
 
 test('各カテゴリの相対楽譜パスはプロジェクトの既存ファイルへ解決できる', async () => {
     const [entry] = await modules;
-    for (const stage of [...entry.BASIC_STAGES, ...entry.TUTORIAL_STAGES]) {
+    for (const stage of [...entry.BASIC_STAGES, ...entry.TUTORIAL_STAGES, ...entry.SOLO_STAGES]) {
         assert.equal(fs.existsSync(path.join(__dirname, '..', stage.file)), true, stage.file);
     }
 });

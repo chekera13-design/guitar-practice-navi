@@ -77,8 +77,14 @@
         </div>
     </header>
 
-    <!-- 🔰 基礎練習ジャンル一覧 -->
-    <main class="card stages-container-card">
+    <!-- 練習コンテンツ：教材一覧は残したままジャンルごとに表示を切り替える -->
+    <main id="practiceContents" class="card stages-container-card">
+        <div class="practice-genre-tabs" role="tablist" aria-label="練習の種類">
+            <button id="basicPracticeTab" type="button" role="tab" data-practice-genre="basic" aria-controls="basicPracticePanel" aria-selected="true" tabindex="0">基礎練習</button>
+            <button id="soloPracticeTab" type="button" role="tab" data-practice-genre="solo" aria-controls="soloPracticePanel" aria-selected="false" tabindex="-1">ソロギター</button>
+        </div>
+
+        <div id="basicPracticePanel" class="practice-genre-panel" role="tabpanel" data-practice-panel="basic" aria-labelledby="basicPracticeTab" tabindex="0">
         <div class="stages-header">
             <div class="stages-header-title-row">
                 <h2 class="stages-title">🔰 基礎練習</h2>
@@ -135,6 +141,24 @@
             </div>
             <div id="exerciseGrid" class="exercise-grid"></div>
         </section>
+        </div>
+
+        <div id="soloPracticePanel" class="practice-genre-panel" role="tabpanel" data-practice-panel="solo" aria-labelledby="soloPracticeTab" tabindex="0" hidden>
+            <div class="stages-header">
+                <div class="stages-header-title-row">
+                    <h2 class="stages-title">🎸 ソロギター</h2>
+                    <span class="stages-count-badge">表示検証用</span>
+                </div>
+                <p class="stages-desc">今回は表示検証用の仮EX1です。正式な練習教材ではありません。</p>
+            </div>
+            <section class="current-exercises solo-exercises" aria-labelledby="soloExercises">
+                <div class="current-exercises-heading">
+                    <h3 id="soloExercises">ソロギター EX1</h3>
+                    <p>単独小音符・小音符和音・連続小音符のTAB表示を確認できます。</p>
+                </div>
+                <div id="soloExerciseGrid" class="exercise-grid"></div>
+            </section>
+        </div>
     </main>
 
     <!-- 📢 ボトム広告スペース -->

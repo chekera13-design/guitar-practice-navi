@@ -14,7 +14,7 @@ export const TUTORIAL_STAGES = [
         file: "scores/tutorial/ex01.mxl",
         available: true,
         guideVideo: {
-            youtubeId: "-WOoDDath4Y",
+            youtubeId: "5kcrs_sO1xU",
             title: "チュートリアル EX1 攻略動画"
         },
         guide: {
@@ -42,6 +42,10 @@ export const TUTORIAL_STAGES = [
         practiceBars: 2,
         file: "scores/tutorial/ex02.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "ggkdPu-BDrk",
+            title: "チュートリアル EX2 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "今度はメトロノームの音に合わせて6弦を弾いてみましょう。カウントインを聞いたあと、クリック音と同じタイミングで1回ずつ弦を鳴らします。速く弾く必要はありません。まずは一定のテンポで続けることを体験してみましょう。",
@@ -65,6 +69,10 @@ export const TUTORIAL_STAGES = [
         practiceBars: 3,
         file: "scores/tutorial/ex03.mxl",
         available: true,
+        guideVideo: {
+            youtubeId: "lj0Cr-DhS5g",
+            title: "チュートリアル EX3 攻略動画"
+        },
         guide: {
             title: "💡 練習のポイント",
             content: "チュートリアルの最後は、自分の演奏を録音して聴いてみましょう。最初の2小節は6弦をクリックに合わせて弾き、最後は6本の弦をまとめて鳴らします。上手に弾くことよりも、「録音して聴き返す」機能を一度体験することが目標です。",

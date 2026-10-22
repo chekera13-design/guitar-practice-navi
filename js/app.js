@@ -2,10 +2,12 @@
 // ギター練習ドットコム - メインアプリケーション (js/app.js)
 // ==========================================
 
-import { TUTORIAL_STAGES, BASIC_STAGES } from "./config.js";
+import { TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES } from "./config.js";
+import { initPracticeGenres } from "./practiceGenres.js";
 import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
 import { createGuideVideo } from "./guideVideo.js";
+import { createGraceNotation } from "./graceNotation.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -61,6 +63,7 @@ let activeScoreRenderGeneration = 0;
 let scoreRenderStartedAt = 0;
 let scoreLoadState = "idle"; // idle / loading / ready / error
 let preparedScore = null;
+const graceNotation = createGraceNotation();
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
@@ -78,6 +81,7 @@ let completedTutorialStages = new Set();
 // DOM要素取得
 const exerciseGrid = document.getElementById("exerciseGrid");
 const tutorialExerciseGrid = document.getElementById("tutorialExerciseGrid");
+const soloExerciseGrid = document.getElementById("soloExerciseGrid");
 const practiceModal = document.getElementById("practiceModal");
 const closePracticeModalBtn = document.getElementById("closePracticeModalBtn");
 const modalStageBadge = document.getElementById("modalStageBadge");
@@ -413,9 +417,10 @@ function updateVolumeDisplay(val) {
 // ==========================================
 // ★ MuseScore 4 MusicXML 補正 & スラー・演奏記号（H/P/S/C等）の抽出 ★
 // ==========================================
-function fixMuseScoreXml(xmlText) {
+function fixMuseScoreXml(xmlText, graceToken = null) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    const keptGraceWords = graceToken ? graceNotation.wordsToKeep(graceToken, xmlDoc, xmlText) : new Set();
 
     detectedSlurPairs = [];
     detectedSlashChords = [];
@@ -464,6 +469,7 @@ function fixMuseScoreXml(xmlText) {
                         const text = words.textContent.trim().toUpperCase();
                         const validLabels = ['H', 'P', 'S', 'C', 'D', 'T', 'SL', 'SLIDE', 'HO', 'PO', 'CHO', 'BEND'];
                         if (validLabels.includes(text)) {
+                            if (keptGraceWords.has(child)) return; // 小音符H/Sは元directionの標準配置を使う。
                             let displayLabel = text;
                             if (['SL', 'SLIDE'].includes(text)) displayLabel = 'S';
                             else if (text === 'HO') displayLabel = 'H';
@@ -490,7 +496,7 @@ function fixMuseScoreXml(xmlText) {
                         staffIndex: value(child, 'staff', 1) - 1,
                         voiceIndex: value(child, 'voice', 1) - 1,
                         string: value(child, 'technical string', NaN),
-                        fret: value(child, 'technical fret', NaN) };
+                        fret: value(child, 'technical fret', NaN), grace: !!child.querySelector('grace') };
                     const slurKey = slur => `${partIndex}:${position.staffIndex}:${position.voiceIndex}:${slur.getAttribute('number') || '1'}`;
 
                     const notations = child.querySelector('notations');
@@ -562,6 +568,7 @@ function renderSlursAndLabelsInSvg(instance, partials) {
         return [point.x, point.y].every(Number.isFinite) ? point : null;
     };
     detectedSlurPairs.forEach(pair => {
+        if (pair.start.grace || pair.end.grace) return; // 小音符はID照合を行う専用経路へ。
         const p1 = notePoint(pair.start), p2 = notePoint(pair.end);
         if (!p1 || !p2) return;
         // Boundsは譜面全体座標、SVGはpartialローカル座標。
@@ -636,6 +643,7 @@ function handleWatermark() {
 // --- alphaTab 初期化 ---
 let api = null;
 function destroyAlphaTabApi() {
+    graceNotation.clear();
     const previousApi = api;
     api = null;
     scorePartialState = null;
@@ -722,6 +730,7 @@ function isScoreReadyForPractice() {
 }
 
 function setScoreLoadState(state) {
+    if (state === "idle" || state === "error") graceNotation.clear();
     scoreLoadState = state;
     if (state !== "ready") preparedScore = null;
     // 音声・マイク許可待ちの途中で譜面が無効になった場合も開始を取り消す。
@@ -797,7 +806,8 @@ function initAlphaTabIfNeeded() {
                 display: { 
                     layoutMode: "horizontal", 
                     staveProfile: "Tab", 
-                    scale: 1.0
+                    scale: 1.0,
+                    resources: { graceFont: "11px Arial, sans-serif" } // 小音符のみ。通常数字14pxは既定のまま。
                 },
                 notation: {
                     rhythm: {
@@ -823,6 +833,7 @@ function initAlphaTabIfNeeded() {
             api = apiInstance;
             const generation = scoreRenderGeneration;
             const stage = currentStage;
+            const graceToken = graceNotation.begin({ generation, stage, api: apiInstance });
             const isCurrentApi = () => api === apiInstance && generation === scoreRenderGeneration
                 && stage === currentStage && !practiceModal.classList.contains("hidden");
 
@@ -855,6 +866,7 @@ function initAlphaTabIfNeeded() {
                 }
                 // scoreLoadedはrendererへモデルが渡される前に通知される。
                 applySlashChordNames(score);
+                graceNotation.bindModel(graceToken, score);
                 if (scoreRenderInProgress) scoreLoadConfirmed = true;
                 if (score && score.masterBars && score.masterBars.length > 0) {
                     const bars = score.masterBars.length;
@@ -873,16 +885,21 @@ function initAlphaTabIfNeeded() {
                     const bars = apiInstance.score?.masterBars?.length;
                     const partials = getCompleteScorePartials(container, apiInstance, bars);
                     renderSlursAndLabelsInSvg(apiInstance, partials);
+                    graceNotation.annotate(graceToken, apiInstance, partials);
                     if (!buildScoreBarLayouts(apiInstance, bars)) {
                         throw new Error("譜面の描画・小節配置が未確定です");
                     }
                     // 2. 完成した本物SVGから縦型TABカードを一括生成
                     if (verticalTabController) {
                         verticalTabController.createCardsFromRenderedPartials(partials, bars);
+                        graceNotation.validateCards(graceToken, apiInstance, verticalTabController.track);
                         if (!verticalTabController.hasCards || verticalTabController.barCount !== bars) {
                             throw new Error("縦型TABの準備が完了していません");
                         }
                     }
+                    // X境界・既存crop確定後に装飾だけを追加する。横型の初回もカード不要。
+                    graceNotation.addSymbols(graceToken, apiInstance, partials, verticalTabController?.track);
+                    graceNotation.positionLabels(graceToken, apiInstance, partials, verticalTabController?.track);
                     if (shouldUseVerticalTabLayout() && stage.file && !verticalTabController?.hasCards) {
                         throw new Error("縦型TABがありません");
                     }
@@ -949,6 +966,7 @@ async function renderTab(stage = currentStage) {
         return;
     }
     const renderApi = api;
+    const graceToken = graceNotation.tokenFor({ generation: renderGeneration, stage, api: renderApi });
     const isCurrentRender = () => api === renderApi
         && scoreRenderGeneration === renderGeneration
         && currentStage === stage
@@ -992,7 +1010,8 @@ async function renderTab(stage = currentStage) {
 
             if (!isCurrentRender()) return;
             if (xmlText) {
-                const fixedXml = fixMuseScoreXml(xmlText);
+                graceNotation.capture(graceToken, xmlText); // 原本を読むだけ。既存の補正XMLは変えない。
+                const fixedXml = fixMuseScoreXml(xmlText, graceToken);
                 const binaryData = new TextEncoder().encode(fixedXml);
                 const loadStarted = renderApi.load(binaryData);
                 if (!loadStarted && activeScoreRenderGeneration === renderGeneration) {
@@ -1072,6 +1091,7 @@ function markTutorialCompleted(stage, mode) {
 function renderExerciseCards() {
     renderStageCards(tutorialExerciseGrid, TUTORIAL_STAGES, "tutorial");
     renderStageCards(exerciseGrid, BASIC_STAGES, "basic");
+    renderStageCards(soloExerciseGrid, SOLO_STAGES, "solo");
     updateTutorialCompletionDisplay();
 }
 
@@ -1142,6 +1162,7 @@ function openPracticeModal(stage) {
     scoreRepairAttempted = false;
     activeScoreRenderGeneration = 0;
     const openGeneration = ++scoreRenderGeneration;
+    graceNotation.clear();
     setScoreLoadState("loading");
 
     unlockAudioContext().catch(() => {});
@@ -1254,7 +1275,14 @@ function updatePracticeScoreLayout() {
     if (container && isScoreReadyForPractice() && (!verticalTabController.hasCards)) {
         try {
             const partials = getCompleteScorePartials(container, api, preparedScore.bars);
+            const graceToken = graceNotation.tokenFor({ generation: scoreRenderGeneration, stage: currentStage, api });
+            graceNotation.restoreLabels(graceToken, api); // 文字移動をX境界解析へ渡さない。
+            graceNotation.removeSymbols(graceToken, api); // 回転時も境界解析へ独自記号を渡さない。
             verticalTabController.createCardsFromRenderedPartials(partials, preparedScore.bars);
+            graceNotation.validateCards(graceNotation.tokenFor({ generation: scoreRenderGeneration,
+                stage: currentStage, api }), api, verticalTabController.track);
+            graceNotation.addSymbols(graceToken, api, partials, verticalTabController.track);
+            graceNotation.positionLabels(graceToken, api, partials, verticalTabController.track);
             if (!verticalTabController.hasCards || verticalTabController.barCount !== preparedScore.bars) {
                 throw new Error("縦型TABの準備が完了していません");
             }
@@ -2215,3 +2243,4 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 initVolumeControl();
 initTutorialCompletion();
 renderExerciseCards();
+initPracticeGenres(document.getElementById("practiceContents"));

@@ -71,6 +71,8 @@ function harness(options = {}) {
         practiceStartGeneration: 0, preparedScore: { generation: 1, bars: 4 }, practiceSession: null,
         pendingPracticeMode: null, practiceRepeatSelect: { value: '3' }, isScoreReadyForPractice: () => true,
         currentStage: { timeSignature: [4, 4], countInBars: 1 }, currentBpm: 60, api: {},
+        // stage.guideVideoのデータではなく、本番で生成される動画UIコントローラーの依存。
+        guideVideo: { closeCalls: 0, close() { this.closeCalls++; } },
         resetPracticeBar() {}, discardRecordingSession() {}, clearRecordingResult() {}, showPracticeStatus() {},
         updatePracticeControls() {}, collapseVolumeBar() {}, requestWakeLock: async () => {},
         document: { querySelector: () => null }, resetScoreFocusState() {}, buildScoreBarLayouts() {},
@@ -249,6 +251,7 @@ for (const mode of ['practice', 'record']) {
     test('実際の' + mode + '開始が待機チューナーを取消し、古いマイクを渡さない', async () => {
         const pending = deferred(), h = harness({ microphone: i => i === 0 ? pending.promise : h.makeStream('record') });
         const old = h.select(6); await h.flush(); await h.c.startPractice(mode);
+        assert.equal(h.c.guideVideo.closeCalls, 1); assert.equal(h.c.practiceRan, true);
         const current = h.c.microphoneStream, source = h.c.micSourceNode;
         const late = h.makeStream('obsolete-tuner'); pending.resolve(late); await old;
         assert.equal(ended(late), true); assert.equal(h.read('isTuning'), false); assert.equal(h.c.isPracticing, true);

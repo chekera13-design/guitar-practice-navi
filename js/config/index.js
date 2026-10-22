@@ -1,5 +1,6 @@
 export { TUTORIAL_STAGES } from "./tutorial.js";
 export { BASIC_STAGES, EX1_STAGE } from "./basic.js";
+export { SOLO_STAGES } from "./solo.js";
 
 // カテゴリ共通の既存設定。
 export const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];

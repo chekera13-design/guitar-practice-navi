@@ -92,11 +92,38 @@ for (const seconds of [0, 12.8, -1, Infinity, NaN, '20']) {
     });
 }
 
-test('実configではTutorial EX1だけに指定動画があり、他のTutorial/Basicにはない', async () => {
-    const { TUTORIAL_STAGES, BASIC_STAGES } = await configModule;
-    assert.deepEqual(TUTORIAL_STAGES.filter(stage => stage.guideVideo).map(stage => stage.id), [1]);
-    assert.deepEqual(TUTORIAL_STAGES[0].guideVideo, guideVideo);
-    assert.ok(BASIC_STAGES.every(stage => !stage.guideVideo));
+test('実configのTutorial EX1〜3・Basic EX1〜10は登録動画を表示し、動画なしSoloは非表示', async () => {
+    const { TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES } = await configModule;
+    assert.deepEqual(TUTORIAL_STAGES.filter(stage => stage.guideVideo).map(stage => stage.id), [1, 2, 3]);
+    assert.deepEqual(BASIC_STAGES.filter(stage => stage.guideVideo).map(stage => stage.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    // 本番configを実際のUIコントローラーへ渡す。動画IDを教材と別の固定一覧で管理しない。
+    for (const stage of [...TUTORIAL_STAGES, ...BASIC_STAGES]) {
+        const video = stage.guideVideo;
+        assert.equal(typeof video.youtubeId, 'string');
+        assert.match(video.youtubeId, /^[A-Za-z0-9_-]{11}$/);
+        assert.equal(typeof video.title, 'string'); assert.ok(video.title.trim());
+        const h = await ui(stage);
+        assert.equal(h.section.hidden, false); assert.equal(h.panel.hidden, true);
+        assert.equal(h.panel.children.length, 0); assert.equal(h.created.length, 0);
+        assert.equal(h.button.getAttribute('aria-expanded'), 'false');
+        h.controller.toggle();
+        assert.equal(h.panel.children.length, 1);
+        const frame = h.panel.children[0], url = new URL(frame.src);
+        assert.equal(url.origin, 'https://www.youtube-nocookie.com');
+        assert.equal(url.pathname, `/embed/${video.youtubeId}`);
+        assert.equal(frame.title, video.title);
+        assert.equal(h.button.getAttribute('aria-expanded'), 'true');
+        h.controller.close();
+        assert.equal(frame.parentElement, null); assert.equal(h.panel.children.length, 0);
+        assert.equal(h.button.getAttribute('aria-expanded'), 'false');
+    }
+    assert.ok(SOLO_STAGES.length > 0);
+    for (const stage of SOLO_STAGES) {
+        assert.equal(stage.guideVideo, undefined);
+        const h = await ui(stage); h.controller.toggle();
+        assert.equal(h.section.hidden, true); assert.equal(h.panel.children.length, 0);
+        assert.equal(h.created.length, 0);
+    }
 });
 
 test('動画領域は縦/横TABの後、録音結果と既存ガイドの前で、HTMLにiframeはない', () => {
