@@ -167,3 +167,47 @@ test('記号処理はカード作成の後、回転時は境界解析より前�
  assert.ok(code.indexOf('graceNotation.removeSymbols(')<code.indexOf('verticalTabController.createCardsFromRenderedPartials('));
  assert.ok(code.indexOf('graceNotation.addSymbols(')>code.indexOf('graceNotation.validateCards('));
 });
+
+
+const pcZoomDigit={x:103.91600036621094,y:53.26222610473633,width:6.6666669845581055,height:12.222223281860352};
+const pcZoomMetrics={width:6.11767578125,actualBoundingBoxAscent:8,actualBoundingBoxDescent:0,fontBoundingBoxAscent:10,fontBoundingBoxDescent:2,actualBoundingBoxLeft:0,actualBoundingBoxRight:6};
+test('PC90%実測：SVG baseline/advance照合で画素丸めされたbboxへ依存しない',async()=>{
+ const m=await modulePromise;assert.throws(()=>m.graceInkBounds(pcZoomDigit,pcZoomMetrics),/uncertain/);
+ const ink=m.graceInkBounds(pcZoomDigit,pcZoomMetrics,{baseline:63.26222610473633,advance:6.128472328186035,pixelScale:.9});
+ assert.equal(ink.y+ink.height,63.26222610473633);assert.equal(ink.width,6);
+});
+test('Fire実測：有効なglyph overhangをfont-cell bboxの外という理由で捨てない',async()=>{
+ const m=await modulePromise,digit={x:103.916,y:53.32125,width:6,height:12.666667},metrics={...pcZoomMetrics,width:6,fontBoundingBoxDescent:3,actualBoundingBoxLeft:-1,actualBoundingBoxRight:7};
+ const ink=m.graceInkBounds(digit,metrics,{baseline:63.32125,advance:6,pixelScale:1.5});assert.equal(ink.x,104.916);assert.equal(ink.width,6);assert.equal(ink.y+ink.height,63.32125);
+});
+test('advanceは実画素の丸めが同じ場合のみ照合できる',async()=>{
+ const m=await modulePromise,digit={x:0,y:0,width:6,height:12.666667},metrics={...pcZoomMetrics,width:6,fontBoundingBoxDescent:3};
+ assert.doesNotThrow(()=>m.graceInkBounds(digit,metrics,{baseline:10,advance:6.125,pixelScale:1.5}));
+ assert.throws(()=>m.graceInkBounds(digit,metrics,{baseline:10,advance:8,pixelScale:1.5}),/uncertain/);
+ assert.throws(()=>m.graceInkBounds(digit,metrics,{baseline:10,advance:6.125}),/uncertain/);
+});
+test('native baseline経路でも欠落API・非有限値・無関係な基準位置は拒否',async()=>{
+ const m=await modulePromise,ref={baseline:10,advance:6.128472,pixelScale:.9};
+ for(const metric of [{...pcZoomMetrics,actualBoundingBoxAscent:undefined},{...pcZoomMetrics,width:NaN},{...pcZoomMetrics,actualBoundingBoxAscent:30}])assert.throws(()=>m.graceInkBounds(pcZoomDigit,metric,ref),/uncertain/);
+ assert.throws(()=>m.graceInkBounds(pcZoomDigit,pcZoomMetrics,{...ref,baseline:NaN}),/uncertain/);
+ assert.throws(()=>m.graceInkBounds(pcZoomDigit,pcZoomMetrics,{...ref,baseline:1000}),/outside/);
+});
+test('符尾短縮でも数字との2px・旗と斜線の形状・接合は維持',async()=>{
+ const m=await modulePromise,d={x:0,y:0,width:6.18,height:13},ink={x:0,y:2,width:6,height:8},a=m.graceSymbolGeometry(d,ink,{slash:true}),b=m.graceSymbolGeometry(d,ink,{slash:true,stemLengthScale:.98});
+ assert.equal(a.y,b.y);assert.equal(b.y-(ink.y+ink.height),2);assert.ok(b.bottom<a.bottom);
+ const numbers=s=>s.match(/-?\d+(?:\.\d+)?/g).map(Number),ap=numbers(a.flag),bp=numbers(b.flag);
+ for(let i=0;i<ap.length;i++)assert.ok(Math.abs((bp[i]-ap[i])-(i%2?b.bottom-a.bottom:0))<1e-9);
+ const as=numbers(a.slash),bs=numbers(b.slash);assert.ok(Math.abs((bs[2]-bs[0])-(as[2]-as[0]))<1e-9);assert.ok(Math.abs((bs[3]-bs[1])-(as[3]-as[1]))<1e-9);
+});
+test('微小な水平fitでも記号の形とY・隙間を変更せず、範囲外は拒否',async()=>{
+ const m=await modulePromise,d={x:0,y:0,width:6,height:13},ink={x:0,y:2,width:6,height:8},a=m.graceSymbolGeometry(d,ink,{slash:true}),b=m.graceSymbolGeometry(d,ink,{slash:true,anchorShift:-.125});
+ assert.equal(b.x,a.x-.125);assert.equal(b.y,a.y);assert.equal(b.bottom,a.bottom);assert.equal(b.inkGap,2);
+ assert.throws(()=>m.graceSymbolGeometry(d,ink,{slash:true,anchorShift:1}),/unverified/);
+ assert.throws(()=>m.graceSymbolGeometry(d,ink,{slash:true,stemLengthScale:.8}),/unverified/);
+});
+test('AQUOS実測：斜線と弦の距離0.244pxの衝突は2%短縮で安全域へ',async()=>{
+ const m=await modulePromise,d={x:103.916,y:53.32125,width:6.1822919845581055,height:13},metric={...pcZoomMetrics,width:6.18212890625,fontBoundingBoxDescent:3},ink=m.graceInkBounds(d,metric);
+ const a=m.graceSymbolGeometry(d,ink,{slash:true}),b=m.graceSymbolGeometry(d,ink,{slash:true,stemLengthScale:.98});
+ const slashBottom=g=>{const p=g.slash.match(/-?\d+(?:\.\d+)?/g).map(Number);return Math.max(p[1],p[3])+m.GRACE_SYMBOL.stemWidth/2;};
+ assert.ok(72.83-slashBottom(a)<.25);assert.ok(72.83-slashBottom(b)>=.25);assert.ok(b.bottom<85.83-.25);assert.ok(Math.abs(b.y-(ink.y+ink.height)-2)<1e-9);
+});

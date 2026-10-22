@@ -607,32 +607,80 @@ export const GRACE_SYMBOL = Object.freeze({ stemLength: 1.72, stemWidth: .85, in
     gap: 2, obstacleGap: .25, color: '#0f172a' });
 const GRACE_SYMBOL_CLASS = 'alphatab-grace-symbol';
 
-export function graceInkBounds(digit, metrics) {
+export function graceInkBounds(digit, metrics, svgReference = null) {
     const keys = ['actualBoundingBoxAscent', 'actualBoundingBoxDescent', 'fontBoundingBoxAscent',
         'fontBoundingBoxDescent', 'actualBoundingBoxLeft', 'actualBoundingBoxRight', 'width'];
-    if (!rectValid(digit) || !keys.every(k => finite(metrics[k]))
-        || Math.abs(metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent - digit.height) > .1
+    if (!rectValid(digit) || !keys.every(k => finite(metrics[k]))) throw Error('digit-ink-metrics-uncertain');
+    if (svgReference) {
+        // SVG bboxはズームで画素丸めされる。実際のbaselineと論理advanceを照合する。
+        const pixelScale = svgReference.pixelScale;
+        const samePixelAdvance = finite(pixelScale) && pixelScale >= .5 && pixelScale <= 8
+            && Math.round(svgReference.advance * pixelScale) === Math.round(metrics.width * pixelScale);
+        if (![svgReference.baseline, svgReference.advance].every(finite) || svgReference.advance <= 0
+            || metrics.width <= 0 || Math.abs(svgReference.advance - metrics.width) > .1 && !samePixelAdvance
+            || metrics.fontBoundingBoxAscent < 0 || metrics.fontBoundingBoxDescent < 0
+            || metrics.actualBoundingBoxAscent > metrics.fontBoundingBoxAscent
+            || metrics.actualBoundingBoxDescent > metrics.fontBoundingBoxDescent) throw Error('digit-ink-metrics-uncertain');
+    } else if (Math.abs(metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent - digit.height) > .1
         || Math.abs(metrics.width - digit.width) > .1) throw Error('digit-ink-metrics-uncertain');
-    const baseline = digit.y + metrics.fontBoundingBoxAscent;
+    const baseline = svgReference ? svgReference.baseline : digit.y + metrics.fontBoundingBoxAscent;
     const ink = { x: digit.x - metrics.actualBoundingBoxLeft, y: baseline - metrics.actualBoundingBoxAscent,
         width: metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight,
         height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent };
-    if (ink.width <= 0 || ink.height <= 0 || ink.x < digit.x - .1 || ink.x + ink.width > digit.x + digit.width + .1
-        || ink.y < digit.y - .1 || ink.y + ink.height > digit.y + digit.height + .1) throw Error('digit-ink-outside-bbox');
+    if (!rectValid(ink) || ink.width <= 0 || ink.height <= 0 || (svgReference
+        ? boxDistance(ink, digit) > 0
+        : ink.x < digit.x - .1 || ink.x + ink.width > digit.x + digit.width + .1
+            || ink.y < digit.y - .1 || ink.y + ink.height > digit.y + digit.height + .1)) throw Error('digit-ink-outside-bbox');
     return ink;
 }
 
-export function graceSymbolGeometry(digit, ink, { slash, flagWidthScale = 1, stemLengthScale = 1 } = {}) {
+function measuredGraceDigit(svg, digit, style, ctx) {
+    const metrics = ctx.measureText(digit.node.textContent);
+    try { return { ink: graceInkBounds(digit.box, metrics), geometryBox: digit.box, measurement: 'bbox-verified' }; }
+    catch (error) {
+        if (!['digit-ink-metrics-uncertain', 'digit-ink-outside-bbox'].includes(error.message)) throw error;
+    }
+    const node = digit.node, y = Number(node.getAttribute('y'));
+    if (!finite(y) || node.children.length || ['dx', 'dy', 'rotate'].some(k => node.hasAttribute(k))
+        || !['middle', 'alphabetic'].includes(style.dominantBaseline)
+        || style.writingMode !== 'horizontal-tb' || style.direction !== 'ltr'
+        || style.baselineShift && !['0px', 'baseline'].includes(style.baselineShift)
+        || typeof node.getComputedTextLength !== 'function') throw Error('symbol-svg-baseline-unverified');
+    const probe = node.cloneNode(true);
+    try {
+        probe.removeAttribute('id');
+        probe.style.setProperty('dominant-baseline', 'alphabetic', 'important');
+        probe.style.setProperty('opacity', '0', 'important');
+        probe.setAttribute('pointer-events', 'none');
+        svg.appendChild(probe);
+        const alphabetic = bbox(probe), advance = node.getComputedTextLength();
+        // 同じ文字・font・座標系でbaselineだけ変更したことを確認する。
+        if (getComputedStyle(probe).font !== style.font
+            || ['x', 'width', 'height'].some(k => Math.abs(alphabetic[k] - digit.box[k]) > .05)) throw Error('symbol-svg-baseline-unverified');
+        const baseline = y + digit.box.y - alphabetic.y;
+        const matrix = svg.getScreenCTM();
+        if (!matrix || ![matrix.a, matrix.b, matrix.c, matrix.d].every(finite)
+            || matrix.a <= 0 || Math.abs(matrix.b) > 1e-9 || Math.abs(matrix.c) > 1e-9
+            || Math.abs(matrix.a - matrix.d) > 1e-9) throw Error('symbol-svg-baseline-unverified');
+        const pixelScale = matrix.a * window.devicePixelRatio;
+        return { ink: graceInkBounds(digit.box, metrics, { baseline, advance, pixelScale }),
+            geometryBox: { ...digit.box, width: metrics.width, height: metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent },
+            measurement: 'svg-baseline', baseline, advance };
+    } finally { probe.remove(); }
+}
+
+export function graceSymbolGeometry(digit, ink, { slash, flagWidthScale = 1, stemLengthScale = 1, anchorShift = 0 } = {}) {
     if (!rectValid(digit) || !rectValid(ink) || Math.min(digit.width, digit.height, ink.width, ink.height) <= 0
-        || ![.9, 1].includes(flagWidthScale) || ![1, 1.04].includes(stemLengthScale)
+        || ![.9, 1].includes(flagWidthScale) || ![1, 1.04, .98, .96].includes(stemLengthScale)
+        || ![0, -.125, .125].includes(anchorShift) || Math.abs(anchorShift) > ink.width * .05
         || typeof slash !== 'boolean') throw Error('symbol-dimensions-unverified');
-    const s = GRACE_SYMBOL, x = ink.x + ink.width * .5, anchorY = ink.y + ink.height - s.inkOverlap,
+    const s = GRACE_SYMBOL, x = ink.x + ink.width * .5 + anchorShift, anchorY = ink.y + ink.height - s.inkOverlap,
         y = ink.y + ink.height + s.gap, bottom = anchorY + digit.height * s.stemLength * stemLengthScale,
         half = s.stemWidth * .5, w = digit.width * s.flagWidth * flagWidthScale, h = digit.height * s.flagHeight,
         sw = digit.width * s.slashWidth, sh = digit.height * s.slashHeight,
         sy = anchorY + (bottom - anchorY) * s.slashPosition;
     if (y >= bottom - h) throw Error('two-pixel-gap-leaves-no-flag-join');
-    return { x, y, bottom, inkGap: s.gap,
+    return { x, y, bottom, inkGap: s.gap, anchorShift, stemLengthScale,
         stem: `M ${x-half} ${y} H ${x+half} V ${bottom} H ${x-half} Z`,
         flag: `M ${x-half} ${bottom} C ${x+w*.25} ${bottom-h*.15} ${x+w} ${bottom-h*.45} ${x+w*.83} ${bottom-h*.72} C ${x+w*.7} ${bottom-h*.93} ${x+w*.35} ${bottom-h} ${x+.1} ${bottom-h} C ${x+w*.65} ${bottom-h*.6} ${x+w*.55} ${bottom-h*.35} ${x-half} ${bottom-h*.35} Z`,
         ...(slash ? { slash: `M ${x-sw*.5} ${sy+sh*.5} L ${x+sw*.5} ${sy-sh*.5}` } : {}) };
@@ -705,7 +753,7 @@ function drawGraceSymbols(state, api, partials, track) {
                 const ctx = document.createElement('canvas').getContext('2d');
                 if (!ctx || !style.font) throw Error('symbol-font-metrics-unavailable');
                 ctx.font = style.font; ctx.textBaseline = 'alphabetic';
-                return { ...d, ink: graceInkBounds(d.box, ctx.measureText(d.node.textContent)), noteId: h.note.id };
+                return { ...d, ...measuredGraceDigit(svg, d, style, ctx), noteId: h.note.id };
             });
             const digit = [...digits].sort((a, b) => b.ink.y + b.ink.height - a.ink.y - a.ink.height)[0],
                 centers = digits.map(d => d.ink.x + d.ink.width * .5);
@@ -713,9 +761,10 @@ function drawGraceSymbols(state, api, partials, track) {
             const obstacles = obstaclesIn(svg, true, true);
             if (obstacles.filter(o => o.staffLine).length < 6) throw Error('symbol-string-geometry-unverified');
             let geometry, parts, reason;
-            // ラボの小さな幅・長さ候補のみ。隙間は全候補で必ず2px、0/1pxへ戻さない。
-            for (const [flagWidthScale, stemLengthScale] of [[1, 1], [.9, 1], [1, 1.04], [.9, 1.04]]) {
-                geometry = graceSymbolGeometry(digit.box, digit.ink, { slash: mapped.slash, flagWidthScale, stemLengthScale });
+            // 従来候補を優先。衝突時だけ短縮/最大1/8pxの水平調整。全候補を同じ安全判定に通す。
+            const fits = [[1, 1], [.9, 1], [1, 1.04], [.9, 1.04], [1, .98], [.9, .98], [1, .96], [.9, .96]];
+            for (const [flagWidthScale, stemLengthScale, anchorShift] of [0, -.125, .125].filter(shift => Math.abs(shift) <= digit.ink.width * .05).flatMap(shift => fits.map(fit => [...fit, shift]))) {
+                geometry = graceSymbolGeometry(digit.geometryBox, digit.ink, { slash: mapped.slash, flagWidthScale, stemLengthScale, anchorShift });
                 group = document.createElementNS(SVG_NS, 'g');
                 for (const [k, v] of Object.entries({ class: GRACE_SYMBOL_CLASS, 'data-grace-symbol': beat.id,
                     'data-grace-symbol-bar': barIndex, 'data-grace-symbol-notes': mapped.noteIds.join(','), 'pointer-events': 'none' })) group.setAttribute(k, String(v));
@@ -746,7 +795,7 @@ function drawGraceSymbols(state, api, partials, track) {
             if (card) { const copy = group.cloneNode(true); card.group.appendChild(copy); state.symbolOwned.add(copy); }
             accepted.add(beat.id);
             Object.assign(record, { rendered: true, partialIndex: partial.partialIndex, inkGap: geometry.inkGap,
-                anchorNoteId: digit.noteId, ink: digit.ink, digit: digit.box, geometry, parts,
+                anchorNoteId: digit.noteId, ink: digit.ink, digit: digit.box, geometry, parts, measurement: digit.measurement,
                 crop: card ? 'inside-existing-crop' : 'horizontal-no-card' });
         } catch (error) { group?.remove(); record.reason = String(error?.message || 'symbol-skipped'); }
     }
