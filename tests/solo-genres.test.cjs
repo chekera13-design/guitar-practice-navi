@@ -1,6 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),os=require('node:os');
 const {pathToFileURL}=require('node:url');
 const root=path.resolve(__dirname,'..'),config=import(pathToFileURL(path.join(root,'js/config.js')).href);
+// test5固有の期待値はここで管理。正式教材への差替え時はこの定義を見直す。
+// configには旧3小節のフォールバックが残る。変更せず、読込後は実譜面4小節を使うことを別に検証する。
+const SOLO_PREVIEW=Object.freeze({file:'scores/solo/test5.musicxml',bars:4,configFallbackBars:3,
+ graceNotes:8,graceBeats:7,groups:['single','chord','sequence','single','single','single'],slurs:8,graceSlurs:5,ties:14});
+function scoreXml(stage){const xml=fs.readFileSync(path.join(root,stage.file),'utf8');return{xml,bars:(xml.match(/<measure\b/g)||[]).length};}
 const genres=import(pathToFileURL(path.join(root,'js/practiceGenres.js')).href);
 const previousGlobals={window:global.window,document:global.document};
 test.afterEach(()=>{for(const [key,value] of Object.entries(previousGlobals)){if(value===undefined)delete global[key];else global[key]=value;}});
@@ -43,12 +48,12 @@ test('既存アンカーと新しいカードへのhashで該当パネルを表�
  h.hash('#%broken');assert.equal(h.controller.selected,'solo');h.hash('#unknown');assert.equal(h.controller.selected,'solo');
  assert.equal((await tabs()).controller.selected,'basic');
 });
-test('ソロギターEX1だけを独立configから再exportし、検証用・60 BPM・3小節・4/4',async()=>{
- const c=await config,solo=await import(pathToFileURL(path.join(root,'js/config/solo.js')).href);
- assert.equal(c.SOLO_STAGES,solo.SOLO_STAGES);assert.equal(c.SOLO_STAGES.length,1);const s=c.SOLO_STAGES[0];
- assert.equal(s.id,1);assert.equal(s.code,'EX1');assert.equal(s.bpm,60);assert.equal(s.practiceBars,3);assert.equal(s.countInBars,1);assert.deepEqual(s.timeSignature,[4,4]);assert.equal(s.isPreview,true);assert.equal(s.available,true);
- assert.equal(s.title,'EX1：小音符・奏法表示テスト');assert.equal(s.file,'scores/solo/test3.musicxml');assert.ok(s.guide.content.includes('仮教材'));
- const xml=fs.readFileSync(path.join(root,s.file),'utf8');assert.equal((xml.match(/<measure\b/g)||[]).length,3);assert.match(xml,/<beats>4<\/beats>/);assert.match(xml,/<beat-type>4<\/beat-type>/);
+test('ソロEX1を独立configから再exportし、検証用・60 BPM・test5実譜面4小節・4/4',async()=>{
+ const c=await config,solo=await import(pathToFileURL(path.join(root,'js/config/solo.js')).href),index=await import(pathToFileURL(path.join(root,'js/config/index.js')).href);
+ assert.equal(c.SOLO_STAGES,solo.SOLO_STAGES);assert.equal(index.SOLO_STAGES,solo.SOLO_STAGES);assert.equal(c.SOLO_STAGES.length,1);const s=c.SOLO_STAGES[0];
+ assert.equal(s.id,1);assert.equal(s.code,'EX1');assert.equal(s.bpm,60);assert.equal(s.practiceBars,SOLO_PREVIEW.configFallbackBars);assert.equal(s.countInBars,1);assert.deepEqual(s.timeSignature,[4,4]);assert.equal(s.isPreview,true);assert.equal(s.available,true);
+ assert.equal(s.title,'EX1：小音符・奏法表示テスト');assert.equal(s.file,SOLO_PREVIEW.file);assert.ok(s.guide.content.includes('仮教材'));
+ assert.ok(fs.statSync(path.join(root,s.file)).isFile());const {xml,bars}=scoreXml(s);assert.equal(bars,SOLO_PREVIEW.bars);assert.match(xml,/<beats>4<\/beats>/);assert.match(xml,/<beat-type>4<\/beat-type>/);
 });
 test('Tutorial・Basic・SoloのEX1はカテゴリ付きIDで衝突しない',async()=>{
  const c=await config,keys=[['tutorial',c.TUTORIAL_STAGES],['basic',c.BASIC_STAGES],['solo',c.SOLO_STAGES]].flatMap(([k,a])=>a.map(s=>`${k}-${s.id}`));
@@ -68,34 +73,57 @@ test('ソロ操作はチュートリアル完了・保存キーへ書き込ま�
  assert.equal(h.evaluate('JSON.stringify([...completedTutorialStages])'),before);assert.equal(h.writes.length,0);assert.equal(saved.get('chogita_tutorial_completed'),'["tutorial-1","tutorial-2"]');
 });
 test('ソロEX1カードから既存XML読込・ready・練習ボタン・ガイドへ接続',async()=>{
+ const genre=await tabs();genre.entries[1].tab.click();assert.equal(genre.controller.selected,'solo');
  const home=boot(),files=[],h=scoreHarness({fetch:async file=>{files.push(file);return{ok:true,text:async()=>fs.readFileSync(path.join(root,file),'utf8')};}});let opening;
+ assert.equal(home.soloCards.length,1);assert.equal(home.soloCards[0].id,'solo-1');
  home.context.openPracticeModal=s=>{opening=h.open(s);};home.soloCards[0].dispatch('click');await opening;
  const stage=home.evaluate('SOLO_STAGES[0]');assert.equal(h.c.currentStage,stage);assert.equal(h.c.currentBpm,60);assert.deepEqual(files,[stage.file]);
- assert.equal((new TextDecoder().decode(h.c.api.loadCalls[0]).match(/<measure\b/g)||[]).length,3);h.complete(h.c.api,3);
+ const {xml,bars}=scoreXml(stage);assert.equal(bars,SOLO_PREVIEW.bars);assert.equal(new TextDecoder().decode(h.c.api.loadCalls[0]),xml);h.complete(h.c.api,bars);
  assert.equal(h.c.scoreLoadState,'ready');assert.equal(h.c.mainActionBtn.disabled,false);assert.equal(h.c.recordPracticeBtn.disabled,false);assert.equal(h.c.stageGuideTitle.innerText,stage.guide.title);
+ assert.ok(h.c.stageGuideBody.innerHTML.includes(stage.guide.content));assert.equal(h.c.verticalTabController.hasCards,true);assert.equal(h.c.verticalTabController.barCount,bars);assert.equal(h.c.preparedScore.bars,bars);assert.equal(h.c.getStagePracticeBars(stage),bars);assert.equal(h.c.modalBarsBadge.innerText,`${bars}小節`);
+ await h.c.startPractice();assert.equal(h.c.practiceSession.practiceBars,bars);h.c.stopPractice();
  h.c.closePracticeModal();assert.equal(h.c.practiceModal.classList.contains('hidden'),true);
+ assert.equal(genre.controller.selected,'solo');genre.entries[0].tab.click();assert.equal(genre.controller.selected,'basic');
 });
 test('ソロXMLの失敗・再試行とBasicへの切替は既存世代ガードを使う',async()=>{
  const c=await config,files=[];let failure=true;const h=scoreHarness({fetch:async file=>{files.push(file);return{ok:!failure,status:404,text:async()=>'<score-partwise />'};}});
- await h.open(c.SOLO_STAGES[0]);assert.equal(h.c.scoreLoadState,'error');assert.equal(h.c.retryScoreBtn.hidden,false);failure=false;await h.c.retryScoreLoad();h.complete(h.c.api,3);assert.equal(h.c.scoreLoadState,'ready');
- const old=h.c.api;h.c.closePracticeModal();await h.open(c.BASIC_STAGES[0]);h.complete(old,3);assert.equal(h.c.scoreLoadState,'loading');h.complete(h.c.api,4);assert.equal(h.c.preparedScore.stage,c.BASIC_STAGES[0]);assert.deepEqual(files.slice(0,2),[c.SOLO_STAGES[0].file,c.SOLO_STAGES[0].file]);
+ const {bars}=scoreXml(c.SOLO_STAGES[0]);await h.open(c.SOLO_STAGES[0]);assert.equal(h.c.scoreLoadState,'error');assert.equal(h.c.retryScoreBtn.hidden,false);failure=false;await h.c.retryScoreLoad();h.complete(h.c.api,bars);assert.equal(h.c.scoreLoadState,'ready');
+ const old=h.c.api;h.c.closePracticeModal();await h.open(c.BASIC_STAGES[0]);h.complete(old,bars);assert.equal(h.c.scoreLoadState,'loading');h.complete(h.c.api,4);assert.equal(h.c.preparedScore.stage,c.BASIC_STAGES[0]);assert.deepEqual(files.slice(0,2),[c.SOLO_STAGES[0].file,c.SOLO_STAGES[0].file]);
 });
-for(const repeat of ['1','3','unlimited'])test('ソロ3小節の既存練習：'+repeat+'回・カウントイン1回・停止で完全終了',async()=>{
- const {SOLO_STAGES}=await config,s=SOLO_STAGES[0],h=practiceHarness({bpm:s.bpm,bars:s.practiceBars}),c=h.context;c.currentStage=s;h.prepareScore();c.practiceRepeatSelect.value=repeat;
- await c.startPractice();assert.equal(c.isPracticing,true);const cycles=repeat==='unlimited'?2:Number(repeat);h.advance(.3+4+12*cycles+.1);
+for(const repeat of ['1','3','unlimited'])test('ソロ実譜面の既存練習：'+repeat+'回・カウントイン1回・停止で完全終了',async()=>{
+ const {SOLO_STAGES}=await config,s=SOLO_STAGES[0],{bars}=scoreXml(s),h=practiceHarness({bpm:s.bpm,bars}),c=h.context;c.currentStage=s;h.prepareScore();c.practiceRepeatSelect.value=repeat;
+ await c.startPractice();assert.equal(c.isPracticing,true);assert.equal(c.practiceSession.practiceBars,bars);const cycles=repeat==='unlimited'?2:Number(repeat);h.advance(.3+4+bars*s.timeSignature[0]*cycles+.1);
  assert.equal(c.isPracticing,repeat==='unlimited');assert.equal(h.phases.filter(p=>p.phase==='count-in').length,4);if(repeat==='unlimited')c.stopPractice();assert.equal(h.timers.size,0);
 });
 test('ソロ録音練習も既存Recorder・1回完了経路を使う',async()=>{
- const s=(await config).SOLO_STAGES[0],h=practiceHarness({bpm:60,bars:3}),c=h.context;c.currentStage=s;h.prepareScore();c.practiceRepeatSelect.value='5';await c.startPractice('record');
- assert.equal(c.practiceSession.repeatCount,1);assert.equal(h.recorders.length,1);h.advance(21);assert.equal(c.isPracticing,false);assert.equal(h.urls.length,1);assert.equal(h.timers.size,0);
+ const s=(await config).SOLO_STAGES[0],{bars}=scoreXml(s),h=practiceHarness({bpm:60,bars}),c=h.context;c.currentStage=s;h.prepareScore();c.practiceRepeatSelect.value='5';await c.startPractice('record');
+ assert.equal(c.practiceSession.repeatCount,1);assert.equal(c.practiceSession.practiceBars,bars);assert.equal(c.practiceSession.totalSteps,(s.countInBars+bars)*s.timeSignature[0]+4);assert.equal(h.recorders.length,1);h.advance(c.practiceSession.finishTime+.1);assert.equal(c.isPracticing,false);assert.equal(h.urls.length,1);assert.equal(h.timers.size,0);
 });
-test('コピーしたtest3はalphaTab 1.8.4 build34で読み込め、小音符3分類を維持',async t=>{
+test('登録test5をalphaTab 1.8.4 build34で読み込み、原本の小音符分類・スラー・通常タイを保持',async t=>{
  const lib=path.join(os.tmpdir(),'notation-lab-alphaTab-1.8.4.cjs');if(!fs.existsSync(lib)){t.skip('取得済み1.8.4キャッシュが必要');return;}
  const alpha=require(lib);assert.equal(alpha.meta.version,'1.8.4');assert.match(fs.readFileSync(lib,'utf8').slice(0,120),/build 34/);
  const {Element,parse}=fixture('technique-markers.test.cjs','const source =','({Element,parse});');Object.defineProperty(Element.prototype,'localName',{get(){return this.tagName;}});
+ const previousParser=global.DOMParser;t.after(()=>{if(previousParser===undefined)delete global.DOMParser;else global.DOMParser=previousParser;});
  global.DOMParser=class{parseFromString(x){const d=parse(x);d.documentElement=d.querySelector('score-partwise');return d;}};
- const xml=fs.readFileSync(path.join(root,(await config).SOLO_STAGES[0].file),'utf8'),m=await import(pathToFileURL(path.join(root,'js/graceNotation.js')).href);
- const score=alpha.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(xml),new alpha.Settings());assert.equal(score.masterBars.length,3);
- const source=m.analyzeGraceSource(xml);assert.deepEqual(source.groups.map(g=>g.kind),['single','chord','sequence']);assert.ok(m.matchGraceModel(source,score).groups[2].symbols.reasons.includes('sequence-symbols-out-of-scope'));
+ const {xml,bars}=scoreXml((await config).SOLO_STAGES[0]),m=await import(pathToFileURL(path.join(root,'js/graceNotation.js')).href),doc=new DOMParser().parseFromString(xml);
+ const score=alpha.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(xml),new alpha.Settings());assert.equal(score.masterBars.length,SOLO_PREVIEW.bars);assert.equal(score.masterBars.length,bars);
+ const source=m.analyzeGraceSource(xml),matched=m.matchGraceModel(source,score);assert.equal(source.status,'parsed');assert.equal(matched.status,'matched');assert.deepEqual(matched.diagnostics,[]);
+ assert.equal(doc.querySelectorAll('grace').length,SOLO_PREVIEW.graceNotes);assert.equal(source.notes.filter(n=>n.grace).length,SOLO_PREVIEW.graceNotes);assert.equal(source.beats.filter(b=>b.grace).length,SOLO_PREVIEW.graceBeats);
+ assert.deepEqual(source.groups.map(g=>g.kind),SOLO_PREVIEW.groups);assert.equal(matched.notes.length,source.notes.length);assert.equal(matched.groups.length,source.groups.length);
+ const bySource=new Map(matched.notes.map(n=>[n.sourceNoteId,n])),actualBySource=new Map(),beats=score.tracks.flatMap(t=>t.staves.flatMap(s=>s.bars.flatMap(b=>b.voices.flatMap(v=>v.beats))));
+ for(const row of source.notes){const staff=score.tracks[row.partIndex].staves[row.staffIndex],beat=staff.bars[row.barIndex].voices[row.voiceIndex].beats[row.beatIndex],note=beat.notes[row.noteIndex];actualBySource.set(row.id,note);
+  assert.equal(note.id,bySource.get(row.id).noteId);assert.equal(note.beat,beat);assert.equal(note.string,staff.tuning.length-row.string+1);assert.equal(note.fret,row.fret);assert.equal(beat.voice.index,row.voiceIndex);assert.equal(beat.index,row.beatIndex);assert.equal(note.index,row.noteIndex);assert.equal(!!beat.graceType,row.grace);assert.equal(beat.displayStart,row.offsetTicks);
+ }
+ const graceBeats=beats.filter(b=>b.graceType),modelGroups=[...new Set(graceBeats.map(b=>b.graceGroup))];assert.equal(graceBeats.length,SOLO_PREVIEW.graceBeats);assert.equal(graceBeats.reduce((sum,b)=>sum+b.notes.length,0),SOLO_PREVIEW.graceNotes);
+ assert.equal(modelGroups.length,SOLO_PREVIEW.groups.length);assert.deepEqual(modelGroups.map(g=>g.beats.length>1?'sequence':g.beats[0].notes.length>1?'chord':'single'),SOLO_PREVIEW.groups);
+ for(const group of source.groups){const actual=group.noteIds.map(id=>actualBySource.get(id)),modelGroup=actual[0].beat.graceGroup;assert.ok(actual.every(n=>n.beat.graceGroup===modelGroup));assert.deepEqual(modelGroup.beats.flatMap(b=>b.notes.map(n=>n.id)),actual.map(n=>n.id));}
+ assert.ok(matched.groups.find(g=>g.kind==='sequence').symbols.reasons.includes('sequence-symbols-out-of-scope'));
+ assert.equal(source.slurs.length,SOLO_PREVIEW.slurs);assert.equal(matched.slurs.length,SOLO_PREVIEW.graceSlurs);assert.equal(doc.querySelectorAll('slur[type="start"]').length,source.slurs.length);
+ for(const pair of source.slurs){const from=actualBySource.get(pair.start),to=actualBySource.get(pair.end);assert.equal(pair.valid,true);assert.equal(from.slurDestination,to);assert.equal(to.slurOrigin,from);}
+ const graceSlurs=matched.slurs.map(s=>[s.logical.fromNoteId,s.logical.toNoteId]);assert.ok(matched.slurs.every(s=>s.slur.eligible));
+ assert.equal(source.ties.length,SOLO_PREVIEW.ties);assert.equal(matched.ties.length,source.ties.length);assert.ok(matched.ties.every(tie=>tie.verified));
+ for(const pair of source.ties){const from=actualBySource.get(pair.start),to=actualBySource.get(pair.end);assert.equal(pair.valid,true);assert.equal(from.tieDestination,to);assert.equal(to.tieOrigin,from);assert.equal(to.isTieDestination,true);assert.equal(from.beat.graceType,0);assert.equal(to.beat.graceType,0);assert.ok(!graceSlurs.some(([a,b])=>a===from.id&&b===to.id));}
+ assert.ok(source.words.some(w=>w.raw==='P'&&actualBySource.get(source.beats.find(b=>b.id===w.anchorBeatId).notes[0]).beat.graceType===0));
+ assert.ok(source.slurs.some(p=>actualBySource.get(p.start).beat.graceType===0));assert.ok(matched.slurs.some(p=>actualBySource.get(source.slurs.find(s=>s.id===p.sourceSlurId).end).beat.notes.length>1));
  assert.equal(new alpha.Settings().display.resources.graceFont.size,12);
 });
