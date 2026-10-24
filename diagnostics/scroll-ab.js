@@ -1,10 +1,12 @@
-import { ScrollABCapture, SCROLL_AB_CONDITIONS, SCROLL_AB_SEQUENCE,
-    applyDecorationCondition, observeCountInDecorations } from './scroll-ab-core.js';
+import { ScrollABCapture, SCROLL_AB_CONDITIONS, SCROLL_COMPARISON_PLANS, SCROLL_BACKGROUND_DESIGNS,
+    SCROLL_DIAGNOSTIC_CLASSES, getComparisonProgress,
+    applyDecorationCondition, observeCountInDecorations } from './scroll-ab-core.js?v=background-design-v1';
 import { BASIC_STAGES } from '../js/config.js';
 
 const iframe = document.getElementById('app');
 const status = document.getElementById('status');
 const select = document.getElementById('condition');
+const planSelect = document.getElementById('comparisonPlan');
 const arm = document.getElementById('arm');
 const cancel = document.getElementById('cancel');
 const output = document.getElementById('output');
@@ -14,10 +16,13 @@ let child, doc, state, capture, context, seenBusy = false;
 let endDecorationCheck = () => {};
 const observedAudio = new WeakSet();
 
-// このstyleは診断iframeだけに注入する。色・寸法・配置・ハイライトは変更しない。
+// このstyleは診断iframeだけに注入する。P2の背景色以外は既存の色を保つ。
+// #practiceModalは背面レイヤー。白い.practice-modal-contentには適用しない。
 export const decorationOverride = `
 #practiceModal.scroll-ab-no-decoration,
-#practiceModal.scroll-ab-no-backdrop { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#practiceModal.scroll-ab-no-backdrop,
+#practiceModal.scroll-ab-opaque-background { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#practiceModal.scroll-ab-opaque-background { background: #0f172a !important; }
 #practiceModal.scroll-ab-no-decoration #visualMetronomeBox,
 #practiceModal.scroll-ab-no-metronome #visualMetronomeBox { box-shadow: none !important; transition: none !important; }
 #practiceModal.scroll-ab-no-decoration .beat-dot,
@@ -27,9 +32,14 @@ export const decorationOverride = `
 function decorations(condition = 'A') {
     applyDecorationCondition(doc?.getElementById('practiceModal'), condition);
 }
+function displayCondition(condition) {
+    const design = planSelect.value === 'background' ? SCROLL_BACKGROUND_DESIGNS[condition] : null;
+    return design && design !== condition ? `${design}（${condition}）` : condition;
+}
 function refresh() {
     const busy = !!state?.busy;
     select.disabled = busy;
+    planSelect.disabled = busy;
     arm.disabled = busy || !state?.ready || !state?.modalOpen || !!(capture && !capture.stopped);
     cancel.disabled = busy || !capture || capture.stopped;
     for (const id of ['copy', 'save', 'show']) document.getElementById(id).disabled = busy || !results.length;
@@ -41,15 +51,17 @@ function finishIfStopped() {
     const result = capture.result(); // 並べ替え・JSON化は練習停止後に限定。
     results.push(result);
     decorations();
+    const planId = planSelect.value;
+    const progress = getComparisonProgress(results, planId);
     output.value = JSON.stringify({ schema: 'tab-scroll-ab-series-v1',
-        diagnosticRevision: 'decoration-isolation-v1', recommendedSequence: SCROLL_AB_SEQUENCE, results }, null, 2);
-    const validResults = results.filter(item => item.validComparison);
-    const validCount = validResults.length;
-    const inOrder = validResults.every((item, index) => item.condition === SCROLL_AB_SEQUENCE[index]);
-    const nextCondition = SCROLL_AB_SEQUENCE[validCount];
-    status.textContent = `${results.length}件目 ${result.condition}：${result.validComparison ? '30秒計測完了' : '比較無効：' + result.invalidReasons.join(' / ')}。` +
-        (!inOrder ? '推奨順序と異なります。測定した条件はJSONへ保存されています。'
-            : nextCondition ? `次の推奨条件：${nextCondition}（条件欄で選択）。` : '推奨7回分を取得しました。JSONを保存してください。');
+        diagnosticRevision: 'background-design-v1', comparisonPlan: planId,
+        recommendedSequence: progress.sequence, recommendedSequences: {
+            background: SCROLL_COMPARISON_PLANS.background.sequence,
+            decoration: SCROLL_COMPARISON_PLANS.decoration.sequence }, results }, null, 2);
+    status.textContent = `${results.length}件目 ${displayCondition(result.condition)}：${result.validComparison ? '30秒計測完了' : '比較無効：' + result.invalidReasons.join(' / ')}。` +
+        (!progress.inOrder ? '推奨順序と異なります。測定した条件はJSONへ保存されています。'
+            : progress.nextCondition ? `次の推奨条件：${displayCondition(progress.nextCondition)}（条件欄で選択）。`
+                : `推奨${progress.sequence.length}回分を取得しました。JSONを保存してください。`);
     refresh();
 }
 function invalidate(reason) {
@@ -69,6 +81,8 @@ function snapshot() {
     const modal = doc.getElementById('practiceModal');
     // 開始準備時だけ取得。測定RAFではcomputedStyleやbboxを取得しない。
     const barStyle = child.getComputedStyle(bar), dotStyle = child.getComputedStyle(dot);
+    const modalStyle = child.getComputedStyle(modal);
+    const content = modal.querySelector('.practice-modal-content');
     return {
         url: child.location.href, userAgent: child.navigator.userAgent,
         hardwareConcurrency: child.navigator.hardwareConcurrency ?? null,
@@ -86,12 +100,19 @@ function snapshot() {
             commit: child.alphaTab?.meta?.commit || null, pinned: '1.8.4 build 34',
             scriptUrl: [...doc.scripts].find(script => /alphatab/i.test(script.src))?.src || null },
         renderGeneration: state.renderGeneration,
+        comparisonPlan: { id: planSelect.value, name: SCROLL_COMPARISON_PLANS[planSelect.value].name,
+            recommendedSequence: SCROLL_COMPARISON_PLANS[planSelect.value].sequence },
+        backgroundStyle: { design: SCROLL_BACKGROUND_DESIGNS[select.value] || null,
+            target: '#practiceModal', backgroundColor: modalStyle.backgroundColor,
+            backgroundImage: modalStyle.backgroundImage, backdropFilter: modalStyle.backdropFilter,
+            webkitBackdropFilter: modalStyle.webkitBackdropFilter || null, opacity: modalStyle.opacity,
+            contentBackgroundColor: content ? child.getComputedStyle(content).backgroundColor : null },
         decoration: { condition: select.value, conditionName: SCROLL_AB_CONDITIONS[select.value].name,
             requested: { backdropDisabled: SCROLL_AB_CONDITIONS[select.value].backdropDisabled,
                 metronomeDisabled: SCROLL_AB_CONDITIONS[select.value].metronomeDisabled },
-            activeDiagnosticClasses: ['scroll-ab-no-decoration', 'scroll-ab-no-backdrop', 'scroll-ab-no-metronome']
+            activeDiagnosticClasses: SCROLL_DIAGNOSTIC_CLASSES
                 .filter(name => modal.classList.contains(name)),
-            beatCheck: {}, modalBackdrop: child.getComputedStyle(modal).backdropFilter,
+            beatCheck: {}, modalBackdrop: modalStyle.backdropFilter,
             barShadow: barStyle.boxShadow, barTransition: barStyle.transition,
             dotShadow: dotStyle.boxShadow, dotTransform: dotStyle.transform, dotTransition: dotStyle.transition },
         sampling: { capacity: 8192, extraRAF: 0, extraPeriodicTimers: 0,
@@ -121,7 +142,7 @@ function armCapture() {
     context = { stage: state.stage, api: state.api, score: state.score, renderGeneration: state.renderGeneration };
     seenBusy = false;
     output.hidden = true;
-    status.textContent = `${select.value}を準備しました。アプリの「練習」を押してください（カウントイン後に自動計測）。`;
+    status.textContent = `${displayCondition(select.value)}を準備しました。アプリの「練習」を押してください（カウントイン後に自動計測）。`;
     document.getElementById('panel').open = false;
     refresh();
 }
@@ -205,7 +226,16 @@ select.addEventListener('change', () => {
     if (capture && !capture.stopped) { capture.stop('condition-changed-before-start'); finishIfStopped(); }
     endDecorationCheck('condition-changed');
     decorations();
-    status.textContent = `${select.value}を選択しました。「次の練習を計測」で準備します。`;
+    status.textContent = `${displayCondition(select.value)}を選択しました。「次の練習を計測」で準備します。`;
+    refresh();
+});
+planSelect.addEventListener('change', () => {
+    if (state?.busy) return;
+    if (capture && !capture.stopped) { capture.stop('comparison-plan-changed-before-start'); finishIfStopped(); }
+    endDecorationCheck('comparison-plan-changed');
+    decorations();
+    select.value = 'A';
+    status.textContent = `${SCROLL_COMPARISON_PLANS[planSelect.value].name}を選択しました。${displayCondition('A')}から計測してください。過去の結果も保持しています。`;
     refresh();
 });
 cancel.addEventListener('click', () => {

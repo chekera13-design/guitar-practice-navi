@@ -4,14 +4,34 @@ export const SCROLL_AB_CONDITIONS = Object.freeze({
     A: Object.freeze({ name: '通常', backdropDisabled: false, metronomeDisabled: false, cssClass: null }),
     B: Object.freeze({ name: '装飾なし', backdropDisabled: true, metronomeDisabled: true, cssClass: 'scroll-ab-no-decoration' }),
     E: Object.freeze({ name: '背景ぼかしのみ無効', backdropDisabled: true, metronomeDisabled: false, cssClass: 'scroll-ab-no-backdrop' }),
-    F: Object.freeze({ name: 'メトロノーム装飾のみ無効', backdropDisabled: false, metronomeDisabled: true, cssClass: 'scroll-ab-no-metronome' })
+    F: Object.freeze({ name: 'メトロノーム装飾のみ無効', backdropDisabled: false, metronomeDisabled: true, cssClass: 'scroll-ab-no-metronome' }),
+    P2: Object.freeze({ name: 'ぼかしなし・不透明背景', backdropDisabled: true, metronomeDisabled: false, cssClass: 'scroll-ab-opaque-background' })
 });
 export const SCROLL_AB_SEQUENCE = Object.freeze(['A', 'E', 'A', 'F', 'A', 'B', 'A']);
+// P0/P1はA/Eの表示名。条件やCSSを重複させない。
+export const SCROLL_BACKGROUND_DESIGNS = Object.freeze({ A: 'P0', E: 'P1', P2: 'P2' });
+export const SCROLL_BACKGROUND_SEQUENCE = Object.freeze(['A', 'E', 'A', 'P2', 'A']);
+export const SCROLL_COMPARISON_PLANS = Object.freeze({
+    background: Object.freeze({ name: '第4段階・背景5回', sequence: SCROLL_BACKGROUND_SEQUENCE }),
+    decoration: Object.freeze({ name: '第3段階・装飾7回', sequence: SCROLL_AB_SEQUENCE })
+});
+export const SCROLL_DIAGNOSTIC_CLASSES = Object.freeze(Object.values(SCROLL_AB_CONDITIONS)
+    .map(condition => condition.cssClass).filter(Boolean));
+
+export function getComparisonProgress(results, planId) {
+    if (!Object.hasOwn(SCROLL_COMPARISON_PLANS, planId)) throw new Error('不明な比較手順です');
+    const sequence = SCROLL_COMPARISON_PLANS[planId].sequence;
+    const valid = results.filter(result => result.validComparison &&
+        (result.metadata?.comparisonPlan?.id || 'decoration') === planId);
+    return { sequence, validCount: valid.length,
+        inOrder: valid.every((result, index) => result.condition === sequence[index]),
+        nextCondition: sequence[valid.length] || null };
+}
 
 export function applyDecorationCondition(modal, condition = 'A') {
-    if (!Object.hasOwn(SCROLL_AB_CONDITIONS, condition)) throw new Error('条件はA/B/E/Fです');
+    if (!Object.hasOwn(SCROLL_AB_CONDITIONS, condition)) throw new Error('条件はA/B/E/F/P2です');
     if (!modal) return;
-    modal.classList.remove('scroll-ab-no-decoration', 'scroll-ab-no-backdrop', 'scroll-ab-no-metronome');
+    modal.classList.remove(...SCROLL_DIAGNOSTIC_CLASSES);
     const cssClass = SCROLL_AB_CONDITIONS[condition].cssClass;
     if (cssClass) modal.classList.add(cssClass);
 }
@@ -94,7 +114,7 @@ const summarize = values => {
 
 export class ScrollABCapture {
     constructor(condition, metadata, notify = () => {}, clock = () => performance.now()) {
-        if (!Object.hasOwn(SCROLL_AB_CONDITIONS, condition)) throw new Error('条件はA/B/E/Fです');
+        if (!Object.hasOwn(SCROLL_AB_CONDITIONS, condition)) throw new Error('条件はA/B/E/F/P2です');
         this.condition = condition;
         this.metadata = metadata;
         this.notify = notify;
@@ -231,7 +251,8 @@ export class ScrollABCapture {
         if (!this.stopped) throw new Error('練習停止後に集計してください');
         return { schema: 'tab-scroll-ab-v1', createdAt: new Date().toISOString(),
             condition: this.condition, conditionName: SCROLL_AB_CONDITIONS[this.condition].name,
-            diagnosticRevision: 'decoration-isolation-v1',
+            diagnosticRevision: 'background-design-v1',
+            backgroundDesign: SCROLL_BACKGROUND_DESIGNS[this.condition] || null,
             validComparison: this.reasons.length === 0 && !!this.endBoundary,
             invalidReasons: [...this.reasons], clockAnomaly: this.clockAnomaly || null,
             startReason: 'audio-elapsed-crosses-3s',
