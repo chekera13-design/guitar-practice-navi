@@ -221,6 +221,34 @@ export function updateHighlightBar(barIndex) {
     }
 }
 
+// 音声時計が粗い端末でも表示だけは連続させる。音声予約・拍・周回は元の時計で判定する。
+function createScrollDisplayClock() {
+    let state = null;
+    return (audioElapsed, now) => {
+        if (!Number.isFinite(audioElapsed) || !Number.isFinite(now) || audioElapsed < 0) {
+            state = null;
+            return audioElapsed;
+        }
+        const delta = state ? (now - state.now) / 1000 : 0;
+        const predicted = state ? state.elapsed + delta : audioElapsed;
+        // 再開・時計の巻き戻り・大きな時間変更では最新の音声時刻へ合わせ直す。
+        if (!state || delta < 0 || delta > 0.25 || audioElapsed < state.audio ||
+            Math.abs(audioElapsed - predicted) > 0.25) {
+            state = { now, audio: audioElapsed, elapsed: audioElapsed };
+            return audioElapsed;
+        }
+        // 小さなずれは約1秒かけて補正し、補正による速度変化を10%以内に抑える。
+        const correction = Math.max(-delta * 0.1, Math.min(delta * 0.1,
+            (audioElapsed - predicted) * Math.min(1, delta)));
+        // 音声時計が停止しても100msを超えて先へ進まず、補正で逆走しない。
+        const elapsed = Math.max(state.elapsed, Math.min(audioElapsed + 0.1, predicted + correction));
+        state.now = now;
+        state.audio = audioElapsed;
+        state.elapsed = elapsed;
+        return elapsed;
+    };
+}
+
 // ★ 演奏開始に合わせて滑らかに自動スクロールするループを開始
 export function startScoreContinuousScroll({
     api,
@@ -245,13 +273,15 @@ export function startScoreContinuousScroll({
     const totalDurationSec = totalBars * beatsPerBar * beatSec;
     const startTime = performance.now();
     const generation = continuousScrollGeneration;
+    const displayClock = createScrollDisplayClock();
 
     function frame(now) {
         if (generation !== continuousScrollGeneration) return;
         continuousScrollFrameId = null;
         if (isActive && !isActive()) return;
         const elapsedSec = getElapsedSeconds ? getElapsedSeconds() : (now - startTime) / 1000;
-        if (elapsedSec < 0) {
+        const displayElapsedSec = getElapsedSeconds ? displayClock(elapsedSec, now) : elapsedSec;
+        if (!Number.isFinite(elapsedSec) || elapsedSec < 0) {
             continuousScrollFrameId = requestAnimationFrame(frame);
             return;
         }
@@ -261,9 +291,14 @@ export function startScoreContinuousScroll({
             ? totalBars * beatsPerBar - 0.000001
             : (elapsedSec % totalDurationSec) / beatSec;
         const currentBarIndex = Math.min(totalBars - 1, Math.floor(currentTotalBeats / beatsPerBar));
-        const progressInBar = Math.max(0, Math.min(1, (currentTotalBeats % beatsPerBar) / beatsPerBar));
+        // 補間するのはスクロール位置だけ。周回を音声より早く始めないよう同じ周内に制限する。
+        const lapStart = Math.floor(elapsedSec / totalDurationSec) * totalDurationSec;
+        const scrollBeats = finished ? currentTotalBeats
+            : Math.max(0, Math.min(totalDurationSec - 0.000001, displayElapsedSec - lapStart)) / beatSec;
+        const scrollBarIndex = Math.min(totalBars - 1, Math.floor(scrollBeats / beatsPerBar));
+        const progressInBar = Math.max(0, Math.min(1, (scrollBeats % beatsPerBar) / beatsPerBar));
 
-        const barRect = cachedBarLayouts[currentBarIndex];
+        const barRect = cachedBarLayouts[scrollBarIndex];
         let currentX = 0;
         if (barRect) {
             currentX = barRect.left + (barRect.width * progressInBar);
