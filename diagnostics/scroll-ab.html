@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>EX5 自動スクロール A/B診断（dev専用）</title>
+    <title>EX5 自動スクロール A/B/E/F診断（dev専用）</title>
     <style>
         html, body { margin: 0; width: 100%; height: 100%; font: 14px system-ui, sans-serif; }
         #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -21,12 +21,12 @@
 <body>
     <iframe id="app" title="通常アプリ（A/B診断対象）" src="../index.html"></iframe>
     <details id="panel" open>
-        <summary>EX5・60 BPM / A → B → A（dev診断）<span id="status" role="status">アプリ読み込み中…</span></summary>
-        <label>条件 <select id="condition"><option value="A">A：通常</option><option value="B">B：指定装飾なし</option></select></label>
+        <summary>EX5・60 BPM / A・B・E・F（dev診断・第3段階）<span id="status" role="status">アプリ読み込み中…</span></summary>
+        <label>条件 <select id="condition"><option value="A">A：通常</option><option value="B">B：装飾なし</option><option value="E">E：背景ぼかしのみ無効</option><option value="F">F：メトロノーム装飾のみ無効</option></select></label>
         <button id="arm" disabled>次の練習を計測</button>
         <button id="cancel" disabled>診断を解除</button>
         <p>① 基礎編EX5を開き、60 BPM・1回・横型にする。② 計測を準備 → アプリの「練習」。</p>
-        <p>カウントイン後3～33秒を測定。完了表示後は練習を停止。条件をA→B→Aの順に変えて3回測定してください。</p>
+        <p>カウントイン後3～33秒を測定。完了表示後は練習を停止。A → E → A → F → A → B → Aの順に7回測定してください。</p>
         <p>測定中は画面の向き・ウィンドウ・倍率・DevTools・タブを変えないでください。</p>
         <p>準備するとパネルを折りたたみます。状態表示は残ります。次の条件選択・結果の出力は見出しを押して開きます。</p>
         <button id="copy" disabled>全結果をコピー</button><button id="save" disabled>JSONを保存</button>

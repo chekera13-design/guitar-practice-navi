@@ -1,4 +1,5 @@
-import { ScrollABCapture } from './scroll-ab-core.js';
+import { ScrollABCapture, SCROLL_AB_CONDITIONS, SCROLL_AB_SEQUENCE,
+    applyDecorationCondition, observeCountInDecorations } from './scroll-ab-core.js';
 import { BASIC_STAGES } from '../js/config.js';
 
 const iframe = document.getElementById('app');
@@ -10,18 +11,21 @@ const output = document.getElementById('output');
 const results = [];
 const expectedStage = BASIC_STAGES.find(stage => stage.id === 5);
 let child, doc, state, capture, context, seenBusy = false;
+let endDecorationCheck = () => {};
 const observedAudio = new WeakSet();
-const className = 'scroll-ab-no-decoration';
 
 // このstyleは診断iframeだけに注入する。色・寸法・配置・ハイライトは変更しない。
 export const decorationOverride = `
-#practiceModal.scroll-ab-no-decoration { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-#practiceModal.scroll-ab-no-decoration #visualMetronomeBox { box-shadow: none !important; transition: none !important; }
-#practiceModal.scroll-ab-no-decoration .beat-dot { box-shadow: none !important; transform: none !important; transition: none !important; }
+#practiceModal.scroll-ab-no-decoration,
+#practiceModal.scroll-ab-no-backdrop { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#practiceModal.scroll-ab-no-decoration #visualMetronomeBox,
+#practiceModal.scroll-ab-no-metronome #visualMetronomeBox { box-shadow: none !important; transition: none !important; }
+#practiceModal.scroll-ab-no-decoration .beat-dot,
+#practiceModal.scroll-ab-no-metronome .beat-dot { box-shadow: none !important; transform: none !important; transition: none !important; }
 `;
 
-function decorations(enabled) {
-    doc?.getElementById('practiceModal')?.classList.toggle(className, enabled);
+function decorations(condition = 'A') {
+    applyDecorationCondition(doc?.getElementById('practiceModal'), condition);
 }
 function refresh() {
     const busy = !!state?.busy;
@@ -33,11 +37,19 @@ function refresh() {
 function finishIfStopped() {
     if (!capture || !capture.stopped || capture.exported || state?.busy) return;
     capture.exported = true;
+    endDecorationCheck('practice-stopped');
     const result = capture.result(); // 並べ替え・JSON化は練習停止後に限定。
     results.push(result);
-    decorations(false);
-    output.value = JSON.stringify({ schema: 'tab-scroll-ab-series-v1', results }, null, 2);
-    status.textContent = `${results.length}件目 ${result.condition}：${result.validComparison ? '30秒計測完了' : '比較無効：' + result.invalidReasons.join(' / ')}。次の条件を選べます。`;
+    decorations();
+    output.value = JSON.stringify({ schema: 'tab-scroll-ab-series-v1',
+        diagnosticRevision: 'decoration-isolation-v1', recommendedSequence: SCROLL_AB_SEQUENCE, results }, null, 2);
+    const validResults = results.filter(item => item.validComparison);
+    const validCount = validResults.length;
+    const inOrder = validResults.every((item, index) => item.condition === SCROLL_AB_SEQUENCE[index]);
+    const nextCondition = SCROLL_AB_SEQUENCE[validCount];
+    status.textContent = `${results.length}件目 ${result.condition}：${result.validComparison ? '30秒計測完了' : '比較無効：' + result.invalidReasons.join(' / ')}。` +
+        (!inOrder ? '推奨順序と異なります。測定した条件はJSONへ保存されています。'
+            : nextCondition ? `次の推奨条件：${nextCondition}（条件欄で選択）。` : '推奨7回分を取得しました。JSONを保存してください。');
     refresh();
 }
 function invalidate(reason) {
@@ -74,7 +86,12 @@ function snapshot() {
             commit: child.alphaTab?.meta?.commit || null, pinned: '1.8.4 build 34',
             scriptUrl: [...doc.scripts].find(script => /alphatab/i.test(script.src))?.src || null },
         renderGeneration: state.renderGeneration,
-        decoration: { modalBackdrop: child.getComputedStyle(modal).backdropFilter,
+        decoration: { condition: select.value, conditionName: SCROLL_AB_CONDITIONS[select.value].name,
+            requested: { backdropDisabled: SCROLL_AB_CONDITIONS[select.value].backdropDisabled,
+                metronomeDisabled: SCROLL_AB_CONDITIONS[select.value].metronomeDisabled },
+            activeDiagnosticClasses: ['scroll-ab-no-decoration', 'scroll-ab-no-backdrop', 'scroll-ab-no-metronome']
+                .filter(name => modal.classList.contains(name)),
+            beatCheck: {}, modalBackdrop: child.getComputedStyle(modal).backdropFilter,
             barShadow: barStyle.boxShadow, barTransition: barStyle.transition,
             dotShadow: dotStyle.boxShadow, dotTransform: dotStyle.transform, dotTransition: dotStyle.transition },
         sampling: { capacity: 8192, extraRAF: 0, extraPeriodicTimers: 0,
@@ -97,8 +114,10 @@ function armCapture() {
         doc.getElementById('standaloneMetroBtn')?.classList.contains('active')) {
         status.textContent = '繰り返し1回にし、単独クリックを停止してください。'; return;
     }
-    decorations(select.value === 'B');
+    endDecorationCheck('new-preparation');
+    decorations(select.value);
     capture = new ScrollABCapture(select.value, snapshot(), phaseChanged, () => child.performance.now());
+    endDecorationCheck = observeCountInDecorations(child, doc, select.value, capture.metadata.decoration.beatCheck);
     context = { stage: state.stage, api: state.api, score: state.score, renderGeneration: state.renderGeneration };
     seenBusy = false;
     output.hidden = true;
@@ -137,11 +156,12 @@ function install() {
                     }
                 } else if (seenBusy || !next.modalOpen) capture.stop('practice-stopped-or-closed');
             }
-            if (!next.modalOpen) decorations(false);
+            if (!next.modalOpen) { endDecorationCheck('modal-closed'); decorations(); }
             finishIfStopped();
             refresh();
         },
         scrollStart(info) {
+            endDecorationCheck('scroll-start-before-measurement');
             if (!capture || capture.stopped) return null;
             if (info.api !== context.api || info.score !== context.score) invalidate('api-score-replaced');
             const probe = capture.start(info);
@@ -158,7 +178,9 @@ function install() {
                 sampleDimensions: { get: () => probe.sampleDimensions } });
             return safe;
         },
-        scrollStop(reason) { if (capture?.started && !capture.stopped) capture.stop(reason); },
+        scrollStop(reason) {
+            if (capture?.started && !capture.stopped) { endDecorationCheck(reason); capture.stop(reason); }
+        },
         fault(error) { invalidate('diagnostic-hook-error:' + error); }
     };
     for (const event of ['resize', 'orientationchange', 'pagehide']) {
@@ -181,14 +203,16 @@ arm.addEventListener('click', armCapture);
 select.addEventListener('change', () => {
     if (state?.busy) return;
     if (capture && !capture.stopped) { capture.stop('condition-changed-before-start'); finishIfStopped(); }
-    decorations(false);
+    endDecorationCheck('condition-changed');
+    decorations();
     status.textContent = `${select.value}を選択しました。「次の練習を計測」で準備します。`;
     refresh();
 });
 cancel.addEventListener('click', () => {
     if (state?.busy) return;
     capture?.stop('diagnostic-cancelled');
-    finishIfStopped(); decorations(false); refresh();
+    endDecorationCheck('diagnostic-cancelled');
+    finishIfStopped(); decorations(); refresh();
 });
 document.getElementById('show').addEventListener('click', () => { output.hidden = !output.hidden; });
 document.getElementById('copy').addEventListener('click', async () => {
