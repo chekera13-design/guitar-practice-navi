@@ -133,6 +133,17 @@ function getMasterBarBounds(lookup, barIndex) {
     return null;
 }
 
+// 独立したdev診断ページが登録した場合だけ通知する。通常入口では未登録。
+export function notifyScrollDiagnostic(method, payload) {
+    const diagnostic = typeof window === "undefined" ? null : window.__TAB_SCROLL_AB_DIAGNOSTIC__;
+    if (!diagnostic) return null;
+    try { return diagnostic[method]?.(payload); }
+    catch (error) {
+        try { diagnostic.fault?.(String(error)); } catch { /* 診断失敗で練習を止めない */ }
+        return null;
+    }
+}
+
 // 全小節のレイアウト座標を一括構築・キャッシュ
 export function buildScoreBarLayouts(api, totalBars) {
     cachedBarLayouts = [];
@@ -274,13 +285,22 @@ export function startScoreContinuousScroll({
     const startTime = performance.now();
     const generation = continuousScrollGeneration;
     const displayClock = createScrollDisplayClock();
+    const diagnosticProbe = notifyScrollDiagnostic("scrollStart", {
+        api, score: api?.score, wrapper, totalBars, beatsPerBar, beatSec, repeatCount,
+        restoreImmediately, generation, audioClock: !!getElapsedSeconds
+    });
 
     function frame(now) {
         if (generation !== continuousScrollGeneration) return;
         continuousScrollFrameId = null;
-        if (isActive && !isActive()) return;
+        const diagnosticStart = diagnosticProbe ? performance.now() : 0;
+        if (isActive && !isActive()) {
+            notifyScrollDiagnostic("scrollStop", "inactive");
+            return;
+        }
         const elapsedSec = getElapsedSeconds ? getElapsedSeconds() : (now - startTime) / 1000;
         const displayElapsedSec = getElapsedSeconds ? displayClock(elapsedSec, now) : elapsedSec;
+        diagnosticProbe?.beginFrame(now, elapsedSec, displayElapsedSec);
         if (!Number.isFinite(elapsedSec) || elapsedSec < 0) {
             continuousScrollFrameId = requestAnimationFrame(frame);
             return;
@@ -305,12 +325,16 @@ export function startScoreContinuousScroll({
             updateHighlightBar(currentBarIndex);
         }
 
+        const diagnosticDimensionStart = diagnosticProbe?.sampleDimensions ? performance.now() : 0;
         const maxScroll = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
         const maxTargetForScoreEnd = Math.max(0, (cachedScoreEndX || wrapper.scrollWidth) - wrapper.clientWidth + 30);
         const desiredTarget = currentX - (wrapper.clientWidth * 0.28);
         const targetScrollLeft = Math.max(0, Math.min(desiredTarget, maxTargetForScoreEnd, maxScroll));
+        if (diagnosticProbe?.measuring) diagnosticProbe.afterDimensions(
+            diagnosticDimensionStart, cachedScoreEndX ? 1 : 2, 3);
 
         wrapper.scrollLeft = targetScrollLeft;
+        if (diagnosticProbe?.measuring) diagnosticProbe.afterWrite(wrapper.scrollLeft);
 
         if (onProgress) {
             onProgress(currentBarIndex, Math.floor(currentTotalBeats % beatsPerBar) + 1);
@@ -321,6 +345,7 @@ export function startScoreContinuousScroll({
         } else {
             continuousScrollFrameId = null;
         }
+        if (diagnosticProbe?.measuring) diagnosticProbe.endFrame(performance.now() - diagnosticStart);
     }
 
     if (restoreImmediately) frame(startTime);
@@ -329,6 +354,7 @@ export function startScoreContinuousScroll({
 
 // 連続スクロール停止
 export function stopScoreContinuousScroll() {
+    notifyScrollDiagnostic("scrollStop", "scroll-stopped-or-redrawn");
     continuousScrollGeneration++;
     if (continuousScrollFrameId !== null) {
         cancelAnimationFrame(continuousScrollFrameId);

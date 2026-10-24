@@ -20,7 +20,7 @@ import {
     updateVisualMetronome, setPlayFinishedVisual, resetVisualMetronome,
     buildScoreBarLayouts, updateHighlightBar,
     startScoreContinuousScroll, stopScoreContinuousScroll,
-    resetScoreFocusState, updateTunerUI, resetTunerSmoothing
+    resetScoreFocusState, updateTunerUI, resetTunerSmoothing, notifyScrollDiagnostic
 } from "./ui.js";
 
 // --- 状態管理 ---
@@ -1591,6 +1591,15 @@ function updatePracticeControls() {
     }
     if (standaloneMetroBtn) standaloneMetroBtn.disabled = busy;
     if (retryScoreBtn) retryScoreBtn.disabled = busy;
+    // dev診断の登録がなければ、状態オブジェクトも作らない。
+    if (typeof window !== "undefined" && window.__TAB_SCROLL_AB_DIAGNOSTIC__) {
+        notifyScrollDiagnostic("practiceState", {
+            stage: currentStage, api, score: api?.score, renderGeneration: scoreRenderGeneration,
+            ready: isScoreReadyForPractice(), busy, mode,
+            modalOpen: !practiceModal.classList.contains("hidden"),
+            bpm: practiceSession?.bpm ?? currentBpm, session: practiceSession, audio: audioContext
+        });
+    }
 }
 
 function clearRecordingResult() {
