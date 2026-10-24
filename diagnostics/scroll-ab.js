@@ -19,6 +19,7 @@ const observedAudio = new WeakSet();
 // このstyleは診断iframeだけに注入する。P2の背景色以外は既存の色を保つ。
 // #practiceModalは背面レイヤー。白い.practice-modal-contentには適用しない。
 export const decorationOverride = `
+#practiceModal { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 #practiceModal.scroll-ab-no-decoration,
 #practiceModal.scroll-ab-no-backdrop,
 #practiceModal.scroll-ab-opaque-background { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
