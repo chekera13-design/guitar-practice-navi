@@ -14,6 +14,8 @@ const video = read('js/guideVideo.js').replace(/export /g, '');
 const genres = read('js/practiceGenres.js').replace(/^export /gm, '');
 const createGraceNotation = vm.runInNewContext(read('js/graceNotation.js').replace(/^export /gm, '') + '\ncreateGraceNotation;');
 
+const createCapoPositionNotation = vm.runInNewContext(read('js/capoPositionNotation.js').replace(/^export /gm, '') + '\ncreateCapoPositionNotation;');
+
 function element() {
     const classes = new Set();
     return { dataset: {}, style: {}, value: '40', innerText: '', innerHTML: '', listeners: {},
@@ -66,7 +68,7 @@ function boot(options = {}) {
             body: { style: {} }, addEventListener() {} },
         window: { addEventListener() {} }, console,
         setTimeout(fn) { timers.set(++nextTimer, fn); return nextTimer; }, clearTimeout(id) { timers.delete(id); },
-        VerticalTabController: class {}, createGraceNotation,
+        VerticalTabController: class {}, createGraceNotation, createCapoPositionNotation,
     };
     Object.defineProperty(context, 'localStorage', { get() {
         if (options.accessError) throw options.accessError;

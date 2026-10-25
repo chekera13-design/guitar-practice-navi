@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通常タイ終点の括弧付き数字・独立ラボ</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#182438;font:15px/1.65 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:18px}h1{font-size:23px;margin:0 0 8px}h2{font-size:18px;margin:0 0 10px}p{margin:6px 0}.panel{background:white;border:1px solid #ccd6e4;border-radius:10px;padding:16px;margin:14px 0}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end}label{display:grid;gap:4px;font-size:13px}select,button{font:inherit;min-height:42px;padding:6px 10px;border:1px solid #8497b2;border-radius:6px;background:white;color:#182438}button{cursor:pointer}button:disabled{opacity:.5}button:focus-visible,select:focus-visible{outline:3px solid #2563eb;outline-offset:2px}#status{white-space:pre-wrap}#modeNote{color:#374151}.warning{color:#9f3011}.score-scroll{overflow:auto;background:white;min-height:220px;border:1px solid #c7d1e1}.score-host{width:100%;min-height:210px}.vertical-shell{width:min(390px,100%);margin:auto}.vertical-controls{display:flex;gap:8px;align-items:center;justify-content:space-between}.vertical-tab-viewport{min-height:220px;padding:12px 0}.vertical-tab-card{background:white;border:1px solid #7d9ccb;border-radius:6px;padding:8px;margin:0}.vertical-tab-card:not(.is-current){display:none}.vertical-tab-card svg{display:block;width:100%;height:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace}#zoom{overflow:auto;background:white;border:1px solid #c7d1e1;min-height:130px}#zoom svg{display:block;width:100%;height:180px}.small{font-size:13px;color:#475569}a{color:#174bba}@media(max-width:600px){main{padding:10px}h1{font-size:19px}.panel{padding:10px}.controls>label{max-width:100%}select{max-width:100%}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.js"></script>
+</head>
+<body><main>
+<h1>通常タイ終点の括弧付きフレット番号</h1>
+<p>alphaTab 1.8.4 build 34・独立した表示実験。本番統合・音声再生は行いません。</p>
+<section class="panel controls" aria-label="比較条件">
+<label>譜面<select id="scoreFile"><option value="../scores/solo/ex03.mxl">ソロギター EX03（主対象）</option><option value="../tests/fixtures/grace-test2.musicxml">test2（参考・対象外パターン）</option><option value="../tests/fixtures/grace-test3.musicxml">test3（参考・対象外パターン）</option><option value="../scores/solo/test5.musicxml">test5（参考・対象外パターン）</option></select></label>
+<label>比較<select id="condition"><option value="A">A：alphaTab標準・無補正</option><option value="B">B：数字だけ追加（失敗例・採用不可）</option><option value="C">C：弦ライン・タイ終端も調整（実験）</option></select></label>
+<label>描画スケール<select id="scale"><option value="0.8">0.8</option><option value="1" selected>1.0</option><option value="1.25">1.25</option></select></label>
+<label>1 SVGあたりの小節数<select id="partialBars"><option value="10">10（標準）</option><option value="2">2（複数SVGの確認）</option></select></label>
+<button id="redraw" type="button">再描画</button><button id="copy" type="button" disabled>結果をコピー</button>
+</section>
+<section class="panel"><div id="status" role="status">読み込み中</div><p id="modeNote"></p><p class="small">Cは曲線とモデル端点を一意に照合できる場合だけ表示します。見送り理由は解析結果に記録します。</p></section>
+<section class="panel"><h2>横型TAB</h2><div id="horizontal" class="score-scroll"><div id="score" class="score-host"></div></div></section>
+<section class="panel"><h2>選択小節の縦型カード</h2><div id="vertical" class="vertical-shell"><div class="vertical-controls"><button type="button" data-action="previous">← 前の小節</button><span class="vertical-bar-indicator"></span><button type="button" data-action="next">次の小節 →</button></div><p class="vertical-tab-message" role="status"></p><div class="vertical-tab-viewport"><div class="vertical-tab-cards"></div></div></div><p class="small">本番のVerticalTabControllerを読み取り利用。X境界・viewBox・clipPathは補助表示前に確定し、その値を維持します。</p></section>
+<section class="panel"><h2>選択小節のタイ終点付近・拡大</h2><div id="zoom"></div><p class="small">拡大図専用の切り抜きです。元SVGと縦型カードの表示範囲は変更しません。</p></section>
+<details class="panel"><summary>解析結果・見送り理由</summary><pre id="report"></pre></details>
+<p><a href="tied-fret-lab-README.md">検証の範囲と手順</a> / <a href="../index.html">通常アプリへ戻る</a></p>
+<script type="module" src="tied-fret-lab.js?v=1"></script>
+</main></body></html>

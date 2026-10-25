@@ -8,6 +8,7 @@ import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
 import { createGuideVideo } from "./guideVideo.js";
 import { createGraceNotation } from "./graceNotation.js";
+import { createCapoPositionNotation } from "./capoPositionNotation.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -64,6 +65,7 @@ let scoreRenderStartedAt = 0;
 let scoreLoadState = "idle"; // idle / loading / ready / error
 let preparedScore = null;
 const graceNotation = createGraceNotation();
+const capoPositionNotation = createCapoPositionNotation();
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
@@ -644,6 +646,7 @@ function handleWatermark() {
 let api = null;
 function destroyAlphaTabApi() {
     graceNotation.clear();
+    updateCapoPosition("clear");
     const previousApi = api;
     api = null;
     scorePartialState = null;
@@ -653,6 +656,12 @@ function destroyAlphaTabApi() {
         console.warn("alphaTab destroy error:", e);
     }
     document.getElementById("alphaTab")?.replaceChildren();
+}
+
+// カポは任意の表示補助。取得・照合の失敗で既存の譜面readyを妨げない。
+function updateCapoPosition(method, ...args) {
+    try { return capoPositionNotation[method](...args); }
+    catch { return null; }
 }
 
 // alphaTabの描画1回ごとのpartial情報。SVGのローカル座標は横追従へ渡さない。
@@ -730,7 +739,10 @@ function isScoreReadyForPractice() {
 }
 
 function setScoreLoadState(state) {
-    if (state === "idle" || state === "error") graceNotation.clear();
+    if (state === "idle" || state === "error") {
+        graceNotation.clear();
+        updateCapoPosition("clear");
+    }
     scoreLoadState = state;
     if (state !== "ready") preparedScore = null;
     // 音声・マイク許可待ちの途中で譜面が無効になった場合も開始を取り消す。
@@ -834,11 +846,13 @@ function initAlphaTabIfNeeded() {
             const generation = scoreRenderGeneration;
             const stage = currentStage;
             const graceToken = graceNotation.begin({ generation, stage, api: apiInstance });
+            const capoToken = updateCapoPosition("begin", { generation, stage, api: apiInstance });
             const isCurrentApi = () => api === apiInstance && generation === scoreRenderGeneration
                 && stage === currentStage && !practiceModal.classList.contains("hidden");
 
             apiInstance.renderStarted.on(() => {
                 if (!isCurrentApi()) return;
+                updateCapoPosition("restore", capoToken, apiInstance);
                 scorePartialState = { api: apiInstance, generation, records: new Map(), collecting: true,
                     validatedPartials: null };
                 // 同じ譜面の再描画は練習セッションや音声初期化待ちを取り消さない。
@@ -867,6 +881,7 @@ function initAlphaTabIfNeeded() {
                 // scoreLoadedはrendererへモデルが渡される前に通知される。
                 applySlashChordNames(score);
                 graceNotation.bindModel(graceToken, score);
+                updateCapoPosition("bindModel", capoToken, score);
                 if (scoreRenderInProgress) scoreLoadConfirmed = true;
                 if (score && score.masterBars && score.masterBars.length > 0) {
                     const bars = score.masterBars.length;
@@ -900,6 +915,8 @@ function initAlphaTabIfNeeded() {
                     // X境界・既存crop確定後に装飾だけを追加する。横型の初回もカード不要。
                     graceNotation.addSymbols(graceToken, apiInstance, partials, verticalTabController?.track);
                     graceNotation.positionLabels(graceToken, apiInstance, partials, verticalTabController?.track);
+                    // X境界・cropと既存の奏法配置が確定した後、カポ文字だけを整える。
+                    updateCapoPosition("annotate", capoToken, apiInstance, partials, verticalTabController?.track);
                     if (shouldUseVerticalTabLayout() && stage.file && !verticalTabController?.hasCards) {
                         throw new Error("縦型TABがありません");
                     }
@@ -967,6 +984,7 @@ async function renderTab(stage = currentStage) {
     }
     const renderApi = api;
     const graceToken = graceNotation.tokenFor({ generation: renderGeneration, stage, api: renderApi });
+    const capoToken = updateCapoPosition("tokenFor", { generation: renderGeneration, stage, api: renderApi });
     const isCurrentRender = () => api === renderApi
         && scoreRenderGeneration === renderGeneration
         && currentStage === stage
@@ -1011,6 +1029,7 @@ async function renderTab(stage = currentStage) {
             if (!isCurrentRender()) return;
             if (xmlText) {
                 graceNotation.capture(graceToken, xmlText); // 原本を読むだけ。既存の補正XMLは変えない。
+                updateCapoPosition("capture", capoToken, xmlText);
                 const fixedXml = fixMuseScoreXml(xmlText, graceToken);
                 const binaryData = new TextEncoder().encode(fixedXml);
                 const loadStarted = renderApi.load(binaryData);
@@ -1163,6 +1182,7 @@ function openPracticeModal(stage) {
     activeScoreRenderGeneration = 0;
     const openGeneration = ++scoreRenderGeneration;
     graceNotation.clear();
+    updateCapoPosition("clear");
     setScoreLoadState("loading");
 
     unlockAudioContext().catch(() => {});
@@ -1276,6 +1296,8 @@ function updatePracticeScoreLayout() {
         try {
             const partials = getCompleteScorePartials(container, api, preparedScore.bars);
             const graceToken = graceNotation.tokenFor({ generation: scoreRenderGeneration, stage: currentStage, api });
+            const capoToken = updateCapoPosition("tokenFor", { generation: scoreRenderGeneration, stage: currentStage, api });
+            updateCapoPosition("restore", capoToken, api); // 元注釈からカードを生成し、同じC方式で再適用する。
             graceNotation.restoreLabels(graceToken, api); // 文字移動をX境界解析へ渡さない。
             graceNotation.removeSymbols(graceToken, api); // 回転時も境界解析へ独自記号を渡さない。
             verticalTabController.createCardsFromRenderedPartials(partials, preparedScore.bars);
@@ -1283,6 +1305,7 @@ function updatePracticeScoreLayout() {
                 stage: currentStage, api }), api, verticalTabController.track);
             graceNotation.addSymbols(graceToken, api, partials, verticalTabController.track);
             graceNotation.positionLabels(graceToken, api, partials, verticalTabController.track);
+            updateCapoPosition("annotate", capoToken, api, partials, verticalTabController.track);
             if (!verticalTabController.hasCards || verticalTabController.barCount !== preparedScore.bars) {
                 throw new Error("縦型TABの準備が完了していません");
             }
