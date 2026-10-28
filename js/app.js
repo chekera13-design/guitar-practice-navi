@@ -3,12 +3,25 @@
 // ==========================================
 
 import { TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES } from "./config.js";
+import { CHROMATIC_STAGES } from "./config.js";
+import { initChromaticPatternPicker } from "./chromaticPatternPicker.js";
+import { CHORD_STAGES, CHORD_FORMS } from "./config.js";
+import { initChordPractice } from "./chordPractice.js";
+import { SCALE_STAGES } from "./config.js";
+import { getScaleVariant } from "./config/scales.js";
+import { initScalePractice } from "./scalePractice.js";
+import { CHORD_TONE_STAGES } from "./config.js";
+import { getChordToneVariant } from "./config/chordTones.js";
+import { initChordTonePractice } from "./chordTonePractice.js";
+import { createPracticeProgress } from "./practiceProgress.js";
 import { initPracticeGenres } from "./practiceGenres.js";
 import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
 import { createGuideVideo } from "./guideVideo.js";
 import { createGraceNotation } from "./graceNotation.js";
 import { createCapoPositionNotation } from "./capoPositionNotation.js";
+import { syncMetronomeBeatDisplay } from "./metronomeBeatDisplay.js";
+import { createTupletScoreViewport } from "./tupletScoreViewport.js";
 import { 
     unlockAudioContext, setupMicrophoneStream, stopMicrophoneStream, scheduleTick,
     autoCorrelate, midiToFrequency,
@@ -66,6 +79,7 @@ let scoreLoadState = "idle"; // idle / loading / ready / error
 let preparedScore = null;
 const graceNotation = createGraceNotation();
 const capoPositionNotation = createCapoPositionNotation();
+const tupletScoreViewport = createTupletScoreViewport(document);
 
 // スラー＆記号（H/P/S/C等）の検出データ
 let detectedSlurPairs = [];
@@ -84,6 +98,14 @@ let completedTutorialStages = new Set();
 const exerciseGrid = document.getElementById("exerciseGrid");
 const tutorialExerciseGrid = document.getElementById("tutorialExerciseGrid");
 const soloExerciseGrid = document.getElementById("soloExerciseGrid");
+const chromaticExerciseGrid = document.getElementById("chromaticExerciseGrid");
+let chromaticPatternPicker = null;
+const chordExerciseGrid = document.getElementById("chordExerciseGrid");
+let chordPractice = null;
+const scaleExerciseGrid = document.getElementById("scaleExerciseGrid");
+let scalePractice = null;
+const chordToneExerciseGrid = document.getElementById("chordToneExerciseGrid");
+let chordTonePractice = null;
 const practiceModal = document.getElementById("practiceModal");
 const closePracticeModalBtn = document.getElementById("closePracticeModalBtn");
 const modalStageBadge = document.getElementById("modalStageBadge");
@@ -171,6 +193,16 @@ async function toggleStandaloneMetronome() {
     }
 }
 
+// 長い中断後は過去拍をまとめて飛ばし、元の拍位置・強拍を維持する。
+function skipMissedStandaloneBeats(now, beatSec) {
+    if (standaloneNextTickTime >= now - 0.05) return;
+    // 拍の境界ちょうどで浮動小数点誤差により次の1拍まで飛ばさない。
+    const missedBeats = Math.ceil((now - standaloneNextTickTime) / beatSec - 1e-8);
+    standaloneNextTickTime += missedBeats * beatSec;
+    standaloneBeat += missedBeats;
+    standaloneIntervalStartTime = standaloneNextTickTime - beatSec;
+}
+
 async function startStandaloneMetronome() {
     if (isStandaloneMetroPlaying || isStartingStandaloneMetro
         || isPracticing || isStartingPractice || isFinalizingRecording
@@ -215,24 +247,29 @@ async function startStandaloneMetronome() {
         function scheduler() {
             if (!isStandaloneMetroPlaying || !isCurrentStart()) return;
             standaloneMetroTimerId = null;
+            const beatSec = 60 / currentBpm;
+            skipMissedStandaloneBeats(audioContext.currentTime, beatSec);
 
             while (standaloneNextTickTime < audioContext.currentTime + 0.1) {
                 const beatInBar = (standaloneBeat % beatsPerBar) + 1;
                 const isAccent = (beatInBar === 1);
 
-                scheduleTick(standaloneNextTickTime, isAccent);
+                const tickTime = standaloneNextTickTime;
+                scheduleTick(tickTime, isAccent);
 
-                const delayMs = Math.max(0, (standaloneNextTickTime - audioContext.currentTime) * 1000);
+                const delayMs = Math.max(0, (tickTime - audioContext.currentTime) * 1000);
                 const displayTimerId = setTimeout(() => {
                     displayTimerIds.delete(displayTimerId);
-                    if (isStandaloneMetroPlaying && isCurrentStart()) {
+                    // 中断前に予約済みだった古い表示も、復帰時にまとめて点滅させない。
+                    if (isStandaloneMetroPlaying && isCurrentStart()
+                        && audioContext.currentTime - tickTime <= 0.05) {
                         updateVisualMetronome(beatInBar, isAccent, "METRO", "metro-solo");
                     }
                 }, delayMs);
                 displayTimerIds.add(displayTimerId);
 
                 standaloneIntervalStartTime = standaloneNextTickTime;
-                standaloneNextTickTime += 60 / currentBpm;
+                standaloneNextTickTime += beatSec;
                 standaloneBeat++;
             }
 
@@ -252,6 +289,8 @@ function retimeStandaloneMetronome() {
     const interval = standaloneNextTickTime - standaloneIntervalStartTime;
     if (!Number.isFinite(interval) || interval <= 0) return;
     const now = audioContext.currentTime;
+    // 復帰直後に操作された場合も、変更前の拍長で過去拍と位相を先に整理する。
+    skipMissedStandaloneBeats(now, interval);
     const beatSec = 60 / currentBpm;
     // 予約済みの直近クリックは残す。未予約の次拍だけ残りの拍割合を維持して移す。
     const progress = Math.min(1, Math.max(0, (now - standaloneIntervalStartTime) / interval));
@@ -647,6 +686,7 @@ let api = null;
 function destroyAlphaTabApi() {
     graceNotation.clear();
     updateCapoPosition("clear");
+    updateTupletScoreViewport("clear");
     const previousApi = api;
     api = null;
     scorePartialState = null;
@@ -661,6 +701,18 @@ function destroyAlphaTabApi() {
 // カポは任意の表示補助。取得・照合の失敗で既存の譜面readyを妨げない。
 function updateCapoPosition(method, ...args) {
     try { return capoPositionNotation[method](...args); }
+    catch { return null; }
+}
+
+// Height is optional display assistance. A failed measurement must not block score readiness.
+function updateTupletScoreViewport(method, ...args) {
+    try {
+        const result = tupletScoreViewport[method](...args);
+        // Reuse the existing modal scroll alignment after its score frame grows.
+        // This is a render/layout operation, not a new RAF or an audio callback.
+        if (method === "apply" && result?.applied) adjustPracticeModalInitialPosition();
+        return result;
+    }
     catch { return null; }
 }
 
@@ -739,6 +791,7 @@ function isScoreReadyForPractice() {
 }
 
 function setScoreLoadState(state) {
+    if (state !== "ready") updateTupletScoreViewport("clear");
     if (state === "idle" || state === "error") {
         graceNotation.clear();
         updateCapoPosition("clear");
@@ -847,11 +900,13 @@ function initAlphaTabIfNeeded() {
             const stage = currentStage;
             const graceToken = graceNotation.begin({ generation, stage, api: apiInstance });
             const capoToken = updateCapoPosition("begin", { generation, stage, api: apiInstance });
+            const tupletToken = updateTupletScoreViewport("begin", { generation, stage, api: apiInstance });
             const isCurrentApi = () => api === apiInstance && generation === scoreRenderGeneration
                 && stage === currentStage && !practiceModal.classList.contains("hidden");
 
             apiInstance.renderStarted.on(() => {
                 if (!isCurrentApi()) return;
+                updateTupletScoreViewport("reset", tupletToken);
                 updateCapoPosition("restore", capoToken, apiInstance);
                 scorePartialState = { api: apiInstance, generation, records: new Map(), collecting: true,
                     validatedPartials: null };
@@ -917,6 +972,9 @@ function initAlphaTabIfNeeded() {
                     graceNotation.positionLabels(graceToken, apiInstance, partials, verticalTabController?.track);
                     // X境界・cropと既存の奏法配置が確定した後、カポ文字だけを整える。
                     updateCapoPosition("annotate", capoToken, apiInstance, partials, verticalTabController?.track);
+                    updateTupletScoreViewport("apply", tupletToken, {
+                        score: apiInstance.score, render: scorePartialState, vertical: shouldUseVerticalTabLayout()
+                    });
                     if (shouldUseVerticalTabLayout() && stage.file && !verticalTabController?.hasCards) {
                         throw new Error("縦型TABがありません");
                     }
@@ -1111,6 +1169,18 @@ function renderExerciseCards() {
     renderStageCards(tutorialExerciseGrid, TUTORIAL_STAGES, "tutorial");
     renderStageCards(exerciseGrid, BASIC_STAGES, "basic");
     renderStageCards(soloExerciseGrid, SOLO_STAGES, "solo");
+    chromaticPatternPicker?.destroy();
+    chromaticPatternPicker = initChromaticPatternPicker(chromaticExerciseGrid, CHROMATIC_STAGES,
+        stage => openPracticeModal(stage), practiceProgress);
+    chordPractice?.destroy();
+    chordPractice = initChordPractice(chordExerciseGrid, CHORD_STAGES, CHORD_FORMS,
+        stage => openPracticeModal(stage), practiceProgress);
+    scalePractice?.destroy();
+    scalePractice = initScalePractice(scaleExerciseGrid, SCALE_STAGES,
+        stage => openPracticeModal(stage), practiceProgress);
+    chordTonePractice?.destroy();
+    chordTonePractice = initChordTonePractice(chordToneExerciseGrid, CHORD_TONE_STAGES,
+        stage => openPracticeModal(stage), practiceProgress);
     updateTutorialCompletionDisplay();
 }
 
@@ -1279,6 +1349,13 @@ function updatePracticeScoreLayout() {
     const useVertical = Boolean(currentStage?.file && verticalTabWrapper && shouldUseVerticalTabLayout());
     practiceModal.classList.toggle("vertical-tab-active", useVertical);
     if (verticalTabWrapper) verticalTabWrapper.hidden = !useVertical;
+
+    // Reuse a completed SVG on height-only changes; width redraws get a new render identity.
+    if (isScoreReadyForPractice()) {
+        updateTupletScoreViewport("apply", { generation: scoreRenderGeneration, stage: currentStage, api }, {
+            score: api.score, render: scorePartialState, vertical: useVertical
+        });
+    }
 
     if (!useVertical) return;
     if (!verticalTabController) {
@@ -1588,6 +1665,7 @@ function changePracticeTempo(delta) {
 }
 
 function updatePracticeControls() {
+    syncMetronomeBeatDisplay(currentStage, practiceSession, document);
     updateTempoControls();
     const mode = practiceSession?.mode || pendingPracticeMode;
     const busy = isPracticing || isStartingPractice || isFinalizingRecording;
@@ -1716,6 +1794,7 @@ async function startPractice(mode = "practice") {
             startTime, finishTime: startTime + totalSteps * beatSec + (mode === "record" ? 0.1 : 0),
             nextBeat: 0, lastStep: -1, scrollStarted: false, firstLapCompleted: false
         };
+        practiceProgress.beginSession(practiceSession);
         buildScoreBarLayouts(api, practiceBars);
         isPracticing = true;
         isStartingPractice = false;
@@ -1763,6 +1842,7 @@ function runPracticeScheduler(session) {
             handleBeatStep(step, session);
         }
         if (practiceSession !== session) return;
+        practiceProgress.recordCompletedLaps(session, now);
         if (session.mode === "record" && step >= session.totalSteps - 1) {
             stopRecording();
             visualMetronomeBox.classList.remove("recording");
@@ -1841,6 +1921,10 @@ function handleBeatStep(step, session) {
 }
 
 function stopPractice() {
+    // 最終観測と停止操作の間に完了した周回だけを回収。同じ周回は再加算しない。
+    if (isPracticing && practiceSession?.generation === practiceStartGeneration) {
+        practiceProgress.recordCompletedLaps(practiceSession, audioContext.currentTime);
+    }
     practiceStartGeneration++;
     isPracticing = false;
     isStartingPractice = false;
@@ -2184,30 +2268,37 @@ function tunePitchLoop(session = tunerSession) {
 // ==========================================
 // ★ 運営情報モーダル ★
 // ==========================================
+const contactFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdgux5-18JyWXd4balvcrvm2F_bMoCkfRXrYoHWeN1Ku8j_Xg/viewform?usp=publish-editor";
+const officialYoutubeUrl = "https://www.youtube.com/channel/UC8621xM8_QL6DzDRYIqcPOA";
+
 if (openAboutBtn) {
     openAboutBtn.addEventListener("click", () => {
         infoModalTitle.innerText = "運営者情報";
         infoModalBody.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
-                    「ギター練習ドットコム」をご利用いただきありがとうございます。当アプリは、ギタリストの基礎トレーニングをブラウザ上で快適にサポートするために開発・運営されています。
+                    ギター練習.comは、ギターの練習をサポートする無料のWebアプリです。<br>
+                    YouTubeでのギター演奏動画とあわせて、初心者から楽しめる練習教材を提供しています。
                 </p>
                 <table style="width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px;">
                     <tr style="border-bottom: 1px solid #e2e8f0;">
-                        <th style="padding: 10px 6px; text-align: left; color: #475569; width: 30%; font-weight: 700;">運営元</th>
-                        <td style="padding: 10px 6px; color: #1e293b;">ギター練習ドットコム 運営事務局</td>
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; width: 30%; font-weight: 700;">サイト名</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">ギター練習.com</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
-                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">主な活動</th>
-                        <td style="padding: 10px 6px; color: #1e293b;">Webオーディオ技術を活用した音楽学習支援ツールの開発、およびメンテナンス</td>
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">運営</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">Guitar Practice Channel</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
-                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">公式URL</th>
-                        <td style="padding: 10px 6px; color: #2563eb; word-break: break-all;">（※アプリを公開しているURLをここに記載）</td>
+                        <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">公式YouTubeチャンネル</th>
+                        <td style="padding: 10px 6px; color: #1e293b;">
+                            <a href="${officialYoutubeUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb;">Guitar Practice Channel</a>
+                        </td>
                     </tr>
+                    <!-- 正式サイトURLは確定後に追加 -->
                     <tr>
                         <th style="padding: 10px 6px; text-align: left; color: #475569; font-weight: 700;">お問い合わせ</th>
-                        <td style="padding: 10px 6px; color: #1e293b;">フッターの「お問い合わせ」リンクよりお寄せください。</td>
+                        <td style="padding: 10px 6px; color: #1e293b;">お問い合わせは、<a href="${contactFormUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb;">専用フォーム</a>からお願いいたします。</td>
                     </tr>
                 </table>
             </div>
@@ -2222,19 +2313,55 @@ if (openPrivacyBtn) {
         infoModalBody.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
                 <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">1. 音声データの取り扱いについて</h4>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">1. このサービスについて</h4>
                     <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
-                        当アプリ内の「録音練習」および「簡易チューナー」で使用されるマイク入力音声は、**すべてお客様のご利用端末（ブラウザ内部）でのみリアルタイム処理**されます。音声データが外部のサーバーに送信・蓄積されることは一切ありません。
+                        ギター練習.comは、基本機能をユーザー登録なしで使える無料のギター練習Webアプリです。録音練習とチューナーではマイクの許可が必要です。教材や関連情報の表示に外部サービスを利用しています。
                     </p>
                 </div>
                 <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">2. ローカルストレージの利用</h4>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">2. マイク・チューナー</h4>
                     <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
-                        当アプリでは、お客様が設定されたメトロノームの音量設定などを保持するため、ブラウザのLocalStorage機能を使用しています。このデータも端末内にのみ保存されます。
+                        マイクは演奏の録音とチューナーの音程確認に使用します。録音練習の開始時やチューナーの弦を選んだとき、必要に応じてブラウザが許可を求めます。許可しない場合は録音・チューナーを使えませんが、譜面閲覧・通常練習・メトロノームは利用できます。<br>取得した音声はブラウザ内で処理します。本アプリには、マイク音声や録音を運営側サーバーへアップロードする処理はありません。
                     </p>
                 </div>
                 <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">3. 免責事項</h4>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">3. 録音データの一時保持と破棄</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        録音はブラウザのメモリ内に一時保持し、練習後の確認・再生に使います。自動で端末へ永続保存する機能はありません。<br>練習画面を閉じる、教材を切り替える、次の練習・録音を開始する、録音結果を閉じる操作で、録音と再生用の一時URLを破棄します。ページの再読み込みやタブを閉じた後に、アプリから録音を復元する機能はありません。ブラウザの機能などで別途保存したファイルは、ご自身で管理してください。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">4. ブラウザ内への設定保存</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        メトロノームの音量、チュートリアルの完了状態、クロマチック練習・コード練習の回数を、お使いのブラウザ内（LocalStorage）に保存します。スケール練習はフォーム別・キー別、コードトーン練習はコードタイプ別・フォーム別・ルート別に回数を記録します。<br>ログインは不要です。記録は同じブラウザでの次回利用に使われ、別端末・別ブラウザには自動同期されません。ブラウザのサイトデータを削除すると、これらの設定・完了状態・練習回数が失われることがあります。録音音声はここへ保存しません。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">5. お問い合わせ（Googleフォーム）</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        お問い合わせは、外部の<a href="${contactFormUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb;">Googleフォーム</a>で受け付けます。お問い合わせの種類、使用端末・ブラウザ、該当教材、問い合わせ本文などを入力できます。返信用メールアドレスの入力は任意です。<br>送信された内容は、お問い合わせへの対応やサービス改善に利用し、Googleのサービスを通じて取り扱われます。お問い合わせ情報はアプリ内の録音とは別の情報です。練習画面が録音を自動的にフォームへ送信することはありません。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">6. 外部ライブラリ・CDNとの通信</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        TAB譜の表示や楽譜ファイルの展開に、alphaTab・JSZipなどの外部ライブラリを利用しています。jsDelivr・cdnjsからライブラリを読み込む際に、外部サービスへの通信が発生します。通信に伴い、IPアドレスやブラウザなどの接続情報が提供元に伝わることがあります。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">7. YouTubeとの通信</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        攻略動画は、動画を開いたときにYouTubeの埋め込みプレーヤー（youtube-nocookie.com）を読み込みます。この時点でYouTube関連サービスへの通信が発生します。公式チャンネルなどの外部リンクを開いた場合も、移動先のサービスへ接続します。<br>Cookieやアクセス情報などの取り扱いは、Google・YouTubeの方針にも従います。Googleフォームとあわせて、<a href="https://policies.google.com/privacy?hl=ja" target="_blank" rel="noopener noreferrer" style="color: #2563eb;">Googleのプライバシーポリシー</a>をご確認ください。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">8. 広告・アクセス解析</h4>
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
+                        当アプリ独自の広告配信・アクセス解析タグは、現在設置していません。画面内の広告スペースは表示枠です。外部サービス側の計測などは、各提供元の方針によります。今後導入する場合は、利用するサービスと情報の扱いを本ページで案内します。
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #0f172a; font-weight: 700;">9. 免責事項</h4>
                     <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.6;">
                         当アプリの利用により生じたトラブルや不利益について、運営事務局は一切の責任を負いかねます。あらかじめご了承の上、毎日の楽しい練習にお役立てください。
                     </p>
@@ -2251,13 +2378,13 @@ if (openContactBtn) {
         infoModalBody.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
-                    アプリへのご意見、バグ報告、応援メッセージなど、何かございましたら以下の方法でお気軽にご連絡ください！
+                    不具合のご報告、ご質問、ご要望などは、Googleフォームからお送りください。
                 </p>
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 12px; color: #334155;">
-                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">📩 連絡先・方法について</strong>
-                    現在は、外部のGoogleフォームや、運営者のSNS（X/GitHub等）のDM・Issueにて個別に対応させていただいております。
+                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">📩 Googleフォームでのお問い合わせ</strong>
+                    Googleフォームが新しいタブで開きます。
                     <br><br>
-                    <a href="（※ここにGoogleフォームやSNSのリンクを入れる）" target="_blank" rel="noopener noreferrer" 
+                    <a href="${contactFormUrl}" target="_blank" rel="noopener noreferrer"
                        style="display: inline-block; background: #2563eb; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; margin-top: 4px;">
                         👉 お問い合わせフォームを開く
                     </a>
@@ -2274,5 +2401,8 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 // --- アプリケーション起動時の初期描画 ---
 initVolumeControl();
 initTutorialCompletion();
+const practiceProgress = createPracticeProgress({ chromatic: CHROMATIC_STAGES, chords: CHORD_STAGES,
+    scales: SCALE_STAGES.flatMap(stage => stage.variants.map(v => getScaleVariant(stage, v.keyId))),
+    chordTones: CHORD_TONE_STAGES.flatMap(stage => stage.variants.map(v => getChordToneVariant(stage, v.rootId))) }, () => localStorage);
 renderExerciseCards();
 initPracticeGenres(document.getElementById("practiceContents"));

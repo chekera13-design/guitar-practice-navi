@@ -1,4 +1,4 @@
-// ホームだけの表示状態。教材・練習セッション・完了データ・URL履歴には書き込まない。
+// ホームのカテゴリとURL履歴だけを扱い、練習セッションや保存データは変更しない。
 export function initPracticeGenres(root) {
     if (!root) return null;
     const tabs = [...root.querySelectorAll('[role="tab"][data-practice-genre]')];
@@ -7,6 +7,29 @@ export function initPracticeGenres(root) {
         panel: panels.find(panel => panel.id === tab.getAttribute('aria-controls')
             && panel.dataset.practicePanel === tab.dataset.practiceGenre) })).filter(entry => entry.panel);
     if (!entries.length) return null;
+    const categories = [...root.querySelectorAll("[data-exercise-category]")]
+        .filter(section => section.dataset.exerciseCategory)
+        .map(section => ({ section, key: section.dataset.exerciseCategory,
+            anchor: section.getAttribute("aria-labelledby"),
+            entry: entries.find(item => item.panel.contains(section)) }))
+        .filter(category => category.entry);
+    const links = [...root.querySelectorAll("[data-category-link]")];
+    const lastCategory = new Map();
+    const defaultCategory = entry => categories.find(category =>
+        category.key === lastCategory.get(entry.key)) || categories.find(category =>
+        category.entry === entry && category.key === entry.key)
+        || categories.find(category => category.entry === entry);
+    let selectedCategory = null;
+    const showCategory = category => {
+        if (!category) return;
+        for (const item of categories) item.section.hidden = item !== category;
+        for (const link of links) {
+            if (link.getAttribute("href") === "#" + category.anchor) link.setAttribute("aria-current", "true");
+            else link.removeAttribute("aria-current");
+        }
+        selectedCategory = category;
+        lastCategory.set(category.entry.key, category.key);
+    };
     const positions = new Map();
     let selected = null;
     const select = (entry, { focus = false, restoreScroll = true } = {}) => {
@@ -23,8 +46,16 @@ export function initPracticeGenres(root) {
         }
         if (focus) entry.tab.focus();
     };
+    const selectGenre = (entry, options) => {
+        select(entry, options);
+        const category = defaultCategory(entry);
+        showCategory(category);
+        if (category && window.location.hash !== "#" + category.anchor) {
+            window.history.pushState(null, "", "#" + category.anchor);
+        }
+    };
     for (const [index, entry] of entries.entries()) {
-        entry.tab.addEventListener('click', () => select(entry));
+        entry.tab.addEventListener('click', () => selectGenre(entry));
         entry.tab.addEventListener('keydown', event => {
             let next;
             if (event.key === 'ArrowRight') next = (index + 1) % entries.length;
@@ -33,21 +64,29 @@ export function initPracticeGenres(root) {
             else if (event.key === 'End') next = entries.length - 1;
             if (next === undefined) return; // Enter/Spaceはbutton本来の操作を使う。
             event.preventDefault();
-            select(entries[next], { focus: true });
+            selectGenre(entries[next], { focus: true });
         });
     }
     const revealHash = () => {
         let id;
         try { id = decodeURIComponent((window.location?.hash || '').slice(1)); } catch { return; }
-        if (!id) return;
+        if (!id) {
+            select(entries[0], { restoreScroll: false });
+            showCategory(categories.find(category => category.key === "basic") || defaultCategory(entries[0]));
+            return;
+        }
         const target = document.getElementById(id);
         const entry = entries.find(item => target && item.panel.contains(target));
         if (!entry) return;
         select(entry, { restoreScroll: false });
+        showCategory(categories.find(category => category.section.contains(target)) || defaultCategory(entry));
         target.scrollIntoView?.({ block: 'start' });
     };
     select(entries[0]);
+    showCategory(defaultCategory(entries[0]));
     window.addEventListener('hashchange', revealHash);
+    window.addEventListener('popstate', revealHash);
     revealHash();
-    return { get selected() { return selected.key; } };
+    return { get selected() { return selected.key; },
+        get category() { return selectedCategory?.key || null; } };
 }

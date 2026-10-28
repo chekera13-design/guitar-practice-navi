@@ -1,0 +1,21 @@
+Third-party software notices - Guitar Practice Channel / ギター練習.com
+
+The public app keeps the original external CDN URLs. The public allowlist does not include any copied third-party runtime library, font or soundfont binary.
+Development-only tests/vendor/alphaTab-1.8.4.cjs contains the unmodified, hash-verified alphaTab bundle for offline tests; it is excluded from public distribution. Its original copyright and integrated-library notices are retained.
+
+alphaTab 1.8.4 (build 34): Mozilla Public License 2.0 (MPL-2.0).
+Runtime/source-form distribution: https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.js
+Upstream source: https://github.com/CoderLine/alphaTab/tree/v1.8.4
+License and integrated-library copyright notices: licenses/alphaTab-1.8.4-LICENSE.txt and licenses/alphaTab-1.8.4-LICENSE.header.txt
+
+Bravura music font: SIL Open Font License 1.1.
+Runtime font: https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/font/Bravura.woff2
+Copyright and license: licenses/Bravura-OFL.txt
+
+JSZip 3.10.1: used under the MIT option of its MIT/GPLv3 dual license.
+Runtime: https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
+Upstream source: https://github.com/Stuk/jszip/tree/v3.10.1
+Unmodified upstream license text (including both options): licenses/JSZip-3.10.1-LICENSE.txt
+
+The app disables the alphaTab player and does not request or distribute its bundled soundfont.
+These notices do not assign a license to the application-specific source or score materials.

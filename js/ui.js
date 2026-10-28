@@ -15,7 +15,6 @@ export function updateVisualMetronome(beat, isAccent, phaseText, phaseClass) {
         if (dotBeat === beat) {
             dot.classList.add("active");
             if (isAccent) dot.classList.add("accent");
-            void dot.offsetWidth;
             dot.classList.add("flash");
         }
     });

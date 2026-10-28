@@ -88,13 +88,13 @@
         <div class="stages-header">
             <div class="stages-header-title-row">
                 <h2 class="stages-title">🔰 基礎練習</h2>
-                <span class="stages-count-badge">5つの練習ジャンル</span>
+                <span class="stages-count-badge">カテゴリを選択</span>
             </div>
             <p class="stages-desc">ギターの基本を身につけよう</p>
         </div>
 
-        <section class="practice-category-grid" aria-label="基礎練習のジャンル">
-            <a class="practice-category-card tutorial-category-card" href="#tutorialExercises">
+        <section id="practiceCategories" class="practice-category-grid" aria-label="基礎練習のジャンル">
+            <a class="practice-category-card tutorial-category-card" href="#tutorialExercises" data-category-link>
                 <span class="category-icon" aria-hidden="true">🎓</span>
                 <span class="category-copy">
                     <strong>チュートリアル</strong>
@@ -103,58 +103,103 @@
                 <span id="tutorialCategoryStatus" class="category-status tutorial-status">未完了</span>
                 <span class="category-arrow" aria-hidden="true">→</span>
             </a>
-            <div class="practice-category-card category-coming-soon">
+            <a class="practice-category-card basic-category-card" href="#basicExercises" data-category-link>
+                <span class="category-icon" aria-hidden="true">🔰</span>
+                <span class="category-copy"><strong>基礎編</strong><span>ピッキングからコードまで</span></span>
+                <span class="category-status">10教材</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="practice-category-card chromatic-category-card" href="#chromaticExercises" data-category-link>
                 <span class="category-icon" aria-hidden="true">🎵</span>
-                <span class="category-copy"><strong>クロマチック</strong><span>ピッキングと運指</span></span>
-                <span class="category-status">準備中</span>
-            </div>
-            <div class="practice-category-card category-coming-soon">
+                <span class="category-copy"><strong>クロマチック練習</strong><span>ピッキングと運指</span></span>
+                <span class="category-status">24パターン</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="practice-category-card chord-category-card" href="#chordExercises" data-category-link>
                 <span class="category-icon" aria-hidden="true">🎸</span>
-                <span class="category-copy"><strong>コード</strong><span>コードを押さえて鳴らす</span></span>
-                <span class="category-status">準備中</span>
-            </div>
-            <div class="practice-category-card category-coming-soon">
+                <span class="category-copy"><strong>コード練習</strong><span>押さえ方を調べて練習</span></span>
+                <span class="category-status">基本8コード</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="practice-category-card scale-category-card" href="#chordToneExercises" data-category-link>
                 <span class="category-icon" aria-hidden="true">🎯</span>
-                <span class="category-copy"><strong>コードトーン</strong><span>コードの構成音を覚える</span></span>
-                <span class="category-status">準備中</span>
-            </div>
-            <div class="practice-category-card category-coming-soon">
+                <span class="category-copy"><strong>コードトーン練習</strong><span>M7の構成音をCAGEDで練習</span></span>
+                <span class="category-status">5フォーム・12コード</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="practice-category-card scale-category-card" href="#scaleExercises" data-category-link>
                 <span class="category-icon" aria-hidden="true">🎼</span>
-                <span class="category-copy"><strong>スケール</strong><span>スケールの基本を身につける</span></span>
-                <span class="category-status">準備中</span>
-            </div>
+                <span class="category-copy"><strong>スケール練習</strong><span>CAGEDの5フォームで練習</span></span>
+                <span class="category-status">5フォーム・12キー</span>
+                <span class="category-arrow" aria-hidden="true">→</span>
+            </a>
         </section>
 
-        <section class="current-exercises" aria-labelledby="tutorialExercises">
+        <section class="current-exercises" aria-labelledby="tutorialExercises" data-exercise-category="tutorial" hidden>
             <div class="current-exercises-heading">
                 <h3 id="tutorialExercises">チュートリアル</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
                 <span id="tutorialCompletionStatus" class="tutorial-completion-badge" hidden>✓ チュートリアル完了</span>
                 <p>はじめての方はこちら</p>
             </div>
             <div id="tutorialExerciseGrid" class="exercise-grid"></div>
         </section>
 
-        <section class="current-exercises" aria-labelledby="basicExercises">
+        <section class="current-exercises" aria-labelledby="basicExercises" data-exercise-category="basic">
             <div class="current-exercises-heading">
                 <h3 id="basicExercises">基礎編</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
                 <p>基礎練習を進めよう</p>
             </div>
             <div id="exerciseGrid" class="exercise-grid"></div>
+        </section>
+        <section class="current-exercises chromatic-exercises" aria-labelledby="chromaticExercises" data-exercise-category="chromatic" hidden>
+            <div class="current-exercises-heading">
+                <h3 id="chromaticExercises">クロマチック練習</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
+                <p>5〜8フレットの24種類の運指パターン</p>
+            </div>
+            <div id="chromaticExerciseGrid" class="chromatic-picker"></div>
+        </section>
+        <section class="current-exercises chord-exercises" aria-labelledby="chordExercises" data-exercise-category="chords" hidden>
+            <div class="current-exercises-heading">
+                <h3 id="chordExercises">コード練習</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
+                <p>基本の8つのローコードを検索し、押さえ方を確認して練習しましょう。</p>
+            </div>
+            <div id="chordExerciseGrid" class="chord-browser"></div>
+        </section>
+        <section class="current-exercises chord-tone-exercises" aria-labelledby="chordToneExercises" data-exercise-category="chord-tones" hidden>
+            <div class="current-exercises-heading">
+                <h3 id="chordToneExercises">コードトーン練習</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
+                <p>CAGEDの5フォームとコードを選び、M7の構成音を練習しましょう。</p>
+            </div>
+            <div id="chordToneExerciseGrid" class="scale-browser"></div>
+        </section>
+        <section class="current-exercises scale-exercises" aria-labelledby="scaleExercises" data-exercise-category="scales" hidden>
+            <div class="current-exercises-heading">
+                <h3 id="scaleExercises">スケール練習</h3>
+                <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
+                <p>CAGEDの5フォームから教材とキーを選び、メジャースケールを練習しましょう。</p>
+            </div>
+            <div id="scaleExerciseGrid" class="scale-browser"></div>
         </section>
         </div>
 
         <div id="soloPracticePanel" class="practice-genre-panel" role="tabpanel" data-practice-panel="solo" aria-labelledby="soloPracticeTab" tabindex="0" hidden>
             <div class="stages-header">
                 <div class="stages-header-title-row">
-                    <h2 class="stages-title">🎸 ソロギター</h2>
-                    <span class="stages-count-badge">表示検証用</span>
+                    <h2 class="stages-title">🎸 ソロギター練習</h2>
+                    <span class="stages-count-badge">3つの練習教材</span>
                 </div>
-                <p class="stages-desc">今回は表示検証用の仮EX1です。正式な練習教材ではありません。</p>
+                <p class="stages-desc">メロディー・ベース・コードを組み合わせて、ソロギターの基本を練習しましょう。</p>
             </div>
-            <section class="current-exercises solo-exercises" aria-labelledby="soloExercises">
+            <section class="current-exercises solo-exercises" aria-labelledby="soloExercises" data-exercise-category="solo">
                 <div class="current-exercises-heading">
-                    <h3 id="soloExercises">ソロギター EX1</h3>
-                    <p>単独小音符・小音符和音・連続小音符のTAB表示を確認できます。</p>
+                    <h3 id="soloExercises">ソロギター EX01〜EX03</h3>
+                    <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
+                    <p>コードの響きやベースラインから始め、メロディーとの組み合わせ、アルペジオへと段階的に練習できます。</p>
                 </div>
                 <div id="soloExerciseGrid" class="exercise-grid"></div>
             </section>
@@ -182,7 +227,7 @@
     </footer>
 
     <!-- ★ 練習ポップアップモーダル ★ -->
-    <div id="practiceModal" class="modal practice-modal hidden">
+    <div id="practiceModal" class="modal practice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalStageTitle" tabindex="-1">
         <div class="practice-modal-content">
             
             <!-- ① スリムヘッダー -->
@@ -193,7 +238,7 @@
                     <h3 id="modalStageTitle" class="practice-modal-title">EX 1: 6弦開放 (E2) ピッキング</h3>
                     <p id="modalStageDesc" class="practice-modal-desc"></p>
                 </div>
-                <button id="closePracticeModalBtn" class="close-x-btn" title="閉じる">✕</button>
+                <button id="closePracticeModalBtn" class="close-x-btn" title="閉じる" aria-label="練習画面を閉じる">✕</button>
             </div>
 
             <!-- ② メトロノーム操作・テンポ設定・拍表示・音量 -->
@@ -312,15 +357,16 @@
     </div>
 
     <!-- 汎用インフォモーダル -->
-    <div id="infoModal" class="modal hidden">
+    <div id="infoModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle" tabindex="-1">
         <div class="modal-content">
-            <button id="closeInfoModalBtn" class="close-x-btn">✕</button>
+            <button id="closeInfoModalBtn" class="close-x-btn" aria-label="閉じる">✕</button>
             <h3 id="infoModalTitle" class="info-title">タイトル</h3>
             <div id="infoModalBody" class="info-body"></div>
         </div>
     </div>
 
     <!-- メインスクリプト -->
+    <script type="module" src="js/modalFocus.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

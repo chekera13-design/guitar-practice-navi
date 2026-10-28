@@ -124,7 +124,7 @@ export const BASIC_STAGES = [
         bpm: 60,
         timeSignature: [4, 4],
         countInBars: 1,
-        practiceBars: 13,
+        practiceBars: 12,
         file: "scores/basic/ex05.mxl",
         available: true,
         guideVideo: {
