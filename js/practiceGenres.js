@@ -80,7 +80,8 @@ export function initPracticeGenres(root) {
         if (!entry) return;
         select(entry, { restoreScroll: false });
         showCategory(categories.find(category => category.section.contains(target)) || defaultCategory(entry));
-        target.scrollIntoView?.({ block: 'start' });
+        const visibleTarget = target.closest?.('[data-practice-type-card], [data-chromatic-card]') || target;
+        visibleTarget.scrollIntoView?.({ block: 'start' });
     };
     select(entries[0]);
     showCategory(defaultCategory(entries[0]));

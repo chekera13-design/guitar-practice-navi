@@ -38,6 +38,22 @@ export function createModalFocusController(doc = globalThis.document) {
             const bTab = b.node.tabIndex > 0 ? b.node.tabIndex : Infinity;
             return aTab - bTab || a.index - b.index;
         }).map(item => item.node);
+    // Geometry is checked only when repairing lost focus, never on each beat/frame.
+    const inView = node => {
+        if (!usable(node)) return false;
+        const rect = node.getBoundingClientRect(), viewport = win.visualViewport;
+        let left = viewport?.offsetLeft || 0, topEdge = viewport?.offsetTop || 0;
+        let right = left + (viewport?.width || win.innerWidth), bottom = topEdge + (viewport?.height || win.innerHeight);
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+            const style = win.getComputedStyle(parent), box = parent.getBoundingClientRect();
+            if (/auto|scroll|hidden|clip/.test(style.overflowX)) { left = Math.max(left, box.left); right = Math.min(right, box.right); }
+            if (/auto|scroll|hidden|clip/.test(style.overflowY)) { topEdge = Math.max(topEdge, box.top); bottom = Math.min(bottom, box.bottom); }
+        }
+        if (!rect.width || !rect.height || rect.left < left || rect.right > right || rect.top < topEdge || rect.bottom > bottom) return false;
+        // A sticky footer/popover may cover a control even inside the scrollport.
+        if (typeof doc.elementFromPoint !== 'function') return true;
+        return node.contains(doc.elementFromPoint((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2));
+    };
     const restoreBackground = () => {
         for (const [node, saved] of blocked) for (const [key, value] of Object.entries(saved)) {
             if (value === null) node.removeAttribute(key); else node.setAttribute(key, value);
@@ -75,14 +91,16 @@ export function createModalFocusController(doc = globalThis.document) {
                 attributeFilter: ['hidden', 'disabled', 'aria-disabled', 'tabindex', 'inert', 'style', 'class'] });
         }
     }
-    function focusInside(preferred = null, last = false) {
+    function focusInside(preferred = null, last = false, { recovery = false } = {}) {
         if (!top || redirecting) return;
         redirecting = true;
         try {
             const items = candidates(top);
-            const target = preferred && top.root.contains(preferred) && usable(preferred) ? preferred
+            let target = preferred && top.root.contains(preferred) && usable(preferred) ? preferred
                 : last ? items.at(-1) : (usable(top.close, true) ? top.close : items[0]);
-            if (!focus(target, false)) focus(top.root, false);
+            // Initial focus and explicit keyboard navigation retain native scrolling.
+            if (recovery && !inView(target)) target = items.find(inView) || top.root;
+            if (!focus(target, recovery)) focus(top.root, recovery);
         } finally { redirecting = false; watchFocus(); }
     }
     function returnFocus(entry) {
@@ -121,7 +139,7 @@ export function createModalFocusController(doc = globalThis.document) {
                 blockBackground(top.root);
             } else if (previous) returnFocus(previous);
         } else if (top) {
-            if (!top.root.contains(doc.activeElement) || !usable(doc.activeElement)) focusInside(top.last);
+            if (!top.root.contains(doc.activeElement) || !usable(doc.activeElement)) focusInside(top.last, false, { recovery: true });
             blockBackground(top.root); watchFocus();
         }
     }

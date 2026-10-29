@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EX5 背景P0/P1/P2比較（dev専用・第4段階）</title>
+    <style>
+        html, body { margin: 0; width: 100%; height: 100%; font: 14px system-ui, sans-serif; }
+        #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+        #panel { position: fixed; z-index: 10000; right: 8px; top: 8px; max-width: min(640px, calc(100% - 36px));
+            max-height: calc(100% - 16px); overflow-y: auto; box-sizing: border-box;
+            padding: 10px; background: #101c2e; color: #fff; border: 1px solid #94a3b8; border-radius: 8px; }
+        summary { cursor: pointer; min-height: 24px; }
+        #status { display: block; margin: 6px 0 0; }
+        button, select { min-height: 36px; margin: 3px; font: inherit; }
+        select { max-width: 100%; }
+        button:disabled { opacity: .6; }
+        #output { display: block; width: min(580px, 85vw); height: 100px; margin-top: 8px; }
+        #output[hidden] { display: none; }
+        p { margin: 6px 0; }
+    </style>
+</head>
+<body>
+    <iframe id="app" title="通常アプリ（A/B診断対象）" src="../index.html"></iframe>
+    <details id="panel" open>
+        <summary>EX5・60 BPM / 背景比較（通常P1対応・旧背景保全）<span id="status" role="status">アプリ読み込み中…</span></summary>
+        <label>手順 <select id="comparisonPlan"><option value="background">第4段階：背景5回</option><option value="decoration">第3段階：装飾7回</option></select></label>
+        <label>条件 <select id="condition"><option value="A">P0 / A：旧背景・比較基準（ぼかしあり）</option><option value="E">P1 / E：通常背景（半透明・ぼかしなし）</option><option value="P2">P2：不透明背景（ぼかしなし）</option><option value="B">B：装飾なし（旧比較）</option><option value="F">F：メトロノーム装飾のみ無効（旧比較）</option></select></label>
+        <button id="arm" disabled>次の練習を計測</button>
+        <button id="cancel" disabled>診断を解除</button>
+        <p>① 基礎編EX5を開き、60 BPM・1回・横型にする。② 計測を準備 → アプリの「練習」。</p>
+        <p>背景比較：P0 → P1 → P0 → P2 → P0の順に各30秒。P0はA、P1はEを再利用します。新規条件はP2だけです。</p>
+        <p>通常アプリはP1です。P0/AとFは、過去の計測条件を保つため、この診断画面内だけ旧ぼかしblur(4px)を再現します。</p>
+        <p>旧比較も維持：A → E → A → F → A → B → A。「手順」を第3段階へ切り替えると7回比較を案内します。</p>
+        <p>カウントイン後3～33秒を測定。完了表示後は練習を停止してから次の条件を選択してください。</p>
+        <p>測定中は画面の向き・ウィンドウ・倍率・DevTools・タブを変えないでください。</p>
+        <p>準備するとパネルを折りたたみます。状態表示は残ります。次の条件選択・結果の出力は見出しを押して開きます。</p>
+        <button id="copy" disabled>全結果をコピー</button><button id="save" disabled>JSONを保存</button>
+        <button id="show" disabled>結果テキスト</button>
+        <textarea id="output" aria-label="診断結果JSON（コピー用）" readonly hidden></textarea>
+    </details>
+    <script type="module" src="scroll-ab.js?v=p1-production-baseline-v1"></script>
+</body>
+</html>

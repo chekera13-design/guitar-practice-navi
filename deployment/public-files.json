@@ -1,0 +1,2465 @@
+{
+  "schema": "guitar-practice-public-files-v1",
+  "purpose": "File selection only; no public directory was updated",
+  "lessonCounts": {
+    "tutorial": 3,
+    "basic": 10,
+    "solo": 3,
+    "chromatic": 24,
+    "chords": 8,
+    "scales": 10,
+    "chord-tones": 20
+  },
+  "lessonCount": 78,
+  "scoreCount": 410,
+  "fileCount": 452,
+  "files": [
+    {
+      "path": "css/style.css",
+      "role": "style",
+      "sha256": "9866a5affbff49c31a3505f634a138622a08f59dc68e400f5e956f0a99240d1a"
+    },
+    {
+      "path": "index.html",
+      "role": "entry",
+      "sha256": "791421129f20b650159ea4d453cb6a6bb640b83b763002614905dee6e8c80bfa"
+    },
+    {
+      "path": "js/app.js",
+      "role": "runtime",
+      "sha256": "8914717271a0b98f58a8763de70d84fcb5e16782c5e73d9f154fca20fc22944d"
+    },
+    {
+      "path": "js/audioEngine.js",
+      "role": "module",
+      "sha256": "5b185f72ed273587b81cb81d25859c2e91a7d7ee39db09a35de490f7106c134b"
+    },
+    {
+      "path": "js/buttonInput.js",
+      "role": "module",
+      "sha256": "3c331484725aba7ee4bbf2dadf01ac3da1d4bc12b73ba3430aacb9696155547e"
+    },
+    {
+      "path": "js/capoPositionNotation.js",
+      "role": "module",
+      "sha256": "a8a953fd1a20332cec2bb68f520a637a8545ef17ed2d9460dbcf209651703424"
+    },
+    {
+      "path": "js/chordDiagram.js",
+      "role": "module",
+      "sha256": "a4ed4543aa4fc199aa126dbf45edffd7d4b98b3c63f5e7a35b2e0579c810bcd2"
+    },
+    {
+      "path": "js/chordPractice.js",
+      "role": "module",
+      "sha256": "fe8eb3c1bf310b312bf75a1f201c15e763cb33c44f7b618acc1e6e02e2c83b7a"
+    },
+    {
+      "path": "js/chordTonePractice.js",
+      "role": "module",
+      "sha256": "3c28747241231fbc4d31edf4f4bce02cb8c367c4d419c99150797c4f8470c71c"
+    },
+    {
+      "path": "js/chromaticPatternPicker.js",
+      "role": "module",
+      "sha256": "ded305b54fdeb6e2551e6535f569e40ca1c3d00dc9c10dc43d562bb022a95204"
+    },
+    {
+      "path": "js/config.js",
+      "role": "module",
+      "sha256": "4c20ce16c8e615e60b75d45a41bd4dbd867bc1216a5ff22fc011ea038f9d2321"
+    },
+    {
+      "path": "js/config/basic.js",
+      "role": "module",
+      "sha256": "b6f61b4f145ec2a8f9ac452f97fc964a3e057aec5940340eca3ce244474b9574"
+    },
+    {
+      "path": "js/config/chordForms.js",
+      "role": "module",
+      "sha256": "2edadd521d6db479f3fafadf09b36e960a28cd618655655d65851279a9168266"
+    },
+    {
+      "path": "js/config/chords.js",
+      "role": "module",
+      "sha256": "1b4d793574d365833adf1638d3985c83f753ae02c3bd216a674d34230fbc5c91"
+    },
+    {
+      "path": "js/config/chordTones.js",
+      "role": "module",
+      "sha256": "8a0c1c92761492b5e5e3bb085902697322ee3181267e05e2eb90807ff5f3e2d0"
+    },
+    {
+      "path": "js/config/chromatic.js",
+      "role": "module",
+      "sha256": "87661ab08237351ef94a2094ccdbde174c74a6c446932a4ae7f1744aa6698fd4"
+    },
+    {
+      "path": "js/config/index.js",
+      "role": "module",
+      "sha256": "d795a04c56665df71f5f1c574a1d45146607d09184eb734490211ab67d6786c2"
+    },
+    {
+      "path": "js/config/min7ChordTones.js",
+      "role": "module",
+      "sha256": "b2ea0a7312a32de8f51d4ab8a158be1ee96b417015e91987a1432720cbb9c948"
+    },
+    {
+      "path": "js/config/naturalMinorScales.js",
+      "role": "module",
+      "sha256": "7b0dc7324e314ab85a447e13876cf917757ed18efd79a4d94f8071062d474a1c"
+    },
+    {
+      "path": "js/config/scales.js",
+      "role": "module",
+      "sha256": "731e7f8bd1550ce895d513f18bd88f3931ab65de306bc5cce4fba88f678fbfaf"
+    },
+    {
+      "path": "js/config/seventhChordTones.js",
+      "role": "module",
+      "sha256": "7464d74bfb177b5a017e58ce27feae8c0b8e08aa2479dd1e14717d0d0d694634"
+    },
+    {
+      "path": "js/config/solo.js",
+      "role": "module",
+      "sha256": "28e6b3bd7bbf76f1ad92f33b18abcf2ec47e098dffec706cd85f7f9df7b2bd3b"
+    },
+    {
+      "path": "js/config/tutorial.js",
+      "role": "module",
+      "sha256": "4257944b740d753c4a7474ef53bd595300820d5a0b5a75dc35cb0fa6116c5499"
+    },
+    {
+      "path": "js/graceNotation.js",
+      "role": "module",
+      "sha256": "4ae5ee4a2e7cdf3e58d80106ea8fd1fd8220ef3dc58b5b10f2a32d685bef69ec"
+    },
+    {
+      "path": "js/guideVideo.js",
+      "role": "module",
+      "sha256": "d896a1e570ce5c612b5aef42b283baced65a05fbca0df677301ce650b3370b62"
+    },
+    {
+      "path": "js/keyDisclosure.js",
+      "role": "module",
+      "sha256": "2c31c5e7dbf0160809c6036626db44811307a96b2c622a907fb19766ebb03879"
+    },
+    {
+      "path": "js/metronomeBeatDisplay.js",
+      "role": "module",
+      "sha256": "8074a97782fd04bc3137ecb1664d56aafd5a09969e4135e61c711ff2e8c1b769"
+    },
+    {
+      "path": "js/modalFocus.js",
+      "role": "runtime",
+      "sha256": "80f96fbbb7e1dc9962a88bcf574a69f25da783a55d6b1570602b5e1a7ee61881"
+    },
+    {
+      "path": "js/practiceFormLabels.js",
+      "role": "module",
+      "sha256": "de7755917312ba9ae4b3072e730258b38ebf086caa6cd3dfe9569ac9ab550d2c"
+    },
+    {
+      "path": "js/practiceGenres.js",
+      "role": "module",
+      "sha256": "96af603e40b92c8d613bd17ff1968a6b78b731f4be033fd613fb09f97450d19c"
+    },
+    {
+      "path": "js/practicePositions.js",
+      "role": "module",
+      "sha256": "f307f5361af1af641af2b5d6cf5ada8699bedd0aab354792e7cd6b8f54e92a13"
+    },
+    {
+      "path": "js/practiceProgress.js",
+      "role": "module",
+      "sha256": "d4b47f637b095766e550715eb2e0864cd0b519ff34227a3ea28e34d66594066e"
+    },
+    {
+      "path": "js/practiceTypeCards.js",
+      "role": "module",
+      "sha256": "478c1c95395ca5053592bdc2f09a77dde9deaaea98c6649aabdcce8d7222da5d"
+    },
+    {
+      "path": "js/scalePractice.js",
+      "role": "module",
+      "sha256": "ba2abc755e08fe22d372baeec71c96f518102ac9b9ca4b3d9daf813259157a9c"
+    },
+    {
+      "path": "js/tupletScoreViewport.js",
+      "role": "module",
+      "sha256": "73ad1366044f864f1571225ad6f720340ad3877e42bc1a83049eb1586ab22075"
+    },
+    {
+      "path": "js/ui.js",
+      "role": "module",
+      "sha256": "c88c5a2e26e8d56cc0efc7fef013b9efcf72227f4bbefd205a1aa65bd1b9d75a"
+    },
+    {
+      "path": "js/verticalTab.js",
+      "role": "module",
+      "sha256": "5e23d88f75276abdaa4e37f5779fb90d70b63b6c40288d0541103e45d62cfd85"
+    },
+    {
+      "path": "licenses/alphaTab-1.8.4-LICENSE.header.txt",
+      "role": "license",
+      "sha256": "670db9824aefb8216ca56da31b73f2d51710a828f408c4080e378b86314bd0ba"
+    },
+    {
+      "path": "licenses/alphaTab-1.8.4-LICENSE.txt",
+      "role": "license",
+      "sha256": "de981130586154b6ce2cf91528b9291789192d62234d0d7e6e41d085b8e1d351"
+    },
+    {
+      "path": "licenses/Bravura-OFL.txt",
+      "role": "license",
+      "sha256": "c24929be7028026a65ee8894da1e3c36d2a4ccce0548d9ba8ba64509f46319ee"
+    },
+    {
+      "path": "licenses/JSZip-3.10.1-LICENSE.txt",
+      "role": "license",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4"
+    },
+    {
+      "path": "scores/basic/ex01.mxl",
+      "role": "score",
+      "sha256": "f7d9f593d794806788b71e6bb933ba269505f6f7a5a16c7ba697d799dd246ce9"
+    },
+    {
+      "path": "scores/basic/ex02.mxl",
+      "role": "score",
+      "sha256": "0cd9818df2f656f4dd151316e665c884d2dda8fe14a0587262c6bcdc105b1fca"
+    },
+    {
+      "path": "scores/basic/ex03.mxl",
+      "role": "score",
+      "sha256": "f860f060f1f662e0650cccdc43c0fed15312507355c847889015c711d4333503"
+    },
+    {
+      "path": "scores/basic/ex04.mxl",
+      "role": "score",
+      "sha256": "9f92d40e838598d3d85da79f4d82d707bb175f4b71381681939474fb5fe67290"
+    },
+    {
+      "path": "scores/basic/ex05.mxl",
+      "role": "score",
+      "sha256": "f6db4bac0dbc8cd95b0cdd70a7263b497f0089670e6a78d5cb7c599c358d5f82"
+    },
+    {
+      "path": "scores/basic/ex06.mxl",
+      "role": "score",
+      "sha256": "29cc732e1ef5c55a5006037b0efe38e8387bb842a2ad9f86308a694eeed67567"
+    },
+    {
+      "path": "scores/basic/ex07.mxl",
+      "role": "score",
+      "sha256": "506d10bac88121709b2ef9b8c30495c94e9c5ebbd865f9407887b98e19d71e70"
+    },
+    {
+      "path": "scores/basic/ex08_2.mxl",
+      "role": "score",
+      "sha256": "d36dc42c44ef196fe053e973eb212df9b8634258cf3ff2e25f29b678882622c4"
+    },
+    {
+      "path": "scores/basic/ex09.mxl",
+      "role": "score",
+      "sha256": "51edb01a5716be064444d180c8f820107713a6a6f88a189e9f767c9a5955b718"
+    },
+    {
+      "path": "scores/basic/ex10.mxl",
+      "role": "score",
+      "sha256": "80d2efdc60d9535e66c8612aba0698be6df1926f8f8bf79a147cee8156265cab"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-a.mxl",
+      "role": "score",
+      "sha256": "16ab4f370fe6d4560daec3641920bb200a0a2da63e41b339aa1f6c1ce9debd91"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-ab.mxl",
+      "role": "score",
+      "sha256": "d39b36d01e7e43457042eccc00a35bbfafe0048f7c0b7af7ce33112f8a2ec150"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-b.mxl",
+      "role": "score",
+      "sha256": "9e26f0f56fde44d00fa4b3661a48e0cb02d6953f36ac14c800a05b3f53ec0303"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-bb.mxl",
+      "role": "score",
+      "sha256": "23a4c490841c991efebe747c52d78b74603b59ac11ef09bceb63f50c680228d2"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-c.mxl",
+      "role": "score",
+      "sha256": "012a987c358c26ac407b98335679362fb068f15f0368670d3ceb0f1a3e503d44"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-d.mxl",
+      "role": "score",
+      "sha256": "6ef366f3bf9b76d2162aa5ceff06596eed6bf25602c21d71b4fdb673d43a3e41"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-db.mxl",
+      "role": "score",
+      "sha256": "6b418e57b69ffd96e1fe9fb429f0f55b0560ce503712363b8e0768c04bcaf178"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-e.mxl",
+      "role": "score",
+      "sha256": "aeab4c79abad5eb95a84ae467c0051b62e078a892a4754111f9eac6b23d4072b"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-eb.mxl",
+      "role": "score",
+      "sha256": "9637438bdce907972f6415fd30d059c19d4bd6b1cd6590dc749a76129fa83f20"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-f.mxl",
+      "role": "score",
+      "sha256": "e96d3f9ea53a98947b2fe42eb0a89b0b9380d9c52988e156da91541ca2863bf7"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-fs.mxl",
+      "role": "score",
+      "sha256": "4a35a56e2952269c36945b448e41c617e25b75af144fcf28d61f64123d0f1c9d"
+    },
+    {
+      "path": "scores/chord_tones/dom7/a/dom7-a-g.mxl",
+      "role": "score",
+      "sha256": "d24e4f2de5da386dab4178ebe80ac3962356213dd4e1c73ded93ff2a0695749e"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-a.mxl",
+      "role": "score",
+      "sha256": "0e6ae834ccac732ef402a8bd3f58e25e5b2e2a4485b266d92f0d79066f772e8d"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-ab.mxl",
+      "role": "score",
+      "sha256": "8f2ef921f20d57fd572c42f0fc7face121dc2230ec3d0a99d7715d55379e76b2"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-b.mxl",
+      "role": "score",
+      "sha256": "c61e602e475f2eeef66377d861d203bda0cdd553e54c90630a39a0b7ac41e80a"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-bb.mxl",
+      "role": "score",
+      "sha256": "2fa166ec5f12991d2598041f7b6a96fb69f3e00c54784efe24566884424418fc"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-c.mxl",
+      "role": "score",
+      "sha256": "10c17d1c3394aaa8b1ec1636551a04312e97ca6e6475b0e0bbf4ddd67164bab3"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-d.mxl",
+      "role": "score",
+      "sha256": "da2e0d9a102f596c6792b6c9b99b5eb00bc327c19916ca4ab94eb2b0e8fc9188"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-db.mxl",
+      "role": "score",
+      "sha256": "ed3b07ecaa8de3d90ce2cd09eaff74fe1ee5a75be3dcb12b83f86202c1c1b1cd"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-e.mxl",
+      "role": "score",
+      "sha256": "77df112f24dd5123efe886dbb20a6f5e978b43ac15a46cb36726c506e48ef062"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-eb.mxl",
+      "role": "score",
+      "sha256": "3c7e7cbb764aeab1aaedf6ca775c0d36a95a2b75aea8256a74cfdc5eac2a9f91"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-f.mxl",
+      "role": "score",
+      "sha256": "b26ba589f1e11d65f833223d60bbf1b33c18768818bece5dd0dd3b012a44937d"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-fs.mxl",
+      "role": "score",
+      "sha256": "05d555431218d128f7fec793230d736ee734e743c0d673360c368bbaf86ec7a8"
+    },
+    {
+      "path": "scores/chord_tones/dom7/c/dom7-c-g.mxl",
+      "role": "score",
+      "sha256": "2dada928254e1d714acfedf381ebda4f800bb43e0d438d11ef732cff1bdb94e5"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-a.mxl",
+      "role": "score",
+      "sha256": "edf2ab8394b038e47651a69e41b4aecf07b7797a0e52a89a425e466d8c0bcd55"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-ab.mxl",
+      "role": "score",
+      "sha256": "05180b0f0612db73bd158882331706dcc5727aa1cf46c266242398ad964076b5"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-b.mxl",
+      "role": "score",
+      "sha256": "ea601ccaa16939774747a62bdb3476e9d111a635d7a7e1d3e63c4235be32988c"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-bb.mxl",
+      "role": "score",
+      "sha256": "3ac8ab5f28145e4caa531b4a215046fe0845eae934c95b2da6ac116ab0f6122c"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-c.mxl",
+      "role": "score",
+      "sha256": "c2198036769ae6e4f1e073c95d2667d565cda5900f5def6cc40ffca2c2d717f0"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-d.mxl",
+      "role": "score",
+      "sha256": "0d146ec6db31633ba4c0b7ecce7aaf1006d1cf07d06e631473e4ccc10c7707d9"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-db.mxl",
+      "role": "score",
+      "sha256": "3ad7b5559f2d14e2fa1ce64c4f8b3964616748b82d83ce8a88e40196e238ce6b"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-e.mxl",
+      "role": "score",
+      "sha256": "bf3dd168a27fcf591781f895dcb18c37cc750ffa98ed0dd0765b1eb9576f5151"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-eb.mxl",
+      "role": "score",
+      "sha256": "a1b74a8402b36d38a2310eb25c4ae5c5af3a90070e9030a0ca89485c80986aa6"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-f.mxl",
+      "role": "score",
+      "sha256": "3f61417938581948992fd0844954234aba59409cad98980ae956e7e638bb336b"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-fs.mxl",
+      "role": "score",
+      "sha256": "dccbd79245f81020987d9a7bf69bb20abc6ffb9faba644caeaa1d275cf3f9ad0"
+    },
+    {
+      "path": "scores/chord_tones/dom7/d/dom7-d-g.mxl",
+      "role": "score",
+      "sha256": "3e0d9545e8c6e0bbcd7942396d18329c8cf15af68f6509d590b0507f85ec790b"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-a.mxl",
+      "role": "score",
+      "sha256": "4d09faa24386b8a8b073ca77a290ed7956a92ad2daad7243947cb7e23ffbd1ab"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-ab.mxl",
+      "role": "score",
+      "sha256": "73fef1b556a5dc52ed44c2ed6825d8b1aed53f0d90893ceff4f0c27231ce3425"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-b.mxl",
+      "role": "score",
+      "sha256": "5074d60c02beb10c1c4c2056816f9f7451f55b533239619e77e5c6a624f71a22"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-bb.mxl",
+      "role": "score",
+      "sha256": "0cbf6a62c933688b6b46f747a9a275da66280b2d561517752dfb6e617c81c1c4"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-c.mxl",
+      "role": "score",
+      "sha256": "572aefff4052f4905d00614175e0feaab6fb8438d40a2d01f995441b45d086c9"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-d.mxl",
+      "role": "score",
+      "sha256": "2ea09908c9a3c751e8623340d316b0525f67013a933e49e0db62f2631d6bf427"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-db.mxl",
+      "role": "score",
+      "sha256": "13b9d563bd39ebdf94537aa08b3806bc9764fbc8a9123eb5a266500ae3f6c902"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-e.mxl",
+      "role": "score",
+      "sha256": "1aa5aab004f4a468d218eb1849c207f2a7b826df6834c0a0fac9af11f6e706e7"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-eb.mxl",
+      "role": "score",
+      "sha256": "437aecc8c05584fe3a78a4bb8c820a3c503151f10f1aba763cffb8a90a1ed8aa"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-f.mxl",
+      "role": "score",
+      "sha256": "241b1d7820fa0393b611463d9274eb46a016cfd8b42f29e099ca8da584e72d8b"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-fs.mxl",
+      "role": "score",
+      "sha256": "cf38f0c44bd1a7ace608cee1da80c45a6ce486a8a9e8dfa32fbdf2491a695dfc"
+    },
+    {
+      "path": "scores/chord_tones/dom7/e/dom7-e-g.mxl",
+      "role": "score",
+      "sha256": "304d1576929041649aeb371fb29010effd035866d8ca4f32640af1d8a64e1a07"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-a.mxl",
+      "role": "score",
+      "sha256": "15a029c3dcf87fe5765fc0b25cc9f3136b8c16e88e605043f6adec2fc07adf75"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-ab.mxl",
+      "role": "score",
+      "sha256": "fe440006b514616dd6c3f9e45d85c255bb62c8303cbf2e1c72c29616ca5e30ce"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-b.mxl",
+      "role": "score",
+      "sha256": "db6f49a2798b8e05e656bbeffb643b842e22df6b36148d3abbb11e8135c65bc9"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-bb.mxl",
+      "role": "score",
+      "sha256": "65cfdec4c3277e6aa2d32303598dcaa963697232da5c8f8b8a6a16d6c0afd885"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-c.mxl",
+      "role": "score",
+      "sha256": "2e2a78ffcecf270f0396541e176abbbdfb647c72e98ca1a2f4ecd9fbf38c0683"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-d.mxl",
+      "role": "score",
+      "sha256": "dfafbe72bcf2a1266e68902cce80e0891462a29e8607fbfef7f674773322f138"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-db.mxl",
+      "role": "score",
+      "sha256": "cb364ae80ad89d8bfdb7b5510cb9bfa4a0adf110ce7514621498998568e91c28"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-e.mxl",
+      "role": "score",
+      "sha256": "d899ab51bfef06e1a1f74f054544896ad82652fb642f24d4f8123eca899fb806"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-eb.mxl",
+      "role": "score",
+      "sha256": "92dd8be131b98d4db5e0cfa2a7ec7a2b13e831825311919a1bf90717b6e2ab37"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-f.mxl",
+      "role": "score",
+      "sha256": "680ef27f5aab63ce7597f155115d374ea01a8c23057fba29657e7c511aa2f6f7"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-fs.mxl",
+      "role": "score",
+      "sha256": "e889d0a5ebe98b62d8eeb7f67728fb853adddf27d32572c6fdf0a07c4f61b860"
+    },
+    {
+      "path": "scores/chord_tones/dom7/g/dom7-g-g.mxl",
+      "role": "score",
+      "sha256": "af4fd43d2ccdc821e02e3b262edf0b451a31c6e65f76082c3b1606b4a299731a"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-a.mxl",
+      "role": "score",
+      "sha256": "95019580f04675e7e0b118d76a6f8f00050294684302fca236d03c9c15fa2ab6"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-b.mxl",
+      "role": "score",
+      "sha256": "bac3f7a840a26d0abb628a4792581d0ea5a6e5ff08dcecae21931823f38948b2"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-bb.mxl",
+      "role": "score",
+      "sha256": "eb556a85c18c8e256774b29a1f0b454eef53feaf46426a3d5242a760494647ef"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-c.mxl",
+      "role": "score",
+      "sha256": "c3390e20c8f15d5a6d959ee70e4235b4c4f3db5ace042eda4e0fdf55abef627d"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-cs.mxl",
+      "role": "score",
+      "sha256": "33851f18504479dd4e549770562d9a305354b71554ad4be625d5482fce7649e1"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-d.mxl",
+      "role": "score",
+      "sha256": "7fcf73ae2f9e84ab88d816c40954631d4876627123f568f69cd45cd927acddf8"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-e.mxl",
+      "role": "score",
+      "sha256": "23ccf50be6023714795ca646357cc0927bccfc8aebe7e4b87f43a3a7bd281fe4"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-eb.mxl",
+      "role": "score",
+      "sha256": "1de83b99e21424915e08ce9238ad378704b915b789588dd53b8197cb1e4aafd0"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-f.mxl",
+      "role": "score",
+      "sha256": "8a292b0c10fe824606418889ac0b1f0a81bf7221003ddf099e65c48200095e60"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-fs.mxl",
+      "role": "score",
+      "sha256": "2337d60f5e66bfbfcb12456c477baa4ddfbd16792d079dda892e1725a35b1573"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-g.mxl",
+      "role": "score",
+      "sha256": "830c13271752f795e2d8b3cf50b4b10307066063fdbcc5c72c3c858bf4a69f18"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/a/m7b5-a-gs.mxl",
+      "role": "score",
+      "sha256": "2378f08ac22d114c18f357477352cd51ae4b61d8354a13bcf86f56b2f8d90979"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-a.mxl",
+      "role": "score",
+      "sha256": "6e3ee37a929e0e635f286af5711e0803902ed0ab9d82a96dc5649e86ad62d123"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-b.mxl",
+      "role": "score",
+      "sha256": "5bf6aece205e3ff231e6497dad3c45b4ea7bb5200885d2abe632f260e018da47"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-bb.mxl",
+      "role": "score",
+      "sha256": "3e2f64e3fb743d1307985b42aa70701cf9e96375e50a83eff73d75d89422bcdb"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-c.mxl",
+      "role": "score",
+      "sha256": "b3f395ca73fac237b685b0686bdb2b2fc446acaa4728f4df19f1738ed7221b1a"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-cs.mxl",
+      "role": "score",
+      "sha256": "6054bbf5abbaec01cd7678d94acbd2d516efda9d276ace89f696738a600ae97f"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-d.mxl",
+      "role": "score",
+      "sha256": "ce470d172b730b33221656b7d08cb5f0a58ae56d27bddce7646f6e67724d4c63"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-e.mxl",
+      "role": "score",
+      "sha256": "1ff457711228bae29e4e94cfef626e83fb8a5aaddbdd02e3e9ce72cdbce10c35"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-eb.mxl",
+      "role": "score",
+      "sha256": "1583af119e3c66f09917a748bf997a9bf75b7f18468d79951d4f1e5f94a29adf"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-f.mxl",
+      "role": "score",
+      "sha256": "9e2be6a136bce9ee691978e3dc6470dd56285fceb0c882b1572f947b41263ff5"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-fs.mxl",
+      "role": "score",
+      "sha256": "fb85fef1ba8c4abb0b50d09d0062b034a2232ae60455ac62e8ba93ce622e53ab"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-g.mxl",
+      "role": "score",
+      "sha256": "fa909222f63acd87bb896420d2c8de2f924b54138ccdf0f6a43ac36ddd3894e4"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/c/m7b5-c-gs.mxl",
+      "role": "score",
+      "sha256": "b444e903b518268c82e47bb2333d92f1d163a4b8f87526ca6847294d86642d45"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-a.mxl",
+      "role": "score",
+      "sha256": "96cd40bb8b6fc4438cced3c43a13d6b57926ebd9c9e06a46de33a82a67f7a8e0"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-b.mxl",
+      "role": "score",
+      "sha256": "5be4984f22ec3f411f37599d2e083868890c02b31f44a0f4320f7be15823c3ce"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-bb.mxl",
+      "role": "score",
+      "sha256": "c891b5f9e47cd0c284a22d42d5430fb07c21b1e204d00fb01962c43dfecaf20e"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-c.mxl",
+      "role": "score",
+      "sha256": "b0631bc7dc1f3b73ecd982368f8b89dcba7e83f1986e3077e4e2515c3b5fbffb"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-cs.mxl",
+      "role": "score",
+      "sha256": "9e0002c578299dba27e4ce7c265c757619d11034da7e22b500f51bdab2647874"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-d.mxl",
+      "role": "score",
+      "sha256": "3e38b52c436e7d44442534db93dcdb026445f4618df1299ad45b2a46808683c2"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-e.mxl",
+      "role": "score",
+      "sha256": "30837a415c36100a1368c31a0d7bd72950e22b9f1eec43ed9a4895c5801d8d93"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-eb.mxl",
+      "role": "score",
+      "sha256": "f1fb38eb58176a824e980cb6badcb00c8effa0f0df148c9c68e25d4c73184df5"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-f.mxl",
+      "role": "score",
+      "sha256": "37d88cff9efb0c85d0343fd5e6173223633e0ab59de5c96a3a686355dd08be80"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-fs.mxl",
+      "role": "score",
+      "sha256": "dccf1f54f4fcccb2ada3b5d20e75a4f07b6289e0600cb1f782d8d0afd06b897e"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-g.mxl",
+      "role": "score",
+      "sha256": "c76e56d476cb6c773a241983483da745c00e1e590d8e20fd23765810712e34e5"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/d/m7b5-d-gs.mxl",
+      "role": "score",
+      "sha256": "3c2d29079ebea638e933c5eb3c8552417c7d99dff9167f691cca4b78aa7aa56e"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-a.mxl",
+      "role": "score",
+      "sha256": "ea5ce3fb0cc34d5aa3b8816ef1c91f9f5e42b8a553a6181ad82443046e782747"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-b.mxl",
+      "role": "score",
+      "sha256": "75416d7ec134b6160c32966c4ab7aea574a544b1bd8ad775d2bab0e71223fb2f"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-bb.mxl",
+      "role": "score",
+      "sha256": "2b068dfc54b619b4b34686f2de6526a3d26588a3e9f6cee198d5eba537a10b5d"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-c.mxl",
+      "role": "score",
+      "sha256": "d7cae24aacd8f1202d9e6977857a4894be3f905300987319319ab1f980e28168"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-cs.mxl",
+      "role": "score",
+      "sha256": "1ce84deaf4b23472da82be0ff0f3a5304ba2f9a95c0db85e8e079c1690f345c3"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-d.mxl",
+      "role": "score",
+      "sha256": "d6f241dd4117c7e3a96efe002c98d7d49418fd758c674702432aa31b9ec7c7e7"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-e.mxl",
+      "role": "score",
+      "sha256": "d3359483410b6189b1d4dc4c33765a8d5eb2fbacd549ebc381701105ea88ebba"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-eb.mxl",
+      "role": "score",
+      "sha256": "e0da28291b9039ce81b4bbfb073a061e1f06cc995d33c3cffbb6ede79cb44637"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-f.mxl",
+      "role": "score",
+      "sha256": "c39651d6dc5ef29d25b4136eda1e2b81e59f842776aab3da025a16ecb14c3b9c"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-fs.mxl",
+      "role": "score",
+      "sha256": "a4c270c282289f5d59a5373ee4eb77459b4bc956d44b4a16b8aee6fcade6f232"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-g.mxl",
+      "role": "score",
+      "sha256": "6a7e14ef9b7777e1764b8cd4839ceea6e9241586b40086b09cb396e3644ad1e1"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/e/m7b5-e-gs.mxl",
+      "role": "score",
+      "sha256": "1da4dffb342ae16cad9aa9e6995b8186c2881dd8cd12ccadbacf1fcee3c50981"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-a.mxl",
+      "role": "score",
+      "sha256": "63050d299e76cbd8cd50431869631c097d31a8b9de1eb971f5c8db119c3e0bbb"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-b.mxl",
+      "role": "score",
+      "sha256": "67845e5b6d20c8efc2cd5345bf8d5fcc2f4f79d52c893e71d4e34e15a44747eb"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-bb.mxl",
+      "role": "score",
+      "sha256": "16384532bd5abbc12ad7c9bca0f56d9f126b723b161c99a6a07ae5ba7b31c0c8"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-c.mxl",
+      "role": "score",
+      "sha256": "1283fab3b4e2f76d5327975724521eb96d7a5e26a761b5b9569694605730cbfa"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-cs.mxl",
+      "role": "score",
+      "sha256": "d34e98ab5546ecbe2f0b7ac50643bb41bd4ad89efbcd25e29d31df1e02d18d66"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-d.mxl",
+      "role": "score",
+      "sha256": "7565a5eaa348d17954a1ac5d405c2a7b38c8733fcf93d54ac90838d397c7ff21"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-e.mxl",
+      "role": "score",
+      "sha256": "5348bc148390928fc94439b593defdd73dc30fe5b11b7704df3ae107bbf22fdd"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-eb.mxl",
+      "role": "score",
+      "sha256": "96bd47fe87cddfe6c3ebf72b37df6befe0fc5c6d018d4cc9ddf4631a8c00f13b"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-f.mxl",
+      "role": "score",
+      "sha256": "74d447bf611966c5823b8b329a5860ec610712993a264d9cd559bc23569de658"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-fs.mxl",
+      "role": "score",
+      "sha256": "46d24dfae871c342d1aabe5df1ccade43cdc9859b79deac05ddb52cfa1f3624d"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-g.mxl",
+      "role": "score",
+      "sha256": "7ff8f9104fd3e8fee2524001b6bb70e6078943628f64425f25ed198e7cb763c9"
+    },
+    {
+      "path": "scores/chord_tones/m7b5/g/m7b5-g-gs.mxl",
+      "role": "score",
+      "sha256": "664f7f88ebc221d53fd57920e8838e3af9f42b9eca0815069624b2d52c1e72e4"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-a.mxl",
+      "role": "score",
+      "sha256": "3764e9c99a76d46b2fe149362f47b9eaabeafc2b5aacf5950a45a2f8f04e7260"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-ab.mxl",
+      "role": "score",
+      "sha256": "bddb189e252de47f10d6acd97959b5e3480a3fab18a61fc64908e358a6200537"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-b.mxl",
+      "role": "score",
+      "sha256": "8cd76370655ab4c1ab73f847a7bbe53a5f51626f2959124288298ee619112ef7"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-bb.mxl",
+      "role": "score",
+      "sha256": "f5277e684a6992a87b00d0bceddcda5a3a46d9e0aa3b7464a9dbeebca02128da"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-c.mxl",
+      "role": "score",
+      "sha256": "cfa93c14619d55f943fdafe8b505b7cbb683f437d08b3c87f2436db559a11000"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-d.mxl",
+      "role": "score",
+      "sha256": "2df6b5430d911fd6f38d401671bfe0735505a1a7fc2a43a4a6aece9cce574dae"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-db.mxl",
+      "role": "score",
+      "sha256": "b5bea213872d6db3d505d83f97a10fe877a8ec4430c210e4003e8f7de5b26f81"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-e.mxl",
+      "role": "score",
+      "sha256": "ca30330030357830f8d4236c56e474f9bb27907142194b3eba74b5092744dec7"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-eb.mxl",
+      "role": "score",
+      "sha256": "ca4d92e6f06e525294888c61a6359407cc9cffa96ec913a251d582d2c146841a"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-f.mxl",
+      "role": "score",
+      "sha256": "0b3ddb02c52d945d88aaefc7c00f853a0034c4750558104e37a096a35e035448"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-fs.mxl",
+      "role": "score",
+      "sha256": "0de1a53cdb90c517e3e8564ee82a88513056d5c3bc7aa1f492ae46563fc3dff4"
+    },
+    {
+      "path": "scores/chord_tones/maj7/a/maj7-a-g.mxl",
+      "role": "score",
+      "sha256": "09edfd597e586e822218bae29c98070f3bc72967fac72b5e290236721aa104dc"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-a.mxl",
+      "role": "score",
+      "sha256": "4d5afc2f58d3a8096ded7cd57aa95555281746c455634faa8e4aaca3625a60af"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-ab.mxl",
+      "role": "score",
+      "sha256": "175a961d4cc0540e4521660bf06b2df0a5156cbe9816b28ecd386ef79c9abf1a"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-b.mxl",
+      "role": "score",
+      "sha256": "bffb12b23e2c7c0d208ca9d1a874eb9c660ec798b35ec5180f9d2950c5a1a733"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-bb.mxl",
+      "role": "score",
+      "sha256": "0dd05ecb955bbc36d7d8b347cc4fa4a81a9a5bdd80b368bda20a8f720012144f"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-c.mxl",
+      "role": "score",
+      "sha256": "e912b252d5d1b39bbe05f6ce9721b60112a5a6b5e979f0f12dbf4e2a509b460c"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-d.mxl",
+      "role": "score",
+      "sha256": "be44dba9d7d4cb75b2e2f9d3a32464bb51340eccebec9976de6f91c869af7166"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-db.mxl",
+      "role": "score",
+      "sha256": "e540237cb88abb551739016b86d84a4533e4d93b19f93442dde2fbc40db604f3"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-e.mxl",
+      "role": "score",
+      "sha256": "fd3a677a358ffe1e4cf9531d8ebaa8fefab62ed7fb1c56beaaf5c43d4eb3cbc4"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-eb.mxl",
+      "role": "score",
+      "sha256": "d73ca5373b3454d750f3e5d08285f18d6e481c4db066d6472b3947027d0335a8"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-f.mxl",
+      "role": "score",
+      "sha256": "8ca2eb3dbefb1fe9633ec497894b869ca9d2931beded05758ab5a1e7b38c557a"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-fs.mxl",
+      "role": "score",
+      "sha256": "03e74cbaf9aeaa83a4c14d42ac6cb9bf2f63e63e11b52964359bdadfbb597544"
+    },
+    {
+      "path": "scores/chord_tones/maj7/c/maj7-c-g.mxl",
+      "role": "score",
+      "sha256": "a4b0f7ac086bf921dcad44104814821116d6200d6a8e88f69add86ad7fe527de"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-a.mxl",
+      "role": "score",
+      "sha256": "dda4b26cb86a9d341a64b6044f68cb679a9047a5443cd31a847b684d0955a19a"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-ab.mxl",
+      "role": "score",
+      "sha256": "af2fbebe95ff095fe33502dca185b8fbd065919556e3f26bf835f91d32ead590"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-b.mxl",
+      "role": "score",
+      "sha256": "9eab6594eef3b4221cdd5a874ada08af426565d3aa5af5dfb45c15ec62065840"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-bb.mxl",
+      "role": "score",
+      "sha256": "fec21b71a91764994d8d8cfc051eb0a6bd7b71acc2c2944ddf89dd0a676f8dcb"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-c.mxl",
+      "role": "score",
+      "sha256": "b19e6deb51adb8925e1647c7e4df86fc4d8740a5256f7c40b21478c45f60cd15"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-d.mxl",
+      "role": "score",
+      "sha256": "b6f9a910f45ea81a8f61c920e055dc1bde5b0ecfd81b9a1929c3bc113512bade"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-db.mxl",
+      "role": "score",
+      "sha256": "cbe9cb70c33554eafe145c6b1190fcd816c71d8e099262fef25797d060f1d285"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-e.mxl",
+      "role": "score",
+      "sha256": "9c334915b6c9a1dc1f0393d9824891663669471c8e1d942a143e50643f7a25ac"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-eb.mxl",
+      "role": "score",
+      "sha256": "f04f45bd8b8dc7d05abc62154e91eaca5527b434d27d482a94500558e3d0f4a2"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-f.mxl",
+      "role": "score",
+      "sha256": "c3b73aa76702d723f975edd029d8f987559dc06d490a388316edd1ec72baa342"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-fs.mxl",
+      "role": "score",
+      "sha256": "e0a08c0c6014b35f24d4739589a109efbfd57d9b937c9cc95816635a3f67de4e"
+    },
+    {
+      "path": "scores/chord_tones/maj7/d/maj7-d-g.mxl",
+      "role": "score",
+      "sha256": "263ceb98b4c86842c65ea8c6234961b05a7c0565404cad38455d7779c1460fd3"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-a.mxl",
+      "role": "score",
+      "sha256": "e281a73ad458ff4606b4dac8e49ffe9ed71c92424e4ca47f9647ef35b84baf62"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-ab.mxl",
+      "role": "score",
+      "sha256": "912663e81650517e9fc1f664f407c1717a18caf493aba8eadb53a157b65c99ec"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-b.mxl",
+      "role": "score",
+      "sha256": "b6ba42341cb1fdf74eba9d6e2815cda6304ecaccc886ad27405571f073de62cd"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-bb.mxl",
+      "role": "score",
+      "sha256": "8189051880baa82d00b03a14c6dc955c0b0915f0ddf6a314c5ca6574a797ea31"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-c.mxl",
+      "role": "score",
+      "sha256": "b9ce0ff65b85d733d684e719c1ecd8b6c12e775d51c0fe7d263ee7888527a921"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-d.mxl",
+      "role": "score",
+      "sha256": "9ad8b29259589c17c6855c0cf3216979521213513fc3c8e92acb3f2dc88199c7"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-db.mxl",
+      "role": "score",
+      "sha256": "110701ff5bec9504ced703d545005c4b920dba291eec3a3d88dceba9697ff3e7"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-e.mxl",
+      "role": "score",
+      "sha256": "fa7e52e9bcb989cd05667cad3fffadb8337d4ad50afc0194460d4f99257e40a2"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-eb.mxl",
+      "role": "score",
+      "sha256": "57f115822c13d0d2c7a50d2c735d1dce080e4f9d6fddca86f6ea1f1f78aed7d2"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-f.mxl",
+      "role": "score",
+      "sha256": "4c262cdc1a1e6d00b33042ff12fcdeaa73b1c39864d940eed72935463b2a00ec"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-fs.mxl",
+      "role": "score",
+      "sha256": "4a5c497a55d4d49f7e9e187c2e53854ed73cd4aa9b379d28d741cd5f591ca17d"
+    },
+    {
+      "path": "scores/chord_tones/maj7/e/maj7-e-g.mxl",
+      "role": "score",
+      "sha256": "ed2f2f5c9e728757a98ee5015891221277a1b2b80608ba7f103c7044da0164e6"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-a.mxl",
+      "role": "score",
+      "sha256": "05346e57f9a34e65ff30f65f7cfb6cc65972d7ac5383317983c3a61ad7c51d0c"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-ab.mxl",
+      "role": "score",
+      "sha256": "8ec18ffffdd9ec051bd82c9acbf1e12f4155d78bae88f9b97513e62a810334ca"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-b.mxl",
+      "role": "score",
+      "sha256": "bb54bb3ac12a45828c963814802d85f6bea9dc58918697a7e5f89265d4dcd8bd"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-bb.mxl",
+      "role": "score",
+      "sha256": "f87716ba766cdbacebd77193d6bf93360c07215566272ed8a970f88027abc994"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-c.mxl",
+      "role": "score",
+      "sha256": "74c32c1a62d293bd72f7331d12f562d781fb2cb28d45b4695c0f58cc6e55cb72"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-d.mxl",
+      "role": "score",
+      "sha256": "8a06f75a3674cc4a6abe01ba71db545d5e95de3c543f718fb20f8e82be2e5af7"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-db.mxl",
+      "role": "score",
+      "sha256": "960dff909dd53672798a0b83147203491cc41a67786a3ebf86ab85b287ac8bea"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-e.mxl",
+      "role": "score",
+      "sha256": "6c7a92a2b6eac72d10fd5c3771d04b0ba5828b11b279911c9deaedab7e913bd9"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-eb.mxl",
+      "role": "score",
+      "sha256": "2c662b841584279f0c19fceaff2c12bd9ee108e7857567697e93523761d03ca0"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-f.mxl",
+      "role": "score",
+      "sha256": "2c754c459c06da00069eb813c0f1b7a879d5028a0286f04c9e5d848f2cb4db70"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-fs.mxl",
+      "role": "score",
+      "sha256": "346643bbbb4bbebf520a133dedac32cc35e99a0b28f0d2e328fe3781fd41e239"
+    },
+    {
+      "path": "scores/chord_tones/maj7/g/maj7-g-g.mxl",
+      "role": "score",
+      "sha256": "dc9f53a5073b436ab8e9b0908022a30f217ee7eee3f0aa7d4e14128f3c657141"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-a.mxl",
+      "role": "score",
+      "sha256": "6e8c5b952645d337feb5851a2fd0489ad0f1f7800bbd2dab5d32969630e8ac0d"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-b.mxl",
+      "role": "score",
+      "sha256": "3acf6c1f3b73518dd306e6168a7aab5ed02b2ae19193a52142ce25a6e20eccb1"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-bb.mxl",
+      "role": "score",
+      "sha256": "3b4222a65f49a7c361510c17178be16379fc7180eef44e025067738737a5d580"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-c.mxl",
+      "role": "score",
+      "sha256": "5eb525ba0b7a60e71b27eb3fda93cc42a26a9131c20065cacf0777bed7c03e9d"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-cs.mxl",
+      "role": "score",
+      "sha256": "b0e5ab999d45b79f8b35fad9cf2e91b4eb752fd8bec0195396041091458ed660"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-d.mxl",
+      "role": "score",
+      "sha256": "31a5858d210c7a1660b6938db71351dc00f3d0f6a93aaec946930927861fd788"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-e.mxl",
+      "role": "score",
+      "sha256": "bdd04d33b633011d1a36be8b3c13409a08fe222e6f8ad23bfa9ff13ada73e254"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-eb.mxl",
+      "role": "score",
+      "sha256": "9f8d0e253c15f0366b9298d0a66bee1a90fa354ad50520a3ddca0d9437abee9d"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-f.mxl",
+      "role": "score",
+      "sha256": "cf710138f863624f6dd098003852066bf019301e4b63003222e6fda29ad49341"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-fs.mxl",
+      "role": "score",
+      "sha256": "da47e0b37e67bd9226db80e8482d37ee3f0d999a2b732a5e165e68e696abadf0"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-g.mxl",
+      "role": "score",
+      "sha256": "76421a71fadb3a55f1cdc9b11bd3d0a96c962d8953f71570bae55248e6a8b667"
+    },
+    {
+      "path": "scores/chord_tones/min7/a/min7-a-gs.mxl",
+      "role": "score",
+      "sha256": "2a02066a860f7db8f9140180a5c3afec9cd74a91651a3edbcd7aee2ebadf2477"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-a.mxl",
+      "role": "score",
+      "sha256": "c4cd304ea260b64cd7e9ec122974eb37df18cbc333adb1df312bad646b8ee1ca"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-b.mxl",
+      "role": "score",
+      "sha256": "0ae2d981d8cb57c56334f9d23a4559bf0b123b476a2f19de73c44c8ed1e85a09"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-bb.mxl",
+      "role": "score",
+      "sha256": "242e9e42e3e7332c585c3479d2f81e869e93d394fcbe91c6cc26baa23fbf179b"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-c-low.mxl",
+      "role": "score",
+      "sha256": "b2546a1a490f8d78fae8b8af66469191a8ffde7f04ce29d5caf70c4bdaea5b2f"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-c.mxl",
+      "role": "score",
+      "sha256": "28129d02adb21f0061caf74c60e74e943f8d16f6ac1df39d51dba649ca6cf46b"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-cs.mxl",
+      "role": "score",
+      "sha256": "45dd65ce60f2788b5c5ac113ced568651a007cf7db4d2d763487fb442ff157af"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-d.mxl",
+      "role": "score",
+      "sha256": "35fc30668a51d3507551753dfbb90a23e642116dc0f1f3cbb10aeb9584fa6eed"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-e.mxl",
+      "role": "score",
+      "sha256": "3dda1cc5bce2a6c9b7fb6cdc2bc845311635930911ac59fe2eb0ed4883e946db"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-eb.mxl",
+      "role": "score",
+      "sha256": "256ba812e5d7f2b2042472681beb460eac068b380bd718727981da72e3a1e35f"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-f.mxl",
+      "role": "score",
+      "sha256": "ddb31d9b3979f7ae914ced8c4b7a6f92112d5fecd6cd61d9f3de0f226fa212e3"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-fs.mxl",
+      "role": "score",
+      "sha256": "aae5897d0e547554f6d42f882d4adc9fa058bc05a45edc6935bbda6c8d4d3e55"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-g.mxl",
+      "role": "score",
+      "sha256": "3f0b671a2aae6688d7cd6ad54e8287910657170b6f7a58e8e84928e7f886394b"
+    },
+    {
+      "path": "scores/chord_tones/min7/c/min7-c-gs.mxl",
+      "role": "score",
+      "sha256": "c11f1520e3aea095fe3b53d752099dcd265a8aef316ca3cdc86513d0d6a44324"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-a.mxl",
+      "role": "score",
+      "sha256": "8fabdf8664f733d9848f4d0bb43c05c6202ca91d2da4a610c5d24edac5e15bb1"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-b.mxl",
+      "role": "score",
+      "sha256": "cb2021188fec01333ee50b8b3ee1a96bd2a79d557bb0684bf7fc0c0139e67499"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-bb.mxl",
+      "role": "score",
+      "sha256": "953d2013e9ea55e2f07d52bc1b16547aaca6a61a586ae9b64b19b680754cfb21"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-c.mxl",
+      "role": "score",
+      "sha256": "83030345895f8dd2d277ce4e80be6a50519bfac464eae606c03c49769db89a2d"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-cs.mxl",
+      "role": "score",
+      "sha256": "c22d26411cf3fe6be26347aaaa34f3c55737a397259626e25ede626f430cbb43"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-d.mxl",
+      "role": "score",
+      "sha256": "67c293d495e43686d6f7265495774799db365a60979d33510ecddd3c72c5387b"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-e.mxl",
+      "role": "score",
+      "sha256": "c08c1d610cea184502cd844baa8d164d68919eeb55aab3957e7d9d961e13668d"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-eb.mxl",
+      "role": "score",
+      "sha256": "b22d2909cc1ae4dcc465b7a03086c0b5b9d46d776ba03ff5726f608bd4bfe55f"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-f.mxl",
+      "role": "score",
+      "sha256": "156842bf40b6756e3fcc66e1a13483898b0acacbd3ffdc78ffeb5229f1195c34"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-fs.mxl",
+      "role": "score",
+      "sha256": "eac585f28965987032015ec56554c20226b069d836cde203a8f0a58704c43bc5"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-g.mxl",
+      "role": "score",
+      "sha256": "a6fb45afd0fc3941aefa08b47c1fe857e4fe571e12928595ea9fe2b8e4bd61bb"
+    },
+    {
+      "path": "scores/chord_tones/min7/d/min7-d-gs.mxl",
+      "role": "score",
+      "sha256": "6c61f7e6f23c2196968d31990fc2ca7aaa52b3b5579ce49345767e59fd31c915"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-a.mxl",
+      "role": "score",
+      "sha256": "7ab23767bb337698bebd5c9210651f7e9895110f8ae1e0d11938665841cb3b4c"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-b.mxl",
+      "role": "score",
+      "sha256": "5a7263c65851866deb88b01af167efe5ab559a342c170be688cbd7756171a308"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-bb.mxl",
+      "role": "score",
+      "sha256": "c4dd4e1750fb1b7c132b71c67ad5b774f0e5ec95908d9a0c872fd84262129cea"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-c.mxl",
+      "role": "score",
+      "sha256": "c300fd2a2a17f9b8915175ec134e5dc59d2b761f744bfdbd6a1eb1e0181718b5"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-cs.mxl",
+      "role": "score",
+      "sha256": "13b2c17aa8159302914da6b2544199e6deb802c0237fa59c970f5f7b2edce205"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-d.mxl",
+      "role": "score",
+      "sha256": "0d6cb694e71e41d1f27d148df8f7a522a2b84abbf7ef7960ffee3948ce7a84ca"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-e.mxl",
+      "role": "score",
+      "sha256": "efba975dba900243b6375093c7c20b367cfab74ca459a7a839555382c6a1947d"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-eb.mxl",
+      "role": "score",
+      "sha256": "22b41bb995c9ae8d80f24c2069171da94cff0b375b77d423890747cefff8ce15"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-f.mxl",
+      "role": "score",
+      "sha256": "74b0c9ca4a196f563ee0765360ab54f8b5105980968d548a8166843c9d558142"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-fs.mxl",
+      "role": "score",
+      "sha256": "37dafef033e47dcdae31c26c5f5c0b6143232210b317bba748383fa6713bc0dc"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-g.mxl",
+      "role": "score",
+      "sha256": "4608765d0cfddb076ba6006e6f136711d92545d3804d6d816baa25516b0dbae5"
+    },
+    {
+      "path": "scores/chord_tones/min7/e/min7-e-gs.mxl",
+      "role": "score",
+      "sha256": "f77868ea99ad0bbbcf0aa21869c0fd9a83cf044842611a36143786600e96a35c"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-a.mxl",
+      "role": "score",
+      "sha256": "c542b76c74e9c4478222ca1fb4963f69f205a5173c9c741eeb3b516ee0ff374a"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-b.mxl",
+      "role": "score",
+      "sha256": "f477a3bebe2045103cc12d46328402839613ef956ae4b33a51f5fe6ba7fe79e3"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-bb.mxl",
+      "role": "score",
+      "sha256": "a899394abd9deb56cf901e2b58bf78384bd0e8c1ecc2063f9e107b5e3c1ed5b7"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-c.mxl",
+      "role": "score",
+      "sha256": "e729f6a72f17f39255411feedbee1727af69590fb35b2f3b81f767cfd2b52f58"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-cs.mxl",
+      "role": "score",
+      "sha256": "57a2b0d8edfd85c4091386df17e9482540cf45e17aea2e6c274a417befa2f755"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-d.mxl",
+      "role": "score",
+      "sha256": "74afc444567aa22dc110ee0f0ee4922ae8f426f36d3bb015140faf9531dc3956"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-e.mxl",
+      "role": "score",
+      "sha256": "3575bd1992fc82c57d82a309a3b4ada9f322186f249b28a17454ec87fea30874"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-eb.mxl",
+      "role": "score",
+      "sha256": "fb6541ab14d6cd071ef85594d83bb7c6e3ca41cc83f3da11a8b5a881a464214d"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-f.mxl",
+      "role": "score",
+      "sha256": "cd1cf72328a7cdeafcfd7d47f67f7a38a7a05d5fbb8d4eaf449d3391d661db80"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-fs.mxl",
+      "role": "score",
+      "sha256": "0dd2bc2197a5f986663f852b34a5c0cb8e2a274096087c93253ed563bbff421c"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-g.mxl",
+      "role": "score",
+      "sha256": "bfa8e60d670e00c4675d89c95662536ace83353ff8b964306a5f842e0e3c624a"
+    },
+    {
+      "path": "scores/chord_tones/min7/g/min7-g-gs.mxl",
+      "role": "score",
+      "sha256": "727187fc6020ef23fcbb14cff5757bc5c1a0781877414d9039fc955a8740186c"
+    },
+    {
+      "path": "scores/chords/ex01.mxl",
+      "role": "score",
+      "sha256": "42241081f2bc9d2167d4ab6781b3ad2aaa55d8f939339bff0891a472934f07e3"
+    },
+    {
+      "path": "scores/chords/ex02.mxl",
+      "role": "score",
+      "sha256": "319cc7fa41a545448469023836c07ec8b388af911f5cc137d600ce9d4eeac0f5"
+    },
+    {
+      "path": "scores/chords/ex03.mxl",
+      "role": "score",
+      "sha256": "904e2c6bb9846386c726f8c40d9560b7e696c0d3b327b79ce3050f3d6840f1aa"
+    },
+    {
+      "path": "scores/chords/ex04.mxl",
+      "role": "score",
+      "sha256": "64a6d6798a28cda99fc96267cc3a7d292c45ae047fdb9cea01ae3d4a4969e60e"
+    },
+    {
+      "path": "scores/chords/ex05.mxl",
+      "role": "score",
+      "sha256": "7fbdf8068033fb49615ee3ba3324edf55c31cee38fb28617c0018a52128b4601"
+    },
+    {
+      "path": "scores/chords/ex06.mxl",
+      "role": "score",
+      "sha256": "bebae3a8c9c6100286db0f444970d5686251f11544fe66927c4ee52f3d4a4f50"
+    },
+    {
+      "path": "scores/chords/ex07.mxl",
+      "role": "score",
+      "sha256": "db3acf46f161d19cd64cacf675343504412a991d6e46c1379722abaed3698a67"
+    },
+    {
+      "path": "scores/chords/ex08.mxl",
+      "role": "score",
+      "sha256": "853ad865059e6efdb262290cae5a8e895bcb0116a59aff6df55e2a7bf2626c68"
+    },
+    {
+      "path": "scores/chromatic/ex01.mxl",
+      "role": "score",
+      "sha256": "f298ac010fdf71979a12f737b71ca2e5126bfe4dc8cd4b9a09dc4d13ffb25199"
+    },
+    {
+      "path": "scores/chromatic/ex02.mxl",
+      "role": "score",
+      "sha256": "c9e43ae8f33304cddd337828e87fcb0b5e812a25eeebb7de1c1223334063909b"
+    },
+    {
+      "path": "scores/chromatic/ex03.mxl",
+      "role": "score",
+      "sha256": "c8c3c0987727f23c822e93b7b75aa5fb755c7ac2226b58d1b2650cf158d83b02"
+    },
+    {
+      "path": "scores/chromatic/ex04.mxl",
+      "role": "score",
+      "sha256": "655c55c34a11117a424ef135f761aa6d361331dc1d566c6c8b24ccd69b4cec87"
+    },
+    {
+      "path": "scores/chromatic/ex05.mxl",
+      "role": "score",
+      "sha256": "5c6ee43084b24d7db93d8a2a047256823e9deb6aadd21b352576b87839909925"
+    },
+    {
+      "path": "scores/chromatic/ex06.mxl",
+      "role": "score",
+      "sha256": "3d4336ef8874336a3e86c1e4623062bda8550ac11aa7cd61669a3f104d884ed0"
+    },
+    {
+      "path": "scores/chromatic/ex07.mxl",
+      "role": "score",
+      "sha256": "170eac88d7c4571b6939fd05c731e222defe2c9ec59a1faf92dbfdfc466d2dbc"
+    },
+    {
+      "path": "scores/chromatic/ex08.mxl",
+      "role": "score",
+      "sha256": "c7a9923d33db0836c3a4b55bdad1ffa3675261fd2da7e3e7a6e4d5c636092f35"
+    },
+    {
+      "path": "scores/chromatic/ex09.mxl",
+      "role": "score",
+      "sha256": "652ca9d7a83fcfb3616e8d8fb03edeb039aa1b483e68ba19ddcfbe426b657d72"
+    },
+    {
+      "path": "scores/chromatic/ex10.mxl",
+      "role": "score",
+      "sha256": "5bb7f02edd999a60f9d210a9cb62147966a2107e19970616194a342767b57217"
+    },
+    {
+      "path": "scores/chromatic/ex11.mxl",
+      "role": "score",
+      "sha256": "09cd8075d8a6762400bb5193efe251bf0c2a787d27a3bdbb6679f61f09e98f17"
+    },
+    {
+      "path": "scores/chromatic/ex12.mxl",
+      "role": "score",
+      "sha256": "dbbf6e5ee28352b8a61905d36ce00d0cdab4b98f478ff449eddd1b5d8f1a2d1f"
+    },
+    {
+      "path": "scores/chromatic/ex13.mxl",
+      "role": "score",
+      "sha256": "298cfa4225cd49eb42b48b62244bab3c3934eec0d174c1cf71e92030269de1ac"
+    },
+    {
+      "path": "scores/chromatic/ex14.mxl",
+      "role": "score",
+      "sha256": "a4d55a8c90161769a49069677a501aea0888bce7b49efe53c9f61aeec4f22659"
+    },
+    {
+      "path": "scores/chromatic/ex15.mxl",
+      "role": "score",
+      "sha256": "2c1212cbae0473f7d680977b9adde09bfbebb51a79c26e192ceb0f3eb28bf5d2"
+    },
+    {
+      "path": "scores/chromatic/ex16.mxl",
+      "role": "score",
+      "sha256": "b4c8acdbd883df36cac36a1fd0d1bbdddc94e453e2165d0a4c003044677bde2f"
+    },
+    {
+      "path": "scores/chromatic/ex17.mxl",
+      "role": "score",
+      "sha256": "50882ae5af96eb73d64febf6f19f04e1d512c6ba0f4da088c39980c86590f62c"
+    },
+    {
+      "path": "scores/chromatic/ex18.mxl",
+      "role": "score",
+      "sha256": "5a379b461724f6d885a36972db599ba57869264b75f093e8363e6ab89c872aaa"
+    },
+    {
+      "path": "scores/chromatic/ex19.mxl",
+      "role": "score",
+      "sha256": "a887fc6d1a23bb7626df08cdf4f2c7bb49adaa4d1a9bed29ea053a2d2db714db"
+    },
+    {
+      "path": "scores/chromatic/ex20.mxl",
+      "role": "score",
+      "sha256": "cfdc308cb1e88b17b3e5e1e8c870a9384d1dd6fcfd877e8ec77684dfd37413bc"
+    },
+    {
+      "path": "scores/chromatic/ex21.mxl",
+      "role": "score",
+      "sha256": "952b6c41e408f06119c932457df5d5a55914cc07702e75195081c949bbb32758"
+    },
+    {
+      "path": "scores/chromatic/ex22.mxl",
+      "role": "score",
+      "sha256": "1b019d2c5a117991209e6ad2d76e52e6ce62ddf2537dcc57b58bcf54bfdc7091"
+    },
+    {
+      "path": "scores/chromatic/ex23.mxl",
+      "role": "score",
+      "sha256": "9f09e0813658740a2773a2ea5ffc9b998e6fa50ecdc94becaa2f53cad5dd73b3"
+    },
+    {
+      "path": "scores/chromatic/ex24.mxl",
+      "role": "score",
+      "sha256": "1a471d7165b9e6cb7bfd11511b81433f451cf4ffb1e40c7c22c4f8b58134d1ea"
+    },
+    {
+      "path": "scores/scales/a/a.mxl",
+      "role": "score",
+      "sha256": "2d9e0634d007d4c9cfb0ec4aa21f0b5d02ad6bf35ad16bc349383f87f7d29574"
+    },
+    {
+      "path": "scores/scales/a/ab.mxl",
+      "role": "score",
+      "sha256": "ace39e511dfccfacd30b648e30492939e505bf497b945ba66f8231678e8182cc"
+    },
+    {
+      "path": "scores/scales/a/b.mxl",
+      "role": "score",
+      "sha256": "4f38c98c8c1ef18537899aa510e12b87a5dfac1e370d56374d21b1af349bb9d3"
+    },
+    {
+      "path": "scores/scales/a/bb.mxl",
+      "role": "score",
+      "sha256": "43f8e0668ee20c3189456df7a3e8740a3d9ec8f575b3267b59a619352ec480d1"
+    },
+    {
+      "path": "scores/scales/a/c.mxl",
+      "role": "score",
+      "sha256": "8baf33c585d49639cbfc61135a700ca2f9db1faba7f075ab815037b496d7ddb9"
+    },
+    {
+      "path": "scores/scales/a/d.mxl",
+      "role": "score",
+      "sha256": "9fac3cdbdc30c7bc7272b24adcd017eac1e3f25c8841bd549bedfb3375ffd1d9"
+    },
+    {
+      "path": "scores/scales/a/db.mxl",
+      "role": "score",
+      "sha256": "5509027f5d6d381e91b649abb7f51e738791211f98455b2753d08a7e3fec6389"
+    },
+    {
+      "path": "scores/scales/a/e.mxl",
+      "role": "score",
+      "sha256": "4852edc2f39ecb43b1daeeab0d7a0bf93290820004587441494d0d1d5d9b8153"
+    },
+    {
+      "path": "scores/scales/a/eb.mxl",
+      "role": "score",
+      "sha256": "efe0afe92a2df850d0bab23fa7e1ed0c9da91ab5e4d3082cccdd95d100a810b1"
+    },
+    {
+      "path": "scores/scales/a/f.mxl",
+      "role": "score",
+      "sha256": "c979374a9eeb2e67a9ac56422563293b0237727f9b4bfe6aa0f65ba7a4ca3374"
+    },
+    {
+      "path": "scores/scales/a/fs.mxl",
+      "role": "score",
+      "sha256": "cd7d4e2bc478cc986035681e20944a4716eaef4a2618041e80c241a4e32def43"
+    },
+    {
+      "path": "scores/scales/a/g.mxl",
+      "role": "score",
+      "sha256": "8db49646520874a579883b86c28d5594f7cd855035802f7855b4c27e3a4ebb41"
+    },
+    {
+      "path": "scores/scales/c/a.mxl",
+      "role": "score",
+      "sha256": "9f39111d5664c9d4295eec1e2a48564a3d1c3a86cf21e9e8299a409a72c4e631"
+    },
+    {
+      "path": "scores/scales/c/ab.mxl",
+      "role": "score",
+      "sha256": "b7d9620890629e1eb3d22230d4c223961be06e7f113161ff78581f36286a4ab1"
+    },
+    {
+      "path": "scores/scales/c/b.mxl",
+      "role": "score",
+      "sha256": "b9e1554b45a7d9b0deb7e3898fc95272c8a86421fbab2f5ad7b6945321e16285"
+    },
+    {
+      "path": "scores/scales/c/bb.mxl",
+      "role": "score",
+      "sha256": "6141bfa5e559f575e43abc778140b0fa79acffac5e1118f1425fe1ed2be88b56"
+    },
+    {
+      "path": "scores/scales/c/c.mxl",
+      "role": "score",
+      "sha256": "a6e82e6c07a4011e5f6838e9b1176bbb4861d20656de1b3478ff5c89567f3f63"
+    },
+    {
+      "path": "scores/scales/c/d.mxl",
+      "role": "score",
+      "sha256": "79a15a2335a2d9cafe0ab14d1d3ebbbbaf12f0a51826267be15ae547a72e482b"
+    },
+    {
+      "path": "scores/scales/c/db.mxl",
+      "role": "score",
+      "sha256": "b1bb6e4720abd3cd8c851504e154c1409c4ff6578db206b91674ef3d0f70d7d8"
+    },
+    {
+      "path": "scores/scales/c/e.mxl",
+      "role": "score",
+      "sha256": "c219864a09b4031e9760846dd35a98a898fa7028c9107cc63a950e0120bb1de7"
+    },
+    {
+      "path": "scores/scales/c/eb.mxl",
+      "role": "score",
+      "sha256": "9cc9026a3deed3377a77d281c0eb28e5fc46b254d46ec73b86075657c93c8dd7"
+    },
+    {
+      "path": "scores/scales/c/f.mxl",
+      "role": "score",
+      "sha256": "4a535bcdfd8977e83bb5fec313d929fb5d66d9db95f80de46a1c2edfea1a8dea"
+    },
+    {
+      "path": "scores/scales/c/fs.mxl",
+      "role": "score",
+      "sha256": "f0d761a97c345c9666c33ec3c509eadb49a5b557c65127e6df2eccb6536e1785"
+    },
+    {
+      "path": "scores/scales/c/g.mxl",
+      "role": "score",
+      "sha256": "b97ae504f753ba1f769d0e52be8ac1b8fbf4959b814873c45c98307eb41da424"
+    },
+    {
+      "path": "scores/scales/d/a.mxl",
+      "role": "score",
+      "sha256": "9f85b11d63e7be4f90fbb7e371e3da58f01b2bf594b2803940ac39b8eace4bcf"
+    },
+    {
+      "path": "scores/scales/d/ab.mxl",
+      "role": "score",
+      "sha256": "ad0b6dbdc7b9d9e2a56d1acea74df36aaf9f878ca9edbf8cf8ed7bf19a2e4eff"
+    },
+    {
+      "path": "scores/scales/d/b.mxl",
+      "role": "score",
+      "sha256": "9ad55ca653c8e614dd38c7b2e73d1b5bf564208c0c9a2eaa88413dafa5617adb"
+    },
+    {
+      "path": "scores/scales/d/bb.mxl",
+      "role": "score",
+      "sha256": "03210b1ef8f94d9bef4c2549bbfd3ef57ecc2214aabb098b1c1af20588e5ec19"
+    },
+    {
+      "path": "scores/scales/d/c.mxl",
+      "role": "score",
+      "sha256": "fea872fefe08f86c2a75a29fdda05e090a3182abb766a5582c49a4975deec812"
+    },
+    {
+      "path": "scores/scales/d/d.mxl",
+      "role": "score",
+      "sha256": "e03a4554361eb1197feabe87cdce63bdd09b4c238239108983564e8a26283abd"
+    },
+    {
+      "path": "scores/scales/d/db.mxl",
+      "role": "score",
+      "sha256": "56d4d9bd74a9b6ba896cb6f26b834263197d3ec1e1f045fb4feb7f7e0fae829e"
+    },
+    {
+      "path": "scores/scales/d/e.mxl",
+      "role": "score",
+      "sha256": "b855762c5ce0e49ba00216d9b7fbbd35f0ab8a848dfde3dbfd1e03750b47f838"
+    },
+    {
+      "path": "scores/scales/d/eb.mxl",
+      "role": "score",
+      "sha256": "e77e214a9756dc6325fd042001794250c41ad61f76078abeb0dd6ed9bc838058"
+    },
+    {
+      "path": "scores/scales/d/f.mxl",
+      "role": "score",
+      "sha256": "35c1a389da58d27c30436bf8e868b275f31f21636e4d2423dc4662a9fe41b8e0"
+    },
+    {
+      "path": "scores/scales/d/fs.mxl",
+      "role": "score",
+      "sha256": "b6508c38595fce8671331374a461184cf155741bb77a47db511a257e38bfcc5a"
+    },
+    {
+      "path": "scores/scales/d/g.mxl",
+      "role": "score",
+      "sha256": "61f0eb2da9ffc3b6b30935cfb0a3556adaf2299d8c8ce8f2c5095289920d2463"
+    },
+    {
+      "path": "scores/scales/e/a.mxl",
+      "role": "score",
+      "sha256": "be13bdaf0089874e8c46a5b32bd206a300d1c36292ea3e4787da48186cbc2d04"
+    },
+    {
+      "path": "scores/scales/e/ab.mxl",
+      "role": "score",
+      "sha256": "339c3c11a078424da623f0b25702431c9700a9119f9409d52f1f75139d836062"
+    },
+    {
+      "path": "scores/scales/e/b.mxl",
+      "role": "score",
+      "sha256": "d28f4d7212a1ea57682984fe04f20080a82593b9ac725ce7a5248c846ca7d9f3"
+    },
+    {
+      "path": "scores/scales/e/bb.mxl",
+      "role": "score",
+      "sha256": "b3465be5aba0fab591871bb91ba02fe4c62467864d20dfdf2c070729ad7db56f"
+    },
+    {
+      "path": "scores/scales/e/c.mxl",
+      "role": "score",
+      "sha256": "5e1155b221ae032dd0bfe8879bf9a66e27ba9b091c83c1e9a5a71a5964a26bc9"
+    },
+    {
+      "path": "scores/scales/e/d.mxl",
+      "role": "score",
+      "sha256": "a1d2361c2a9aa8263db2b270d916d5d0dafc091a5e4cc6f6d8ed997533e3ab74"
+    },
+    {
+      "path": "scores/scales/e/db.mxl",
+      "role": "score",
+      "sha256": "79cedce0097ca123360f10fffc80afcbe2baf2adc9953ca305f9d04ab21df22c"
+    },
+    {
+      "path": "scores/scales/e/e.mxl",
+      "role": "score",
+      "sha256": "6386ffdd7346f1de5d91fdd36eeba1c016ca44ad347a3f5ce6cb814410411769"
+    },
+    {
+      "path": "scores/scales/e/eb.mxl",
+      "role": "score",
+      "sha256": "50494b6632a01767cc3338f1facaf372340d9dee6543ad19380e7db9ddac8cd7"
+    },
+    {
+      "path": "scores/scales/e/f.mxl",
+      "role": "score",
+      "sha256": "464299acb128a37b538cf253973ad2a29e1a78f91810ecd4c63f41d7eceb7145"
+    },
+    {
+      "path": "scores/scales/e/fs.mxl",
+      "role": "score",
+      "sha256": "a1eacf9e231a830ecf2e9a838d8cf9e42c98e198b0131a69e849ccf475d711f4"
+    },
+    {
+      "path": "scores/scales/e/g.mxl",
+      "role": "score",
+      "sha256": "db25d42f56ad4e7f0e636d72be1d8f3f03df25a4963107903a9d28570a7f91f5"
+    },
+    {
+      "path": "scores/scales/g/a.mxl",
+      "role": "score",
+      "sha256": "1491f698484aa3994580790b75523cec08fb55ade086862c97d05d5cde907fee"
+    },
+    {
+      "path": "scores/scales/g/ab.mxl",
+      "role": "score",
+      "sha256": "3e87ad1f66dea71eab6a2097665536f76ce06a2e28506e16845182ab695f4786"
+    },
+    {
+      "path": "scores/scales/g/b.mxl",
+      "role": "score",
+      "sha256": "0c34c9f468b537e10bcb2a26fcbe31d4c9802dc551da4dec08abe83a9d6bc780"
+    },
+    {
+      "path": "scores/scales/g/bb.mxl",
+      "role": "score",
+      "sha256": "34909f4164938cfd17dd47b8d0d750f66c50545aa11e208370d48d6ecace8bc2"
+    },
+    {
+      "path": "scores/scales/g/c.mxl",
+      "role": "score",
+      "sha256": "8b571ffaeaafe5c0d6842efdc9864d3b9058aafcd53a566518c049acbc201cea"
+    },
+    {
+      "path": "scores/scales/g/d.mxl",
+      "role": "score",
+      "sha256": "f530e418fd06aacd37e4d8e5fa5ba1320dae15361d91a582603ded8232f74699"
+    },
+    {
+      "path": "scores/scales/g/db.mxl",
+      "role": "score",
+      "sha256": "aaa3aa782e466750c9f2c8c2591b67af10cc4da2388d22502002b30159f823e5"
+    },
+    {
+      "path": "scores/scales/g/e.mxl",
+      "role": "score",
+      "sha256": "917fa15996f968ef2ee3292499c0ba3c32dc567125ef410fcca31399a28c484f"
+    },
+    {
+      "path": "scores/scales/g/eb.mxl",
+      "role": "score",
+      "sha256": "18c7c9e9a7fe67526dbab8d8625d5494a1cc1e4e2871da15f3605dd7e1b4ac1e"
+    },
+    {
+      "path": "scores/scales/g/f.mxl",
+      "role": "score",
+      "sha256": "fda859f114a99b0144c2638ed0474d575a70504999147082cbdccb0105ee0b95"
+    },
+    {
+      "path": "scores/scales/g/fs.mxl",
+      "role": "score",
+      "sha256": "f48979255ee3b70688753df66516c3adfb936920b86124dd39cfd3280cc87653"
+    },
+    {
+      "path": "scores/scales/g/g.mxl",
+      "role": "score",
+      "sha256": "9d14483b8d4c2203735721d667fe3d2405d0bfaa762df7d12b3fa923f031dc8c"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-a.mxl",
+      "role": "score",
+      "sha256": "26bb1d4a224d0e6f70873a7cdfe26ce63a1036ab8b1b339fcc0435d085499483"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-b.mxl",
+      "role": "score",
+      "sha256": "1db2c633a4b539b1be821be18a8c52d7d59b2a3f2cb054c40fc8a63050b72b03"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-bb.mxl",
+      "role": "score",
+      "sha256": "de3ec1136e78fb7b39e2f7558b2bb535ddd69062a402d14dbe8616b0ce2e0546"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-c.mxl",
+      "role": "score",
+      "sha256": "257b47236e1874bab77d8d98eba15f11574025fb88b5cd820d83e624d149cefd"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-cs.mxl",
+      "role": "score",
+      "sha256": "e01c85c76fe7035dfdedaa9fcd7a96a292376478ff586f962f208ee7389501f0"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-d.mxl",
+      "role": "score",
+      "sha256": "ff41aa5b08087ff5a0131194d0f18b9fec3939b0f7bc34e25d05baac5cc981c6"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-e.mxl",
+      "role": "score",
+      "sha256": "225330f507296fc32b92881886448bc23054e45852c001a1efb16d1c4663ee02"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-eb.mxl",
+      "role": "score",
+      "sha256": "82c93ec34798aade18996bc45c3edfb559a5f05cdc1ce5ef999e81990d9370a7"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-f.mxl",
+      "role": "score",
+      "sha256": "e5eb067daa24654f6ad3508a63dca1c7367c4a7a240192212181c39b2cb688ff"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-fs.mxl",
+      "role": "score",
+      "sha256": "707d5b8ef5cd34e315dd46c89466af99a5b522bce291d014d4300778a4baf359"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-g.mxl",
+      "role": "score",
+      "sha256": "4c9450ae6b25e29143a9dbe8da80ebec08ce563acaf590d8506ed8a060f1b8b2"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-a-form-gs.mxl",
+      "role": "score",
+      "sha256": "ee29ff20b030dec6c1f9b7f03726dbf587e163f97d08d46d11cf95eacdcc0f95"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-a.mxl",
+      "role": "score",
+      "sha256": "19c8e6320136cd7eed86f127fc23abbb464a38093b10cbbe608d1667f355e6bf"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-b.mxl",
+      "role": "score",
+      "sha256": "a868f1451eb71491c3ab5c92f47fa57c71a2e826a80d6c850bb66f9762b72f88"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-bb.mxl",
+      "role": "score",
+      "sha256": "90299f252ceb6bc06481daaccf24f834592401852a41fceab75b1c4f6ffd6ab7"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-c-low.mxl",
+      "role": "score",
+      "sha256": "462766e3f00b0a66f7a014960bf0d07a73ab1b7e8fa49c8416f0a42f55a750ee"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-c.mxl",
+      "role": "score",
+      "sha256": "4eb7f405a049c14d5cad456a937be64127edd41851202cb02818a101cb10b8b0"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-cs.mxl",
+      "role": "score",
+      "sha256": "7e5b6894fd36143cdd7c887825726ffeb4c758d139ffd8919441122e4c8ad352"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-d.mxl",
+      "role": "score",
+      "sha256": "43d37cb21e72301161f8f362b22f6fd92d2b7fd9320b371ec635532cb6a0cdb3"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-e.mxl",
+      "role": "score",
+      "sha256": "fea691c3ad43f3f782248a1ce6a936e9fb12946622a676009ec93a9dd0b7036c"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-eb.mxl",
+      "role": "score",
+      "sha256": "c9e584555ed031ce5f4fda5f14c135f10a8d8877a85c3d4d0acb5c081c93ca06"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-f.mxl",
+      "role": "score",
+      "sha256": "5aa3351e266b88f1e1500f119ad15e56950d5bf4f67f5517af95f194ae75e7db"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-fs.mxl",
+      "role": "score",
+      "sha256": "6362338af4358fd3227fe2adb3a30f15c3c5a94897963bcfa3d1d2fbb860f9c2"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-g.mxl",
+      "role": "score",
+      "sha256": "3785e7d6aaacbbe4d4ac94fcff13dfc3c277cdeb8e4a2826fa68dad863351ac9"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-c-form-gs.mxl",
+      "role": "score",
+      "sha256": "1e93e445bcbf117f53231e8e655312e5964350de6ecd5277d4358c64166a78a5"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-a.mxl",
+      "role": "score",
+      "sha256": "53ba37cfe715326b619db664ae5c3ec5633536311cb2c5c49616152062db5884"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-b.mxl",
+      "role": "score",
+      "sha256": "72c079259b0b1b9b3184bd199351b3dae405dc78facc88b27d8dcddeb4355ce8"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-bb.mxl",
+      "role": "score",
+      "sha256": "fc384686109ca2f7cc923aee831adf5051e3aa665053e60da517fe79632e3b08"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-c.mxl",
+      "role": "score",
+      "sha256": "4687835031bc76bb194b0598e281b34197654633b607cfadde32665e24435479"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-cs.mxl",
+      "role": "score",
+      "sha256": "916cc60e0bf0f1572332735e554143520a6214ff63046ee6b34c893f18c7c916"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-d.mxl",
+      "role": "score",
+      "sha256": "d089bbb1e1440622bfbca353b8a52948a4ddf4d0061802ee3c13c9ef5ddf29d6"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-e.mxl",
+      "role": "score",
+      "sha256": "8a6a96683518e548d9aad2650bdd2f9035842d437b7cc3970ec21941fdc4c382"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-eb.mxl",
+      "role": "score",
+      "sha256": "ca824599a6238350b268facbb4cb972b4a7898ef10ba163c6f3af05ffb3a234e"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-f.mxl",
+      "role": "score",
+      "sha256": "3b50090c38f0cad7600b846d30e104e458e57ef400cabd53c63f13cfadc3b50a"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-fs.mxl",
+      "role": "score",
+      "sha256": "2c5708cc54dd7ae2fef48f0adee5a4ced81ce53538279f9accc0b24de5e7461c"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-g.mxl",
+      "role": "score",
+      "sha256": "d1fbf051d8719361894b0345e4259a4136b3313eec35a84d990e984a6eba3ae6"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-d-form-gs.mxl",
+      "role": "score",
+      "sha256": "66353d8decafa9b6c392a24b41f0853eb63c0eff6a5c9c8100951a01349d0078"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-a.mxl",
+      "role": "score",
+      "sha256": "29e7630c27de2f1437804aa3e6cb9fd17bfb989eed7e4890b5dd8cd28c104aef"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-b.mxl",
+      "role": "score",
+      "sha256": "751a1b3de7fa0e75764ba976c50bd61c9b830658f35ba38cedd4deb9296f8539"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-bb.mxl",
+      "role": "score",
+      "sha256": "196db908f1d19c49048896ed6c7e8ca41682a0c08fbf2f96ae2d1b66868137ee"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-c.mxl",
+      "role": "score",
+      "sha256": "fecd82216f53211eb4d31302d8daaef492811a48a8f5a519f0163305a4d80a1f"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-cs.mxl",
+      "role": "score",
+      "sha256": "7a84fc58a1f42a3699d5bfbd0c9658e952033ca3e6b8240ff29dea75fb526588"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-d.mxl",
+      "role": "score",
+      "sha256": "1586135bff64929bbb6a34b2cdb231848e006cccf3bd3f498ad509a9e5009d3a"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-e.mxl",
+      "role": "score",
+      "sha256": "a5852a7711b2cdabe34251feeaeca2a3e3f3c322865c073d6226aeee0f8eff02"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-eb.mxl",
+      "role": "score",
+      "sha256": "6bca454403adacf0eb32e3c801849cfbcacc705f9ba24e00dc09761fb2cc5e7a"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-f.mxl",
+      "role": "score",
+      "sha256": "def4d2351ab508397ce331c84d74d1d50c7e13e84ece0ffce709170625744e25"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-fs.mxl",
+      "role": "score",
+      "sha256": "2ba89cf1a656eee4b91affd94f31e1e287da7495ee73a5012c96500060547351"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-g.mxl",
+      "role": "score",
+      "sha256": "740d11bbb32af692341b26640c8b8f0f0b93b30210ef7400d8b4d20efab9f0d1"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-e-form-gs.mxl",
+      "role": "score",
+      "sha256": "289743f187590c75b0b76871fe7d8bdaf4119c988ef9374fbcc2c703ba25ed8b"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-a.mxl",
+      "role": "score",
+      "sha256": "71ac3e70106d5676d12b2c3747135693b76699b10d4f8c65b9c33feff8be1ee8"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-b.mxl",
+      "role": "score",
+      "sha256": "e0e77e1f2cceeb75fd69bc911727d7c430edc0ad42c5dc9e321efc387b191b0f"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-bb.mxl",
+      "role": "score",
+      "sha256": "7cdc0a158ec8fa4487a3cebf0c38f92fe09b09dfbf29e98a7ca4e618f66ac5d5"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-c.mxl",
+      "role": "score",
+      "sha256": "3608ed5f5d1022f43c0c1ff11e09b0b745e0712ef31f9a1894017c7d6234be46"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-cs.mxl",
+      "role": "score",
+      "sha256": "ffc678999c87f63fd9fb4010f64c0fbe83f04a5fb88749590e97b40627d9438d"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-d.mxl",
+      "role": "score",
+      "sha256": "b744796f7fcd33fc86ea56705a0048728f7a5eab8c45ddcc97220aaa70a38c01"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-e.mxl",
+      "role": "score",
+      "sha256": "92ef5b1507595335e59e0a2b60aa1a4edc0f89285902d244fb6e551b62ea964c"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-eb.mxl",
+      "role": "score",
+      "sha256": "554ccedd23cf0fc2d4d89f750dec14f811a4b951b990a3c030ce6f23e7f05e1e"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-f.mxl",
+      "role": "score",
+      "sha256": "67b7daf96cea022b1ae0baa537e4989eff7b29eb67bc9d0bc6d3bb66b341f9f1"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-fs.mxl",
+      "role": "score",
+      "sha256": "b161e9bab4cd59d8dcc8e79f935eda9badb4dcc6424ee4f4a0f7b80d37be8b47"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-g.mxl",
+      "role": "score",
+      "sha256": "7bd9456ef528ef87ae7f31fa0aec116f82eebb46cea5ebd491524264bcc09de6"
+    },
+    {
+      "path": "scores/scales/natural-minor/natural-minor-g-form-gs.mxl",
+      "role": "score",
+      "sha256": "51e0be3da127d868b3bad84a6afecd42f97b21e7ba28fb9b8b9973981eb937ed"
+    },
+    {
+      "path": "scores/solo/ex01.mxl",
+      "role": "score",
+      "sha256": "c4ae407e2339156874ffc31c7eda81d69cb87843446c2ace7c7fbca1f3b459a0"
+    },
+    {
+      "path": "scores/solo/ex02.mxl",
+      "role": "score",
+      "sha256": "b53a121e476c0f439a19c8783030e89aac3966a2541f8cafb275773781b002bc"
+    },
+    {
+      "path": "scores/solo/ex03.mxl",
+      "role": "score",
+      "sha256": "555bbfa342105b86c39533a991a265b92e92b9ca827d2121a311c478e30826de"
+    },
+    {
+      "path": "scores/tutorial/ex01.mxl",
+      "role": "score",
+      "sha256": "eaa4f2f56e2cd8515e79166d88725bbe5a2ab35e4727217bde50d627470ad2cc"
+    },
+    {
+      "path": "scores/tutorial/ex02.mxl",
+      "role": "score",
+      "sha256": "d3e51a5c272fe5d133bbfc08ca9dfb6b14aa2395d6b6852cd2a447db41c77a50"
+    },
+    {
+      "path": "scores/tutorial/ex03.mxl",
+      "role": "score",
+      "sha256": "99d0e489a46a0b94d9b7428295f810a3b1f12eb23f1cdfcf5b8a77dad1cb236c"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.txt",
+      "role": "license",
+      "sha256": "415b9219bede8924fd9e3d1590492ad4b49c4d745bcf5298642ddf9941d62980"
+    }
+  ],
+  "excludedFileCount": 167,
+  "excludedExistingFiles": [
+    "TESTING.md",
+    "deployment/README.md",
+    "deployment/device-checklist.md",
+    "deployment/public-files.json",
+    "diagnostics/capo-position-lab-README.md",
+    "diagnostics/capo-position-lab-core.js",
+    "diagnostics/capo-position-lab.html",
+    "diagnostics/capo-position-lab.js",
+    "diagnostics/scroll-ab-README.md",
+    "diagnostics/scroll-ab-core.js",
+    "diagnostics/scroll-ab.html",
+    "diagnostics/scroll-ab.js",
+    "diagnostics/tied-fret-lab-README.md",
+    "diagnostics/tied-fret-lab-core.js",
+    "diagnostics/tied-fret-lab.html",
+    "diagnostics/tied-fret-lab.js",
+    "package.json",
+    "scores/README.md",
+    "scores/basic/ex01.musicxml",
+    "scores/basic/ex02.musicxml",
+    "scores/basic/ex03.musicxml",
+    "scores/basic/ex04.musicxml",
+    "scores/basic/ex05.musicxml",
+    "scores/basic/ex06.musicxml",
+    "scores/basic/ex07.musicxml",
+    "scores/basic/ex08.musicxml",
+    "scores/basic/ex08.mxl",
+    "scores/basic/ex08_2.musicxml",
+    "scores/basic/ex09.musicxml",
+    "scores/basic/ex10.musicxml",
+    "scores/basic/test.musicxml",
+    "scores/basic/test01.mxl",
+    "scores/chord_tones/dom7/manifest.json",
+    "scores/chord_tones/m7b5/manifest.json",
+    "scores/chord_tones/maj7-a-form-bb.mxl",
+    "scores/chord_tones/maj7-a-form-c.mxl",
+    "scores/chord_tones/maj7-c-form-c.mxl",
+    "scores/chord_tones/maj7-c-form-db.mxl",
+    "scores/chord_tones/maj7-d-form-c.mxl",
+    "scores/chord_tones/maj7-d-form-e.mxl",
+    "scores/chord_tones/maj7-e-form-c.mxl",
+    "scores/chord_tones/maj7-e-form-f.mxl",
+    "scores/chord_tones/maj7-g-form-c.mxl",
+    "scores/chord_tones/maj7-g-form-g.mxl",
+    "scores/chord_tones/manifest.json",
+    "scores/chord_tones/min7/manifest.json",
+    "scores/chord_tones/sources/dom7/dom7-a-form-c.mxl",
+    "scores/chord_tones/sources/dom7/dom7-c-form-c.mxl",
+    "scores/chord_tones/sources/dom7/dom7-d-form-c.mxl",
+    "scores/chord_tones/sources/dom7/dom7-e-form-c.mxl",
+    "scores/chord_tones/sources/dom7/dom7-g-form-c.mxl",
+    "scores/chord_tones/sources/m7b5/m7b5-a-form-c.mxl",
+    "scores/chord_tones/sources/m7b5/m7b5-c-form-c.mxl",
+    "scores/chord_tones/sources/m7b5/m7b5-d-form-c.mxl",
+    "scores/chord_tones/sources/m7b5/m7b5-e-form-c.mxl",
+    "scores/chord_tones/sources/m7b5/m7b5-g-form-c.mxl",
+    "scores/chord_tones/sources/min7/min7-a-form-c.mxl",
+    "scores/chord_tones/sources/min7/min7-c-form-c-low.mxl",
+    "scores/chord_tones/sources/min7/min7-c-form-c-standard.mxl",
+    "scores/chord_tones/sources/min7/min7-d-form-c.mxl",
+    "scores/chord_tones/sources/min7/min7-e-form-c.mxl",
+    "scores/chord_tones/sources/min7/min7-g-form-c.mxl",
+    "scores/scale/major-a-form-b.mxl",
+    "scores/scale/major-a-form-c.mxl",
+    "scores/scale/major-c-form-c.mxl",
+    "scores/scale/major-c-form-db.mxl",
+    "scores/scale/major-d-form-c.mxl",
+    "scores/scale/major-d-form-e.mxl",
+    "scores/scale/major-e-form-c.mxl",
+    "scores/scale/major-e-form-f.mxl",
+    "scores/scale/major-g-form-c.mxl",
+    "scores/scale/major-g-form-g.mxl",
+    "scores/scale/natural-minor-a-form-a.mxl",
+    "scores/scale/natural-minor-a-form-c.mxl",
+    "scores/scale/natural-minor-c-form-c-low.mxl",
+    "scores/scale/natural-minor-c-form-c-standard.mxl",
+    "scores/scale/natural-minor-c-form-db.mxl",
+    "scores/scale/natural-minor-d-form-c.mxl",
+    "scores/scale/natural-minor-d-form-d.mxl",
+    "scores/scale/natural-minor-e-form-c.mxl",
+    "scores/scale/natural-minor-e-form-e.mxl",
+    "scores/scale/natural-minor-g-form-ab.mxl",
+    "scores/scale/natural-minor-g-form-c.mxl",
+    "scores/scales/manifest.json",
+    "scores/scales/natural-minor/manifest.json",
+    "scores/solo/ex01.musicxml",
+    "scores/solo/ex02.musicxml",
+    "scores/solo/ex03.musicxml",
+    "scores/solo/test3.musicxml",
+    "scores/solo/test4.musicxml",
+    "scores/solo/test5.musicxml",
+    "scores/tutorial/ex01.musicxml",
+    "scores/tutorial/ex02.musicxml",
+    "scores/tutorial/ex03.musicxml",
+    "scripts/generate-chords.py",
+    "scripts/generate-chromatic.py",
+    "scripts/release-files.mjs",
+    "scripts/setup-test-dependencies.cjs",
+    "tests/capo-position-lab.test.cjs",
+    "tests/capo-position-production.test.cjs",
+    "tests/chord-practice.test.cjs",
+    "tests/chord-tones.test.cjs",
+    "tests/chromatic-patterns.test.cjs",
+    "tests/chromatic.test.cjs",
+    "tests/compact-practice-selectors.test.cjs",
+    "tests/config.test.cjs",
+    "tests/dependencies.json",
+    "tests/first-bar-margin.test.cjs",
+    "tests/fixtures/grace-test2.musicxml",
+    "tests/fixtures/grace-test3.musicxml",
+    "tests/fixtures/rhythm/meter-44-34.musicxml",
+    "tests/fixtures/rhythm/sextuplets-44.musicxml",
+    "tests/fixtures/rhythm/triplets-44.musicxml",
+    "tests/fixtures/rhythm/tuplets-34.musicxml",
+    "tests/grace-collision.test.cjs",
+    "tests/grace-labels.test.cjs",
+    "tests/grace-notation.test.cjs",
+    "tests/grace-slur.test.cjs",
+    "tests/grace-symbols.test.cjs",
+    "tests/guide-video.test.cjs",
+    "tests/helpers/alpha-tab.cjs",
+    "tests/helpers/chord-tone-ui.cjs",
+    "tests/helpers/chord-ui.cjs",
+    "tests/helpers/chromatic-ui.cjs",
+    "tests/helpers/key-disclosure.cjs",
+    "tests/helpers/practice-progress.cjs",
+    "tests/helpers/rhythm-display.cjs",
+    "tests/helpers/scale-ui.cjs",
+    "tests/home-categories.test.cjs",
+    "tests/key-disclosure.test.cjs",
+    "tests/metronome-tempo.test.cjs",
+    "tests/min7-chord-tones.test.cjs",
+    "tests/modal-focus.test.cjs",
+    "tests/natural-minor.test.cjs",
+    "tests/practice-progress.test.cjs",
+    "tests/practice-type-cards.test.cjs",
+    "tests/practice.test.cjs",
+    "tests/privacy-policy.test.cjs",
+    "tests/public-info.test.cjs",
+    "tests/release-files.test.cjs",
+    "tests/rhythm-display.test.cjs",
+    "tests/scale-progress.test.cjs",
+    "tests/scales.test.cjs",
+    "tests/score-loading.test.cjs",
+    "tests/score-partials.test.cjs",
+    "tests/scroll-ab.test.cjs",
+    "tests/scroll-clock.test.cjs",
+    "tests/scroll-redraw.test.cjs",
+    "tests/seventh-chord-tones.test.cjs",
+    "tests/slash-chords.test.cjs",
+    "tests/solo-genres.test.cjs",
+    "tests/standalone-metronome-resume.test.cjs",
+    "tests/standalone-metronome.test.cjs",
+    "tests/storage.test.cjs",
+    "tests/tab-boundaries.test.cjs",
+    "tests/tab-y-crop.test.cjs",
+    "tests/technique-markers.test.cjs",
+    "tests/tempo.test.cjs",
+    "tests/test-dependencies.test.cjs",
+    "tests/tied-fret-lab.test.cjs",
+    "tests/tuner.test.cjs",
+    "tests/tutorial-completion.test.cjs",
+    "tests/tutorial-first-lap.test.cjs",
+    "tests/ui-stage1.test.cjs",
+    "tests/vendor/alphaTab-1.8.4.cjs",
+    "tests/vertical-tab.test.cjs",
+    "tests/volume-popover.test.cjs"
+  ],
+  "excludedDirectoryPrefixes": [
+    ".git/",
+    "tests/",
+    "scripts/",
+    "diagnostics/",
+    "deployment/",
+    "node_modules/"
+  ],
+  "externalScripts": [
+    "https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+  ],
+  "externalRuntimeNotes": [
+    "alphaTab resolves its Bravura font from its CDN directory at runtime; it is not a local asset.",
+    "YouTube iframe is created only when a guide video is opened. Contact/YouTube links remain external.",
+    "Library versions, SRI/CSP and hosting rules were not modified; production access restrictions are unverified."
+  ]
+}

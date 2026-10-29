@@ -1,3 +1,4 @@
+import { getPracticeFormLabel } from "../practiceFormLabels.js";
 import { DOM7_FORMS, M7B5_FORMS } from "./seventhChordTones.js";
 import { MIN7_ROOTS, MIN7_FORMS } from "./min7ChordTones.js";
 import { getPracticePositions, getPracticePositionId } from "../practicePositions.js";
@@ -26,8 +27,8 @@ export function getChordToneLabel(typeId, rootId) {
     const type = Object.hasOwn(CHORD_TONE_TYPES, typeId) && CHORD_TONE_TYPES[typeId];
     return root && type ? root.label + type.label : null;
 }
-const chordToneTitle = (stage, label) => stage.code + "：" + (CHORD_TONE_TYPES[stage.chordTypeId].practiceLabel || CHORD_TONE_TYPES[stage.chordTypeId].label) + "コードトーン／" + stage.formId + "フォーム・" + label;
-const chordToneDescription = (form, label) => label + "の構成音をCAGEDの" + form + "フォームで練習します。TABを確認し、一定のテンポで弾きましょう。";
+const chordToneTitle = (stage, label) => stage.code + "：" + (CHORD_TONE_TYPES[stage.chordTypeId].practiceLabel || CHORD_TONE_TYPES[stage.chordTypeId].label) + "コードトーン／" + getPracticeFormLabel(stage.formId) + "・" + label;
+const chordToneDescription = (form, label) => label + "の構成音を" + getPracticeFormLabel(form) + "で練習します。TABを確認し、一定のテンポで弾きましょう。";
 
 const MAJ7_STAGES = CHORD_TONE_FORM_DATA.map(([formId, min, max, shifts], index) => {
     const id = index + 1, code = "EX" + String(id).padStart(2, "0"), chordTypeId = "maj7";
@@ -38,7 +39,7 @@ const MAJ7_STAGES = CHORD_TONE_FORM_DATA.map(([formId, min, max, shifts], index)
     const stage = {
         id, code, lessonId: "chord-tones-" + id, lessonType: "chord-tone", chordTypeId, formId,
         rootId: "c", rootLabel: "C", chordLabel: "CM7", stageBadge: "コードトーン練習 " + code,
-        title: "", subTitle: "M7コードトーン・CAGED " + formId + "フォーム・CM7",
+        title: "", subTitle: "M7コードトーン・" + getPracticeFormLabel(formId) + "・CM7",
         desc: chordToneDescription(formId, "CM7"), bpm: 60, timeSignature: [4, 4], countInBars: 1,
         practiceBars: 5, available: true, isPreview: false, ...variants[0], variants,
         guide: {
@@ -58,7 +59,7 @@ const MIN7_STAGES = MIN7_FORMS.map((form, index) => {
     const stage = {
         id, code, lessonId: "chord-tones-" + id, lessonType: "chord-tone", chordTypeId, formId,
         rootId: "c", rootLabel: "C", chordLabel: "Cm7", stageBadge: "コードトーン練習 " + code,
-        subTitle: "m7コードトーン・CAGED " + formId + "フォーム・Cm7", desc: chordToneDescription(formId, "Cm7"),
+        subTitle: "m7コードトーン・" + getPracticeFormLabel(formId) + "・Cm7", desc: chordToneDescription(formId, "Cm7"),
         bpm: 60, timeSignature: [4, 4], countInBars: 1, practiceBars: 5, available: true, isPreview: false,
         ...standard, variants,
         guide: {
@@ -81,7 +82,7 @@ function createSeventhStages(forms, chordTypeId, firstId, toneDescription) {
         const stage = {
             id, code, lessonId: "chord-tones-" + id, lessonType: "chord-tone", chordTypeId, formId,
             rootId: "c", rootLabel: "C", chordLabel, stageBadge: "コードトーン練習 " + code,
-            subTitle: name + "コードトーン・CAGED " + formId + "フォーム・" + chordLabel,
+            subTitle: name + "コードトーン・" + getPracticeFormLabel(formId) + "・" + chordLabel,
             desc: chordToneDescription(formId, chordLabel), bpm: 60, timeSignature: [4, 4], countInBars: 1,
             practiceBars: form.measures, available: true, isPreview: false, ...standard, variants,
             guide: {
@@ -117,7 +118,7 @@ export function getChordToneVariant(stage, rootId = "c", positionId = "standard"
         const label = getChordToneLabel(stage.chordTypeId, rootId);
         cache.set(id, { ...stage, ...variant, rootLabel: root.label, chordLabel: label,
             title: chordToneTitle(stage, label) + (positionId === "standard" ? "" : "（" + variant.positionLabel + "）"),
-            subTitle: (CHORD_TONE_TYPES[stage.chordTypeId].practiceLabel || CHORD_TONE_TYPES[stage.chordTypeId].label) + "コードトーン・CAGED " + stage.formId + "フォーム・" + label,
+            subTitle: (CHORD_TONE_TYPES[stage.chordTypeId].practiceLabel || CHORD_TONE_TYPES[stage.chordTypeId].label) + "コードトーン・" + getPracticeFormLabel(stage.formId) + "・" + label,
             desc: chordToneDescription(stage.formId, label) });
     }
     return cache.get(id);

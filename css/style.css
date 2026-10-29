@@ -1216,3 +1216,83 @@ button { touch-action: manipulation; }
 .practice-key-toggle { min-height: 44px; max-width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; font: inherit; font-size: 13px; cursor: pointer; }
 .practice-key-toggle:hover { background: #eff6ff; }
 .practice-key-summary { margin: 6px 0 10px; }
+/* カテゴリと教材選択の表示整理。練習モーダル・TAB・音声の表示領域には適用しない。 */
+.practice-category-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.practice-category-card:not(.tutorial-category-card) { min-height: 72px; padding: 12px 16px; }
+.practice-category-card:not(.tutorial-category-card) .category-copy strong { font-size: 1rem; white-space: normal; word-break: normal; overflow-wrap: normal; }
+.scale-form-buttons { gap: 6px; }
+.scale-choice { padding: 8px 6px; gap: 3px; justify-content: center; }
+.scale-choice .scale-choice-title { font-size: 13px; line-height: 1.35; }
+.scale-choice .scale-choice-title span { font-size: inherit; overflow-wrap: normal; }
+.scale-choice .scale-form-label { font-size: 13px; line-height: 1.35; }
+.scale-choice .scale-choice-counts { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px 8px; width: 100%; }
+.scale-choice .scale-form-count { font-size: 12px; line-height: 1.4; }
+.scale-browser .scale-key-count { font-size: 12px; }
+.scale-details { padding: 12px; margin-top: 10px; }
+.scale-details h4 { margin: 0 0 2px; font-size: 16px; line-height: 1.4; }
+.scale-details .scale-selected-form { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.scale-selection-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: #475569; font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+.scale-details .scale-key-label { margin: 6px 0 2px; font-size: 14px; }
+.scale-details .practice-key-summary { margin: 2px 0 6px; }
+.scale-browser .practice-key-panel { margin: 6px 0; }
+.scale-details [data-scale-position-area] > p, .scale-details [data-chord-tone-position-area] > p { margin: 6px 0 4px; }
+.scale-browser .scale-position-buttons { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 6px; }
+.scale-browser .scale-position-buttons button { padding: 7px 6px; font-size: 13px; }
+.scale-details .ex-start-btn { margin-top: 8px; }
+@media (max-width: 600px) { .practice-category-card:not(.tutorial-category-card) { min-height: 66px; padding: 12px 14px; } }
+
+/* 種類を先に選ぶ6カード。すべてホーム内に限定し、練習モーダルを変更しない。 */
+.practice-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.practice-type-card { min-width: 0; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; display: grid; gap: 6px; }
+.practice-type-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; }
+.practice-type-header h3 { margin: 0; color: #0f172a; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.practice-type-total { color: #64748b; font-size: 12px; overflow-wrap: anywhere; }
+.practice-type-form { display: flex; align-items: center; gap: 8px; }
+.practice-type-form > div { min-width: 88px; flex: 0 1 auto; }
+.practice-type-form label { display: block; color: #334155; font-size: 13px; font-weight: 600; }
+.practice-type-form small { display: block; color: #64748b; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.practice-type-form select { flex: 1; min-width: 0; min-height: 44px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; font-size: 14px; }
+.practice-type-form select:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.practice-type-card .scale-form-buttons, .practice-type-card [hidden] { display: none !important; }
+.practice-type-card .scale-details { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.practice-type-card .practice-type-key-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.practice-type-key-row > div { min-width: 0; flex: 1; }
+.practice-type-card .scale-key-label { margin: 0; line-height: 1.5; }
+.practice-type-card .practice-key-summary { margin: 0; font-size: 12px; line-height: 1.5; }
+.practice-type-card .practice-key-toggle { flex: 0 1 auto; padding: 7px 8px; font-size: 12px; }
+.practice-type-card .scale-selection-meta { margin: 0; gap: 0 8px; font-size: 12px; }
+.practice-type-card .ex-start-btn { margin: 0; width: 100%; }
+.practice-type-card .practice-key-panel { margin: 0; }
+.practice-type-card .scale-key-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.practice-type-card [data-scale-position-area] > p, .practice-type-card [data-chord-tone-position-area] > p { margin: 0 0 4px; font-size: 12px; }
+@media (max-width: 700px) { .practice-type-grid { grid-template-columns: 1fr; } }
+@media (prefers-color-scheme: dark) {
+    .practice-type-card { background: #0f172a; border-color: #475569; }
+    .practice-type-header h3, .practice-type-form label, .practice-type-card .scale-key-label strong { color: #e2e8f0; }
+    .practice-type-card .scale-details p, .practice-type-card .scale-selection-meta, .practice-type-form small, .practice-type-total { color: #cbd5e1; }
+    .practice-type-form select { background: #1e293b; color: #e2e8f0; border-color: #64748b; }
+}
+
+/* Compact selectors stay inside home practice cards. */
+.practice-type-card .practice-type-key-row { flex-wrap: wrap; }
+.practice-type-key-row > div:first-child { min-width: 80px; }
+.practice-type-key-row > .practice-type-key-actions { display: flex; flex: 0 1 auto; align-items: center; flex-wrap: wrap; gap: 6px; max-width: 100%; }
+.practice-position-select { width: 120px; max-width: 100%; min-height: 44px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; font-size: 14px; }
+.practice-position-select:focus-visible, .chromatic-practice-card select:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.chromatic-practice-card { max-width: 640px; }
+.chromatic-practice-card [hidden] { display: none !important; }
+.chromatic-practice-card .chromatic-pattern-label { font-size: 13px; font-weight: 600; color: #334155; }
+.chromatic-practice-card select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; font-size: 16px; }
+.chromatic-practice-card .chromatic-selection { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+.chromatic-practice-card .chromatic-selection p { margin: 0; overflow-wrap: anywhere; }
+.chromatic-practice-card .chromatic-selection .ex-start-btn { margin: 0; width: 100%; }
+@media (prefers-color-scheme: dark) {
+    .practice-position-select, .chromatic-practice-card select { background: #1e293b; color: #e2e8f0; border-color: #64748b; }
+    .chromatic-practice-card .chromatic-pattern-label { color: #e2e8f0; }
+    .chromatic-practice-card .chromatic-selection p { color: #cbd5e1; }
+}
+
+.practice-type-card, .practice-type-card .scale-details { grid-template-columns: minmax(0, 1fr); }
+.practice-type-card > *, .practice-type-card .scale-details > * { min-width: 0; }
+.practice-type-card .practice-type-form { flex-wrap: wrap; }
+.practice-type-card .practice-type-form select { flex-basis: 180px; }

@@ -4,15 +4,15 @@
 
 import { TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES } from "./config.js";
 import { CHROMATIC_STAGES } from "./config.js";
-import { initChromaticPatternPicker } from "./chromaticPatternPicker.js";
+import { initChromaticPracticeCard as initChromaticPatternPicker } from "./chromaticPatternPicker.js";
 import { CHORD_STAGES, CHORD_FORMS } from "./config.js";
 import { initChordPractice } from "./chordPractice.js";
 import { SCALE_STAGES } from "./config.js";
 import { getScaleVariant } from "./config/scales.js";
-import { initScalePractice } from "./scalePractice.js";
+import { initScalePracticeCards as initScalePractice } from "./scalePractice.js";
 import { CHORD_TONE_STAGES } from "./config.js";
 import { getChordToneVariant } from "./config/chordTones.js";
-import { initChordTonePractice } from "./chordTonePractice.js";
+import { initChordTonePracticeCards as initChordTonePractice } from "./chordTonePractice.js";
 import { createPracticeProgress } from "./practiceProgress.js";
 import { initPracticeGenres } from "./practiceGenres.js";
 import { VerticalTabController } from "./verticalTab.js";
@@ -1171,16 +1171,16 @@ function renderExerciseCards() {
     renderStageCards(soloExerciseGrid, SOLO_STAGES, "solo");
     chromaticPatternPicker?.destroy();
     chromaticPatternPicker = initChromaticPatternPicker(chromaticExerciseGrid, CHROMATIC_STAGES,
-        stage => openPracticeModal(stage), practiceProgress);
+        (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
     chordPractice?.destroy();
     chordPractice = initChordPractice(chordExerciseGrid, CHORD_STAGES, CHORD_FORMS,
         stage => openPracticeModal(stage), practiceProgress);
     scalePractice?.destroy();
     scalePractice = initScalePractice(scaleExerciseGrid, SCALE_STAGES,
-        stage => openPracticeModal(stage), practiceProgress);
+        (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
     chordTonePractice?.destroy();
     chordTonePractice = initChordTonePractice(chordToneExerciseGrid, CHORD_TONE_STAGES,
-        stage => openPracticeModal(stage), practiceProgress);
+        (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
     updateTutorialCompletionDisplay();
 }
 
@@ -1234,7 +1234,7 @@ function renderStageCards(grid, stages, category) {
 // ==========================================
 // ★ 練習ポップアップモーダルの制御 ★
 // ==========================================
-function openPracticeModal(stage) {
+function openPracticeModal(stage, presentation = null) {
     if (!practiceModal.classList.contains("hidden")) closePracticeModal();
     currentStage = stage;
     guideVideo.setStage(stage);
@@ -1268,10 +1268,10 @@ function openPracticeModal(stage) {
 
     const practiceBars = getStagePracticeBars(stage);
 
-    if (modalStageBadge) modalStageBadge.innerText = stage.stageBadge || "基礎編";
+    if (modalStageBadge) modalStageBadge.innerText = presentation?.stageBadge || stage.stageBadge || "基礎編";
     updateTempoControls();
     if (modalBarsBadge) modalBarsBadge.innerText = `${practiceBars}小節`;
-    if (modalStageTitle) modalStageTitle.innerText = stage.title;
+    if (modalStageTitle) modalStageTitle.innerText = presentation?.title || stage.title;
     if (modalStageDesc) modalStageDesc.innerText = stage.desc || "";
 
     if (stageGuideTitle && stageGuideBody) {

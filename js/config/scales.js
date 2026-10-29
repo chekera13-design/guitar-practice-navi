@@ -1,3 +1,4 @@
+import { getPracticeFormLabel } from "../practiceFormLabels.js";
 import { NATURAL_MINOR_KEYS, NATURAL_MINOR_FORMS } from "./naturalMinorScales.js";
 import { getPracticePositions, getPracticePositionId } from "../practicePositions.js";
 
@@ -561,15 +562,15 @@ const FORM_VARIANTS = [
     }
 ];
 
-const scaleTitle = (stage, label) => stage.code + "：" + (stage.scaleType === "naturalMinor" ? "ナチュラルマイナー／" + stage.formId + "フォーム・" + label : "メジャースケール／" + stage.formId + "フォーム・" + label + "メジャー");
-const scaleDescription = (form, label) => label + "メジャーをCAGEDの" + form + "フォームで練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
+const scaleTitle = (stage, label) => stage.code + "：" + (stage.scaleType === "naturalMinor" ? "ナチュラルマイナー／" + getPracticeFormLabel(stage.formId) + "・" + label : "メジャースケール／" + getPracticeFormLabel(stage.formId) + "・" + label + "メジャー");
+const scaleDescription = (form, label) => label + "メジャーを" + getPracticeFormLabel(form) + "で練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
 
 const MAJOR_SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
     const id = index + 1, code = "EX" + String(id).padStart(2, "0"), c = form.variants.find(v => v.keyId === "c");
     const stage = {
         id, code, lessonId: "scales-" + id, lessonType: "major-scale", formId: form.form,
         keyId: "c", keyLabel: "C", stageBadge: "スケール練習 " + code,
-        title: "", subTitle: "CAGED " + form.form + "フォーム・Cメジャー",
+        title: "", subTitle: getPracticeFormLabel(form.form) + "・Cメジャー",
         desc: scaleDescription(form.form, "C"), bpm: 60, timeSignature: [4, 4],
         countInBars: 1, practiceBars: 9, available: true, isPreview: false,
         ...c, variants: form.variants,
@@ -577,7 +578,7 @@ const MAJOR_SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
             title: "💡 練習のポイント",
             content: "選択したキーのTABを見ながら、メジャースケールを一定のリズムで練習しましょう。",
             points: [
-                "CAGEDのフォーム名とキーは別の情報です。画面のフォーム・キーとTABを確認しましょう。",
+                "フォーム番号は形の区別で、低い順・難易度順ではありません。画面のフォーム・キーとTABを確認しましょう。",
                 "クリックは四分音符ごとです。8分音符を均等に弾き、上昇・下降の流れを保ちましょう。",
                 "キーによって押さえる位置や開放弦が変わります。無理のないテンポで音を確かめましょう。"
             ]
@@ -587,14 +588,14 @@ const MAJOR_SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
     return stage;
 });
 
-const minorDescription = (form, label) => label + "のナチュラルマイナースケールをCAGEDの" + form + "フォームで練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
+const minorDescription = (form, label) => label + "のナチュラルマイナースケールを" + getPracticeFormLabel(form) + "で練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
 const MINOR_SCALE_STAGES = NATURAL_MINOR_FORMS.map((form, index) => {
     const id = index + 6, code = "EX" + String(id).padStart(2, "0");
     const c = form.variants.find(v => v.keyId === "c" && v.positionId === "standard");
     const stage = {
         id, code, lessonId: "scales-" + id, lessonType: "natural-minor-scale", scaleType: "naturalMinor", formId: form.form,
         keyId: "c", keyLabel: "Cm", stageBadge: "スケール練習 " + code,
-        subTitle: "CAGED " + form.form + "フォーム・Cm", desc: minorDescription(form.form, "Cm"),
+        subTitle: getPracticeFormLabel(form.form) + "・Cm", desc: minorDescription(form.form, "Cm"),
         bpm: 60, timeSignature: [4, 4], countInBars: 1, practiceBars: 9, available: true, isPreview: false,
         ...c, variants: form.variants,
         guide: { title: "💡 練習のポイント", content: "選択したキーとポジションのTABを見ながら、自然短音階を一定のリズムで練習しましょう。",
@@ -620,7 +621,7 @@ export function getScaleVariant(stage, keyId = "c", positionId = "standard") {
     if (!cache.has(id)) cache.set(id, {
         ...stage, ...variant, keyLabel: key.label,
         title: scaleTitle(stage, key.label),
-        subTitle: "CAGED " + stage.formId + "フォーム・" + key.label + (stage.scaleType === "naturalMinor" ? "" : "メジャー"),
+        subTitle: getPracticeFormLabel(stage.formId) + "・" + key.label + (stage.scaleType === "naturalMinor" ? "" : "メジャー"),
         desc: stage.scaleType === "naturalMinor" ? minorDescription(stage.formId, key.label) : scaleDescription(stage.formId, key.label)
     });
     return cache.get(id);

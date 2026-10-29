@@ -1,5 +1,5 @@
 // 運指選択と教材の起動だけを扱う。音声・保存データ・練習セッションには触れない。
-export function initChromaticPatternPicker(root, stages, openStage, progress = null) {
+export function initChromaticPatternPicker(root, stages, openStage, progress = null, presentation = null) {
     if (!root) return null;
     const singles = stages.filter(stage => stage.patternType === "single");
     root.innerHTML = '<div class="chromatic-pattern-grid" role="group" aria-label="単独運指パターン">'
@@ -12,25 +12,30 @@ export function initChromaticPatternPicker(root, stages, openStage, progress = n
         + '<p data-chromatic-meta></p><p data-chromatic-frets></p>'
         + '<button id="chromaticStartBtn" type="button" class="ex-start-btn">▶ 練習する</button></div>'
         + '<p class="chromatic-selection-status" role="status" data-chromatic-status></p>';
+    presentation?.arrange(root, singles);
+    let selected = null, destroyed = false;
     const buttons = [...root.querySelectorAll("[data-chromatic-id]")];
     const start = root.querySelector("#chromaticStartBtn");
     const title = root.querySelector("[data-chromatic-title]");
     const meta = root.querySelector("[data-chromatic-meta]");
     const frets = root.querySelector("[data-chromatic-frets]");
     const status = root.querySelector("[data-chromatic-status]");
-    const refreshCounts = changed => buttons.forEach((button, index) => {
-        const stage = singles[index];
-        if (changed && changed !== stage) return;
-        const count = progress?.getCount(stage) || 0;
-        const badge = button.querySelector?.("[data-practice-count]");
-        if (badge) { badge.hidden = count === 0; badge.textContent = count ? "✓ 練習" + count + "回" : ""; }
-        button.setAttribute("aria-label", stage.fingering + "、" + stage.code + "、練習" + count + "回");
-    });
+    const refreshCounts = changed => {
+        if (destroyed || changed && !singles.includes(changed)) return;
+        buttons.forEach((button, index) => {
+            const stage = singles[index];
+            if (changed && changed !== stage) return;
+            const count = progress?.getCount(stage) || 0;
+            const badge = button.querySelector?.("[data-practice-count]");
+            if (badge) { badge.hidden = count === 0; badge.textContent = count ? "✓ 練習" + count + "回" : ""; }
+            button.setAttribute("aria-label", stage.fingering + "、" + stage.code + "、練習" + count + "回");
+        });
+        if (selected) presentation?.counts(selected);
+    };
     refreshCounts();
     const unsubscribe = progress?.subscribe(refreshCounts);
-    let selected = null;
     function select(stage, { navigate = false, focus = false } = {}) {
-        if (!singles.includes(stage)) return;
+        if (destroyed || !singles.includes(stage)) return;
         const changed = selected !== stage;
         selected = stage;
         for (const button of buttons) {
@@ -43,6 +48,7 @@ export function initChromaticPatternPicker(root, stages, openStage, progress = n
             + "・" + stage.practiceBars + "小節・" + stage.timeSignature.join("/");
         frets.innerText = "フレット順：" + stage.fretOrder.join(" → ") + "（各弦2回）";
         start.disabled = !stage.available;
+        presentation?.selection(stage); presentation?.counts(stage);
         if (changed) status.innerText = stage.code + "、運指" + stage.fingering + "を選択";
         if (navigate && window.location?.hash !== "#chromatic-" + stage.id) {
             // 表示位置は保ち、履歴だけを追加。戻る／進むは最新URLから再選択する。
@@ -68,7 +74,7 @@ export function initChromaticPatternPicker(root, stages, openStage, progress = n
         });
     });
     start.addEventListener("click", () => {
-        if (selected?.available) openStage(selected);
+        if (!destroyed && selected?.available) openStage(selected, presentation?.modal(selected));
     });
     if (singles.length) select(singles[0]);
     fromHash();
@@ -76,10 +82,54 @@ export function initChromaticPatternPicker(root, stages, openStage, progress = n
     window.addEventListener("popstate", fromHash);
     return {
         get selected() { return selected; },
+        selectStage: select,
         destroy() {
+            destroyed = true;
             unsubscribe?.();
             window.removeEventListener("hashchange", fromHash);
             window.removeEventListener("popstate", fromHash);
         }
     };
+}
+
+// The display card groups the existing permutations; lesson identities stay unchanged.
+export function initChromaticPracticeCard(root, stages, openStage, progress = null) {
+    if (!root || !stages.some(s => s.patternType === "single")) return null;
+    let controller, select, count, total, meta;
+    const presentation = {
+        arrange(body, singles) {
+            const grid = body.querySelector(".chromatic-pattern-grid"), detail = body.querySelector(".chromatic-selection"), status = body.querySelector("[data-chromatic-status]");
+            grid.hidden = true; grid.setAttribute("aria-hidden", "true");
+            const card = document.createElement("article"); card.className = "practice-type-card chromatic-practice-card"; card.id = "chromatic-type-card";
+            card.setAttribute("data-chromatic-card", "single"); card.setAttribute("aria-labelledby", "chromaticCardTitle");
+            card.innerHTML = '<header class="practice-type-header"><h3 id="chromaticCardTitle">EX01 クロマチック練習</h3><span class="practice-type-total" data-chromatic-total></span></header>'
+                + '<label class="chromatic-pattern-label" for="chromaticPatternSelect">練習内容</label><select id="chromaticPatternSelect" data-chromatic-select aria-controls="chromaticSelection">'
+                + singles.map(s => '<option value="' + s.id + '">' + s.code + '・運指' + s.fingering + '</option>').join("") + '</select>';
+            body.insertBefore(card, grid); card.appendChild(grid); card.appendChild(detail); card.appendChild(status);
+            detail.querySelector(".badge-tag").hidden = true; detail.querySelector("h4").hidden = true;
+            select = card.querySelector("select"); total = card.querySelector("[data-chromatic-total]"); meta = detail.querySelector("[data-chromatic-meta]");
+            count = document.createElement("p"); count.className = "practice-key-summary"; count.setAttribute("data-chromatic-selected-count", ""); count.setAttribute("aria-live", "polite");
+            detail.insertBefore(count, detail.querySelector(".ex-start-btn"));
+            select.addEventListener("change", () => {
+                const next = singles.find(s => String(s.id) === select.value);
+                if (next) controller.selectStage(next, { navigate: true });
+                else select.value = String(controller.selected.id);
+            });
+        },
+        selection(stage) {
+            select.value = String(stage.id);
+            meta.textContent = "BPM " + stage.bpm + "・" + stage.timeSignature.join("/") + "・" + stage.practiceBars + "小節";
+        },
+        counts(stage) {
+            const n = progress?.getCount(stage) || 0;
+            count.textContent = n ? "✓ 練習" + n + "回" : "未練習（0回）";
+            const sum = stages.filter(s => s.patternType === "single").reduce((a, s) => a + BigInt(progress?.getCount(s) || 0), 0n);
+            total.textContent = "種類計" + sum + "回";
+        },
+        modal(stage) {
+            return { stageBadge: "クロマチック練習 EX01", title: "EX01：クロマチック練習・運指" + stage.fingering + "（" + stage.code + "）" };
+        }
+    };
+    controller = initChromaticPatternPicker(root, stages, openStage, progress, presentation);
+    return controller;
 }
