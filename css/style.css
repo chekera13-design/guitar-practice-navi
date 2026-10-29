@@ -1204,3 +1204,15 @@ button { touch-action: manipulation; }
     .beat-dot { width: 20px; height: 20px; }
     .metro-vol-container { padding: 3px; }
 }
+
+/* ポジションが複数ある教材だけに表示する追加選択。既存キーの装飾を再利用。 */
+.scale-position-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.scale-position-buttons button { min-height: 58px; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .scale-position-buttons { grid-template-columns: 1fr; } }
+
+/* キー一覧の開閉。選択中のキーとポジションは折りたたみ領域の外。 */
+.practice-key-panel[hidden] { display: none; }
+.practice-key-panel { margin: 10px 0; }
+.practice-key-toggle { min-height: 44px; max-width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; font: inherit; font-size: 13px; cursor: pointer; }
+.practice-key-toggle:hover { background: #eff6ff; }
+.practice-key-summary { margin: 6px 0 10px; }

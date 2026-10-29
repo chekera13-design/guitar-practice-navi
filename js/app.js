@@ -1830,7 +1830,10 @@ function runPracticeScheduler(session) {
             session.nextBeat++;
         }
 
-        if (session.mode === "record" && step >= session.countInBeats
+        // 録音だけを最終カウント拍から開始し、演奏・スクロールの時刻原点は維持する。
+        const performanceStart = session.startTime + session.countInBeats * session.beatSec;
+        const recordingStart = Math.max(session.startTime, performanceStart - session.beatSec);
+        if (session.mode === "record" && now + 1e-8 >= recordingStart
             && recordingSession?.status === "ready") {
             if (step >= session.totalBeats) throw new Error("録音開始前に演奏時間を過ぎました");
             startRecording(recordingSession);
@@ -2402,7 +2405,7 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 initVolumeControl();
 initTutorialCompletion();
 const practiceProgress = createPracticeProgress({ chromatic: CHROMATIC_STAGES, chords: CHORD_STAGES,
-    scales: SCALE_STAGES.flatMap(stage => stage.variants.map(v => getScaleVariant(stage, v.keyId))),
-    chordTones: CHORD_TONE_STAGES.flatMap(stage => stage.variants.map(v => getChordToneVariant(stage, v.rootId))) }, () => localStorage);
+    scales: SCALE_STAGES.flatMap(stage => stage.variants.map(v => getScaleVariant(stage, v.keyId, v.positionId))),
+    chordTones: CHORD_TONE_STAGES.flatMap(stage => stage.variants.map(v => getChordToneVariant(stage, v.rootId, v.positionId))) }, () => localStorage);
 renderExerciseCards();
 initPracticeGenres(document.getElementById("practiceContents"));

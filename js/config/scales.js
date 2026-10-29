@@ -1,3 +1,6 @@
+import { NATURAL_MINOR_KEYS, NATURAL_MINOR_FORMS } from "./naturalMinorScales.js";
+import { getPracticePositions, getPracticePositionId } from "../practicePositions.js";
+
 // 検証済みMXLを選択する表示設定。音声・運指・MXLの動的生成は行わない。
 export const SCALE_KEYS = [
     {
@@ -558,10 +561,10 @@ const FORM_VARIANTS = [
     }
 ];
 
-const scaleTitle = (stage, label) => stage.code + "：メジャースケール／" + stage.formId + "フォーム・" + label + "メジャー";
+const scaleTitle = (stage, label) => stage.code + "：" + (stage.scaleType === "naturalMinor" ? "ナチュラルマイナー／" + stage.formId + "フォーム・" + label : "メジャースケール／" + stage.formId + "フォーム・" + label + "メジャー");
 const scaleDescription = (form, label) => label + "メジャーをCAGEDの" + form + "フォームで練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
 
-export const SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
+const MAJOR_SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
     const id = index + 1, code = "EX" + String(id).padStart(2, "0"), c = form.variants.find(v => v.keyId === "c");
     const stage = {
         id, code, lessonId: "scales-" + id, lessonType: "major-scale", formId: form.form,
@@ -584,21 +587,41 @@ export const SCALE_STAGES = FORM_VARIANTS.map((form, index) => {
     return stage;
 });
 
-// 同じ教材・キーには同じオブジェクトを返す。選択変更で実行中の設定を変質させない。
+const minorDescription = (form, label) => label + "のナチュラルマイナースケールをCAGEDの" + form + "フォームで練習します。TABの弦とフレットを確認し、一定のテンポで弾きましょう。";
+const MINOR_SCALE_STAGES = NATURAL_MINOR_FORMS.map((form, index) => {
+    const id = index + 6, code = "EX" + String(id).padStart(2, "0");
+    const c = form.variants.find(v => v.keyId === "c" && v.positionId === "standard");
+    const stage = {
+        id, code, lessonId: "scales-" + id, lessonType: "natural-minor-scale", scaleType: "naturalMinor", formId: form.form,
+        keyId: "c", keyLabel: "Cm", stageBadge: "スケール練習 " + code,
+        subTitle: "CAGED " + form.form + "フォーム・Cm", desc: minorDescription(form.form, "Cm"),
+        bpm: 60, timeSignature: [4, 4], countInBars: 1, practiceBars: 9, available: true, isPreview: false,
+        ...c, variants: form.variants,
+        guide: { title: "💡 練習のポイント", content: "選択したキーとポジションのTABを見ながら、自然短音階を一定のリズムで練習しましょう。",
+            points: ["フォーム名、キー、ポジションは別の情報です。選択中の譜面を確認しましょう。", "クリックは四分音符ごとです。8分音符を均等に弾きましょう。", "無理のないテンポで上昇・下降の流れを確かめましょう。"] }
+    };
+    stage.title = scaleTitle(stage, "Cm");
+    return stage;
+});
+export const SCALE_STAGES = [...MAJOR_SCALE_STAGES, ...MINOR_SCALE_STAGES];
+export const getScaleKeys = stage => stage?.scaleType === "naturalMinor" ? NATURAL_MINOR_KEYS : SCALE_KEYS;
+export const getScalePositions = (stage, keyId) => getPracticePositions(stage, keyId);
+
+// 同じ教材・キー・ポジションは同じオブジェクト。実行中の設定を選択操作で変質させない。
 const scaleVariantCache = new WeakMap();
-export function getScaleVariant(stage, keyId = "c") {
+export function getScaleVariant(stage, keyId = "c", positionId = "standard") {
     if (!SCALE_STAGES.includes(stage)) return null;
-    const key = SCALE_KEYS.find(item => item.id === keyId);
-    const variant = stage.variants.find(item => item.keyId === keyId);
+    const key = getScaleKeys(stage).find(item => item.id === keyId);
+    const variant = getScalePositions(stage, keyId).find(item => getPracticePositionId(item) === positionId);
     if (!key || !variant) return null;
-    if (keyId === "c") return stage;
+    if (keyId === "c" && positionId === "standard") return stage;
     if (!scaleVariantCache.has(stage)) scaleVariantCache.set(stage, new Map());
-    const cache = scaleVariantCache.get(stage);
-    if (!cache.has(keyId)) cache.set(keyId, {
+    const cache = scaleVariantCache.get(stage), id = keyId + "/" + positionId;
+    if (!cache.has(id)) cache.set(id, {
         ...stage, ...variant, keyLabel: key.label,
         title: scaleTitle(stage, key.label),
-        subTitle: "CAGED " + stage.formId + "フォーム・" + key.label + "メジャー",
-        desc: scaleDescription(stage.formId, key.label)
+        subTitle: "CAGED " + stage.formId + "フォーム・" + key.label + (stage.scaleType === "naturalMinor" ? "" : "メジャー"),
+        desc: stage.scaleType === "naturalMinor" ? minorDescription(stage.formId, key.label) : scaleDescription(stage.formId, key.label)
     });
-    return cache.get(keyId);
+    return cache.get(id);
 }

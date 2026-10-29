@@ -13,20 +13,26 @@ export function createPracticeProgress(groups, getStorage = () => globalThis.loc
     for (const stage of groups.scales || []) {
         if (!Number.isSafeInteger(stage.id) || stage.id < 1 || stage.lessonId !== "scales-" + stage.id
             || !/^[a-z]+$/.test(stage.keyId || "") || !stage.variants?.some(v => v.keyId === stage.keyId)) continue;
-        const key = stage.lessonId + "-" + stage.keyId;
+        const positionId = stage.positionId || "standard";
+        if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(positionId)
+            || !stage.variants.some(v => v.keyId === stage.keyId && (v.positionId || "standard") === positionId)) continue;
+        const key = stage.lessonId + "-" + stage.keyId + (positionId === "standard" ? "" : "-position-" + positionId);
         keys.set(stage, key); allowed.add(key);
-        if (!scaleForms.has(stage.lessonId)) scaleForms.set(stage.lessonId, new Set());
-        scaleForms.get(stage.lessonId).add(key);
+        if (!scaleForms.has(stage.lessonId)) scaleForms.set(stage.lessonId, new Map());
+        scaleForms.get(stage.lessonId).set(key, stage.keyId);
     }
     for (const stage of groups.chordTones || []) {
         if (!Number.isSafeInteger(stage.id) || stage.id < 1 || stage.lessonId !== "chord-tones-" + stage.id
             || !["maj7", "min7", "dom7", "m7b5"].includes(stage.chordTypeId) || !["C", "A", "G", "E", "D"].includes(stage.formId)
             || !/^[a-z]+$/.test(stage.rootId || "") || !stage.variants?.some(v => v.rootId === stage.rootId)) continue;
+        const positionId = stage.positionId || "standard";
+        if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(positionId)
+            || !stage.variants.some(v => v.rootId === stage.rootId && (v.positionId || "standard") === positionId)) continue;
         const formKey = stage.chordTypeId + "-" + stage.formId.toLowerCase();
-        const key = "chord-tones-" + formKey + "-" + stage.rootId;
+        const key = "chord-tones-" + formKey + "-" + stage.rootId + (positionId === "standard" ? "" : "-position-" + positionId);
         keys.set(stage, key); allowed.add(key);
-        if (!chordToneForms.has(formKey)) chordToneForms.set(formKey, new Set());
-        chordToneForms.get(formKey).add(key);
+        if (!chordToneForms.has(formKey)) chordToneForms.set(formKey, new Map());
+        chordToneForms.get(formKey).set(key, stage.rootId);
     }
     const validCount = value => Number.isSafeInteger(value) && value >= 0;
     try {
@@ -43,24 +49,42 @@ export function createPracticeProgress(groups, getStorage = () => globalThis.loc
     return {
         getCount(stage) { return counts[keys.get(stage)] || 0; },
         getScaleSummary(stage) {
-            let total = 0n, practicedKeys = 0;
-            for (const key of keys.has(stage) ? scaleForms.get(stage.lessonId) || [] : []) {
+            let total = 0n;
+            const practicedRoots = new Set();
+            for (const [key, rootId] of keys.has(stage) ? scaleForms.get(stage.lessonId) || [] : []) {
                 const count = counts[key] || 0;
                 total += BigInt(count);
-                if (count > 0) practicedKeys++;
+                if (count > 0) practicedRoots.add(rootId);
             }
+            const practicedKeys = practicedRoots.size;
             // 合計は表示用文字列。大きな回数も桁落ちせず集計し、重複保存しない。
             return { total: total.toString(), practicedKeys };
         },
+        getScaleKeyCount(stage, rootId) {
+            let total = 0n;
+            for (const [key, root] of keys.has(stage) ? scaleForms.get(stage.lessonId) || [] : []) {
+                if (root === rootId) total += BigInt(counts[key] || 0);
+            }
+            return total.toString();
+        },
         getChordToneSummary(stage) {
-            let total = 0n, practicedCodes = 0;
+            let total = 0n;
+            const roots = new Set();
             const formKey = stage?.chordTypeId + "-" + stage?.formId?.toLowerCase();
-            for (const key of keys.has(stage) ? chordToneForms.get(formKey) || [] : []) {
+            for (const [key, rootId] of keys.has(stage) ? chordToneForms.get(formKey) || [] : []) {
                 const count = counts[key] || 0;
                 total += BigInt(count);
-                if (count > 0) practicedCodes++;
+                if (count > 0) roots.add(rootId);
             }
-            return { total: total.toString(), practicedCodes };
+            return { total: total.toString(), practicedCodes: roots.size };
+        },
+        getChordToneRootCount(stage, rootId) {
+            let total = 0n;
+            const formKey = stage?.chordTypeId + "-" + stage?.formId?.toLowerCase();
+            for (const [key, root] of keys.has(stage) ? chordToneForms.get(formKey) || [] : []) {
+                if (root === rootId) total += BigInt(counts[key] || 0);
+            }
+            return total.toString();
         },
         beginSession,
         subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
