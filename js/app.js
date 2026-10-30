@@ -1198,6 +1198,19 @@ function markTutorialCompleted(stage, mode) {
     updateTutorialCompletionDisplay();
 }
 
+// Completion is derived from existing lap counts; no separate flag or storage key.
+function updatePracticeCompletionDisplay(changedStage) {
+    for (const [category, stages] of [["tutorial", TUTORIAL_STAGES], ["basic", BASIC_STAGES], ["solo", SOLO_STAGES]]) {
+        for (const stage of stages) {
+            if (changedStage && changedStage !== stage) continue;
+            const badge = document.getElementById(category + "-" + stage.id + "-completion");
+            if (badge && category !== "tutorial") badge.hidden = practiceProgress.getCount(stage) === 0;
+            const countLabel = document.getElementById(category + "-" + stage.id + "-practice-count");
+            if (countLabel) countLabel.textContent = "練習：" + practiceProgress.getCount(stage) + "回";
+        }
+    }
+}
+
 function renderExerciseCards() {
     renderStageCards(tutorialExerciseGrid, TUTORIAL_STAGES, "tutorial");
     renderStageCards(exerciseGrid, BASIC_STAGES, "basic");
@@ -1222,6 +1235,7 @@ function renderExerciseCards() {
     chordTonePractice = initChordTonePractice(chordToneExerciseGrid, CHORD_TONE_STAGES,
         (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
     updateTutorialCompletionDisplay();
+    updatePracticeCompletionDisplay();
 }
 
 function renderStageCards(grid, stages, category) {
@@ -1239,9 +1253,13 @@ function renderStageCards(grid, stages, category) {
                     <div class="ex-badge-row">
                         <span class="ex-badge ${stage.available ? '' : 'badge-muted'}">${stage.code}</span>
                         ${category === "tutorial" ? `<span id="tutorial-${stage.id}-completion" class="tutorial-completion-badge" ${completedTutorialStages.has(`tutorial-${stage.id}`) ? '' : 'hidden'}>✓ 完了</span>` : ''}
+                        ${["basic", "solo"].includes(category) ? `<span id="${category}-${stage.id}-completion" class="tutorial-completion-badge" data-practice-completion role="status" aria-live="polite" aria-atomic="true" ${practiceProgress.getCount(stage) > 0 ? '' : 'hidden'}>✓ 完了</span>` : ''}
                         ${stage.bpm ? `<span class="bpm-badge">BPM ${stage.bpm}</span>` : ''}
                         ${barsLabel ? `<span class="bars-badge">${barsLabel}</span>` : ''}
-                        <span class="badge-tag ${stage.available ? '' : 'badge-tag-muted'}">${stage.subTitle || ''}</span>
+                        <span class="exercise-subject-count">
+                            <span class="badge-tag ${stage.available ? '' : 'badge-tag-muted'}">${stage.subTitle || ''}</span>
+                            <span id="${category}-${stage.id}-practice-count" class="exercise-practice-count" role="status" aria-live="polite" aria-atomic="true">練習：${practiceProgress.getCount(stage)}回</span>
+                        </span>
                         ${!stage.available ? '<span class="badge-coming">近日追加予定</span>' : ''}
                     </div>
                     <h3 class="ex-title">${stage.title}</h3>
@@ -2452,8 +2470,9 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 // --- アプリケーション起動時の初期描画 ---
 initVolumeControl();
 initTutorialCompletion();
-const practiceProgress = createPracticeProgress({ chromatic: CHROMATIC_STAGES, chromaticHorizontal: CHROMATIC_HORIZONTAL_STAGES, chords: CHORD_STAGES, chordProgressions: CHORD_PROGRESSION_STAGES,
+const practiceProgress = createPracticeProgress({ tutorial: TUTORIAL_STAGES, basic: BASIC_STAGES, solo: SOLO_STAGES, chromatic: CHROMATIC_STAGES, chromaticHorizontal: CHROMATIC_HORIZONTAL_STAGES, chords: CHORD_STAGES, chordProgressions: CHORD_PROGRESSION_STAGES,
     scales: SCALE_STAGES.flatMap(stage => stage.variants.map(v => getScaleVariant(stage, v.keyId, v.positionId))),
     chordTones: CHORD_TONE_STAGES.flatMap(stage => stage.variants.map(v => getChordToneVariant(stage, v.rootId, v.positionId))) }, () => localStorage);
 renderExerciseCards();
+practiceProgress.subscribe(updatePracticeCompletionDisplay);
 initPracticeGenres(document.getElementById("practiceContents"));

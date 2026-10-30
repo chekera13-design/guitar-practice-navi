@@ -28,7 +28,7 @@ export function createProgressWriter(storageKey, write, hasPending, environment 
 // 既存セッションの音声時刻を観測するだけで、タイマーや音声処理は持たない。
 export function createPracticeProgress(groups, getStorage = () => globalThis.localStorage, environment = globalThis) {
     const keys = new Map(), allowed = new Set(), counts = Object.create(null), scaleForms = new Map(), chordToneForms = new Map();
-    for (const category of ["chromatic", "chords"]) {
+    for (const category of ["chromatic", "chords", "basic", "solo", "tutorial"]) {
         for (const stage of groups[category] || []) {
             if (!Number.isSafeInteger(stage.id) || stage.id < 1) continue;
             const key = category + "-" + stage.id;
