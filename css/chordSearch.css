@@ -1,0 +1,36 @@
+/* Only the auxiliary search panel; main lessons and practice modal retain their styles. */
+.chord-lookup{--lookup-surface:#fff;--lookup-text:#1e293b;--lookup-muted:#475569;--lookup-border:#cbd5e1;max-width:920px;margin:20px auto;color:var(--lookup-text);font-size:14px;}
+.chord-lookup>summary{padding:12px 14px;min-height:44px;box-sizing:border-box;border:1px solid var(--lookup-border);border-radius:10px;background:var(--lookup-surface);cursor:pointer;font-weight:700;}
+.chord-lookup #chordSearchPanel{padding-top:12px;}
+.chord-lookup .lookup-card{padding:16px;border:1px solid var(--lookup-border);border-radius:12px;background:var(--lookup-surface);margin-bottom:12px;}
+.chord-lookup label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;}
+.chord-lookup .search-row{display:flex;gap:8px;align-items:center;}
+.chord-lookup input,.chord-lookup select,.chord-lookup button{font:inherit;min-height:44px;border:1px solid var(--lookup-border);border-radius:8px;padding:8px 10px;max-width:100%;box-sizing:border-box;color:var(--lookup-text);background:var(--lookup-surface);}
+.chord-lookup input,.chord-lookup select{width:100%;min-width:0;}
+.chord-lookup button{background:#2563eb;border-color:#2563eb;color:white;font-weight:700;cursor:pointer;flex:none;}
+.chord-lookup button:disabled{opacity:.45;cursor:default;}
+.chord-lookup :focus-visible{outline:3px solid #0284c7;outline-offset:3px;}
+.chord-lookup .filters{display:grid;grid-template-columns:150px 160px minmax(0,1fr);gap:12px;margin-top:16px;}
+.chord-lookup .filters>div,.chord-lookup .diagram-layout>div{min-width:0;}
+.chord-lookup .hint,.chord-lookup .eyebrow,.chord-lookup .lookup-catalog{font-size:12px;color:var(--lookup-muted);overflow-wrap:anywhere;}
+.chord-lookup p{margin:8px 0;}
+.chord-lookup [data-chord-lookup=status]{font-size:13px;}
+.chord-lookup [data-chord-lookup=status][data-error=true]{color:#b91c1c;}
+.chord-lookup .result-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.chord-lookup .result-heading h2{font-size:26px;line-height:1.4;margin:0;overflow-wrap:anywhere;color:var(--lookup-text);}
+.chord-lookup .status-badge{font-size:12px;color:#166534;padding:3px 8px;border:1px solid var(--lookup-border);border-radius:6px;background:#ecfdf5;}
+.chord-lookup .status-badge[data-state=unregistered],.chord-lookup .status-badge[data-state=pending]{color:var(--lookup-muted);background:var(--lookup-surface);}
+.chord-lookup .diagram-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px;align-items:start;}
+.chord-lookup .chord-diagram{width:min(100%,240px);height:auto;display:block;margin:0 auto;color:var(--lookup-text);background:var(--lookup-surface);}
+.chord-lookup .finger-number{fill:var(--lookup-surface);}
+.chord-lookup .empty{padding:16px;border:1px dashed var(--lookup-border);border-radius:8px;color:var(--lookup-muted);}
+.chord-lookup .practice-button{width:100%;margin:8px 0;}
+.chord-lookup .chord-information{font-size:13px;margin-top:12px;}
+.chord-lookup .chord-information>summary{min-height:36px;cursor:pointer;color:var(--lookup-muted);padding:5px 0;}
+.chord-lookup .theory-information{border-top:1px solid var(--lookup-border);padding-top:8px;}
+.chord-lookup .theory{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;}
+.chord-lookup .theory>div{min-width:0;}.chord-lookup dt{color:var(--lookup-muted);font-size:12px;}.chord-lookup dd{margin:0;overflow-wrap:anywhere;}
+.chord-lookup table{width:100%;border-collapse:collapse;font-size:12px;}.chord-lookup th,.chord-lookup td{text-align:left;padding:5px;border-bottom:1px solid var(--lookup-border);}
+.chord-lookup a{color:#2563eb;overflow-wrap:anywhere;}.chord-lookup [hidden]{display:none!important;}
+@media(max-width:680px){.chord-lookup .lookup-card{padding:12px;}.chord-lookup .filters{grid-template-columns:1fr 1fr;}.chord-lookup .quality-field{grid-column:1/-1;}.chord-lookup .diagram-layout{grid-template-columns:1fr;gap:10px;}.chord-lookup .theory{grid-template-columns:1fr;}.chord-lookup .chord-diagram{max-width:220px;}}
+@media(prefers-color-scheme:dark){.chord-lookup{--lookup-surface:#0f172a;--lookup-text:#e2e8f0;--lookup-muted:#cbd5e1;--lookup-border:#64748b;}.chord-lookup [data-chord-lookup=status][data-error=true]{color:#fca5a5;}.chord-lookup .status-badge[data-state=verified]{background:#123524;color:#86efac;}.chord-lookup a{color:#93c5fd;}}

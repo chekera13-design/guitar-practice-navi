@@ -1,3 +1,5 @@
+import { renderPracticeCount, renderPracticeTotal } from "./practiceCountDisplay.js";
+
 // 運指選択と教材の起動だけを扱う。音声・保存データ・練習セッションには触れない。
 export function initChromaticPatternPicker(root, stages, openStage, progress = null, presentation = null) {
     if (!root) return null;
@@ -95,21 +97,29 @@ export function initChromaticPatternPicker(root, stages, openStage, progress = n
 // The display card groups the existing permutations; lesson identities stay unchanged.
 export function initChromaticPracticeCard(root, stages, openStage, progress = null) {
     if (!root || !stages.some(s => s.patternType === "single")) return null;
-    let controller, select, count, total, meta;
+    let controller, select, count, total, meta, previous, next;
     const presentation = {
         arrange(body, singles) {
             const grid = body.querySelector(".chromatic-pattern-grid"), detail = body.querySelector(".chromatic-selection"), status = body.querySelector("[data-chromatic-status]");
             grid.hidden = true; grid.setAttribute("aria-hidden", "true");
-            const card = document.createElement("article"); card.className = "practice-type-card chromatic-practice-card"; card.id = "chromatic-type-card";
+            const card = document.createElement("article"); card.className = "practice-type-card chromatic-practice-card practice-count-card"; card.id = "chromatic-type-card";
             card.setAttribute("data-chromatic-card", "single"); card.setAttribute("aria-labelledby", "chromaticCardTitle");
             card.innerHTML = '<header class="practice-type-header"><h3 id="chromaticCardTitle">EX01 クロマチック練習</h3><span class="practice-type-total" data-chromatic-total></span></header>'
-                + '<label class="chromatic-pattern-label" for="chromaticPatternSelect">練習内容</label><select id="chromaticPatternSelect" data-chromatic-select aria-controls="chromaticSelection">'
-                + singles.map(s => '<option value="' + s.id + '">' + s.code + '・運指' + s.fingering + '</option>').join("") + '</select>';
+                + '<label class="chromatic-pattern-label" for="chromaticPatternSelect">練習内容</label><div class="chromatic-navigation" role="group" aria-label="運指の切り替え"><button type="button" class="chromatic-step" data-chromatic-previous aria-label="前の運指" aria-controls="chromaticPatternSelect"><span aria-hidden="true">←</span></button><select id="chromaticPatternSelect" data-chromatic-select aria-controls="chromaticSelection">'
+                + singles.map((s, index) => '<option value="' + s.id + '">No.' + String(index + 1).padStart(2, '0') + ' | ' + s.fingering + '</option>').join("") + '</select><button type="button" class="chromatic-step" data-chromatic-next aria-label="次の運指" aria-controls="chromaticPatternSelect"><span aria-hidden="true">→</span></button></div>';
             body.insertBefore(card, grid); card.appendChild(grid); card.appendChild(detail); card.appendChild(status);
             detail.querySelector(".badge-tag").hidden = true; detail.querySelector("h4").hidden = true;
             select = card.querySelector("select"); total = card.querySelector("[data-chromatic-total]"); meta = detail.querySelector("[data-chromatic-meta]");
-            count = document.createElement("p"); count.className = "practice-key-summary"; count.setAttribute("data-chromatic-selected-count", ""); count.setAttribute("aria-live", "polite");
+            count = document.createElement("p"); count.className = "practice-key-summary practice-current-count"; count.setAttribute("data-chromatic-selected-count", ""); count.setAttribute("aria-live", "polite");
             detail.insertBefore(count, detail.querySelector(".ex-start-btn"));
+            previous = card.querySelector("[data-chromatic-previous]"); next = card.querySelector("[data-chromatic-next]");
+            const step = delta => {
+                const index = select.selectedIndex + delta;
+                if (select.disabled || index < 0 || index >= select.options.length || select.options[index].disabled) return;
+                select.selectedIndex = index;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+            };
+            previous.addEventListener("click", () => step(-1)); next.addEventListener("click", () => step(1));
             select.addEventListener("change", () => {
                 const next = singles.find(s => String(s.id) === select.value);
                 if (next) controller.selectStage(next, { navigate: true });
@@ -118,13 +128,15 @@ export function initChromaticPracticeCard(root, stages, openStage, progress = nu
         },
         selection(stage) {
             select.value = String(stage.id);
+            previous.disabled = select.selectedIndex <= 0;
+            next.disabled = select.selectedIndex >= select.options.length - 1;
             meta.textContent = "BPM " + stage.bpm + "・" + stage.timeSignature.join("/") + "・" + stage.practiceBars + "小節";
         },
         counts(stage) {
             const n = progress?.getCount(stage) || 0;
-            count.textContent = n ? "✓ 練習" + n + "回" : "未練習（0回）";
+            renderPracticeCount(count, n);
             const sum = stages.filter(s => s.patternType === "single").reduce((a, s) => a + BigInt(progress?.getCount(s) || 0), 0n);
-            total.textContent = "種類計" + sum + "回";
+            renderPracticeTotal(total, sum, "このカードの24運指全体の練習合計");
         },
         modal(stage) {
             return { stageBadge: "クロマチック練習 EX01", title: "EX01：クロマチック練習・運指" + stage.fingering + "（" + stage.code + "）" };

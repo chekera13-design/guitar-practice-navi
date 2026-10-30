@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ギター練習ドットコム - 基礎編</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/chordSearch.css">
     <link rel="icon" href="data:,">
     <!-- alphaTab の読み込み（外部CDN経由） -->
     <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.js"></script>
@@ -152,17 +153,25 @@
             <div class="current-exercises-heading">
                 <h3 id="chromaticExercises">クロマチック練習</h3>
                 <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
-                <p>5〜8フレットの24種類の運指パターン</p>
+                <p>弦移動と横移動を、24種類の運指で練習しましょう。</p>
             </div>
-            <div id="chromaticExerciseGrid" class="chromatic-picker"></div>
+            <div class="chromatic-practice-grid">
+                <div id="chromaticExerciseGrid" class="chromatic-picker"></div>
+                <div id="chromaticHorizontalGrid"></div>
+            </div>
         </section>
         <section class="current-exercises chord-exercises" aria-labelledby="chordExercises" data-exercise-category="chords" hidden>
             <div class="current-exercises-heading">
                 <h3 id="chordExercises">コード練習</h3>
                 <a class="category-return" href="#practiceCategories">← カテゴリを選び直す</a>
-                <p>基本の8つのローコードを検索し、押さえ方を確認して練習しましょう。</p>
+                <p>循環コードの流れを練習しましょう。コードの押さえ方も検索できます。</p>
             </div>
-            <div id="chordExerciseGrid" class="chord-browser"></div>
+            <div id="chordProgressionGrid"></div>
+            <details id="chordSearchDisclosure" class="chord-lookup">
+                <summary>コードの押さえ方を調べる</summary>
+                <div id="chordSearchPanel"></div>
+            </details>
+            <div id="chordExerciseGrid" hidden aria-hidden="true"></div>
         </section>
         <section class="current-exercises chord-tone-exercises" aria-labelledby="chordToneExercises" data-exercise-category="chord-tones" hidden>
             <div class="current-exercises-heading">

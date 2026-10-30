@@ -4,16 +4,21 @@
 
 import { TUTORIAL_STAGES, BASIC_STAGES, SOLO_STAGES } from "./config.js";
 import { CHROMATIC_STAGES } from "./config.js";
+import { CHROMATIC_HORIZONTAL_LESSON, CHROMATIC_HORIZONTAL_STAGES } from "./config/chromaticHorizontal.js";
+import { initChromaticHorizontalPractice } from "./chromaticHorizontalPractice.js";
 import { initChromaticPracticeCard as initChromaticPatternPicker } from "./chromaticPatternPicker.js";
 import { CHORD_STAGES, CHORD_FORMS } from "./config.js";
-import { initChordPractice } from "./chordPractice.js";
+import { initChordSearch } from "./chordSearch/controller.js";
+import { createPracticeStage as createChordSearchStage } from "./chordSearch/practiceScore.js";
+import { CHORD_PROGRESSION_STAGES } from "./config.js";
+import { initChordProgressionPractice } from "./chordProgressionPractice.js";
 import { SCALE_STAGES } from "./config.js";
 import { getScaleVariant } from "./config/scales.js";
 import { initScalePracticeCards as initScalePractice } from "./scalePractice.js";
 import { CHORD_TONE_STAGES } from "./config.js";
 import { getChordToneVariant } from "./config/chordTones.js";
 import { initChordTonePracticeCards as initChordTonePractice } from "./chordTonePractice.js";
-import { createPracticeProgress } from "./practiceProgress.js";
+import { createPracticeProgress, createProgressWriter } from "./practiceProgress.js";
 import { initPracticeGenres } from "./practiceGenres.js";
 import { VerticalTabController } from "./verticalTab.js";
 import { bindButtonActivation } from "./buttonInput.js";
@@ -93,6 +98,8 @@ let microphoneStream = null;
 
 const TUTORIAL_COMPLETION_STORAGE_KEY = "chogita_tutorial_completed";
 let completedTutorialStages = new Set();
+const pendingTutorialCompletions = new Set();
+let tutorialCompletionWriter = null;
 
 // DOM要素取得
 const exerciseGrid = document.getElementById("exerciseGrid");
@@ -100,8 +107,13 @@ const tutorialExerciseGrid = document.getElementById("tutorialExerciseGrid");
 const soloExerciseGrid = document.getElementById("soloExerciseGrid");
 const chromaticExerciseGrid = document.getElementById("chromaticExerciseGrid");
 let chromaticPatternPicker = null;
+const chromaticHorizontalGrid = document.getElementById("chromaticHorizontalGrid");
+let chromaticHorizontalPractice = null;
 const chordExerciseGrid = document.getElementById("chordExerciseGrid");
-let chordPractice = null;
+const chordSearchRoot = document.getElementById("chordSearchPanel");
+let chordSearch = null;
+const chordProgressionGrid = document.getElementById("chordProgressionGrid");
+let chordProgressionPractice = null;
 const scaleExerciseGrid = document.getElementById("scaleExerciseGrid");
 let scalePractice = null;
 const chordToneExerciseGrid = document.getElementById("chordToneExerciseGrid");
@@ -1126,15 +1138,36 @@ async function renderTab(stage = currentStage) {
 // ==========================================
 // ★ 練習カードの動的生成 ★
 // ==========================================
+function readTutorialCompletions() {
+    const raw = localStorage.getItem(TUTORIAL_COMPLETION_STORAGE_KEY);
+    let saved;
+    try { saved = JSON.parse(raw || "[]"); } catch { return new Set(); }
+    return new Set(Array.isArray(saved) ? saved.filter(key => typeof key === "string" && /^tutorial-[1-9]\d*$/.test(key)) : []);
+}
+
 function initTutorialCompletion() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(TUTORIAL_COMPLETION_STORAGE_KEY) || "[]");
-        completedTutorialStages = new Set(Array.isArray(saved)
-            ? saved.filter(key => typeof key === "string" && /^tutorial-[1-9]\d*$/.test(key)) : []);
-    } catch (err) {
-        // 保存領域や保存値が使えない場合も、未完了の状態で起動を続ける。
-        completedTutorialStages = new Set();
-    }
+    try { completedTutorialStages = new Set([...readTutorialCompletions(), ...pendingTutorialCompletions]); }
+    catch { completedTutorialStages = new Set(); }
+    if (tutorialCompletionWriter) return;
+    tutorialCompletionWriter = createProgressWriter(TUTORIAL_COMPLETION_STORAGE_KEY, () => {
+        // 完了を取り消す機能はないため、最新の完了集合とこのページの完了を統合する。
+        const merged = new Set([...readTutorialCompletions(), ...completedTutorialStages]);
+        localStorage.setItem(TUTORIAL_COMPLETION_STORAGE_KEY, JSON.stringify([...merged]));
+        const changed = merged.size !== completedTutorialStages.size;
+        completedTutorialStages = merged;
+        pendingTutorialCompletions.clear();
+        if (changed) updateTutorialCompletionDisplay();
+    }, () => pendingTutorialCompletions.size > 0, globalThis);
+    window.addEventListener("storage", event => {
+        try {
+            if (event.key !== TUTORIAL_COMPLETION_STORAGE_KEY || event.storageArea !== localStorage) return;
+            completedTutorialStages = new Set([...readTutorialCompletions(), ...completedTutorialStages]);
+            updateTutorialCompletionDisplay();
+        } catch { /* 保存不能時も、このページの完了状態は維持する。 */ }
+    });
+    window.addEventListener("focus", () => {
+        if (pendingTutorialCompletions.size) void tutorialCompletionWriter.flush();
+    });
 }
 
 function updateTutorialCompletionDisplay() {
@@ -1155,13 +1188,13 @@ function markTutorialCompleted(stage, mode) {
     const requiredMode = stage.id === 3 ? "record" : (stage.id === 1 || stage.id === 2) ? "practice" : null;
     if (!requiredMode || mode !== requiredMode) return;
     const key = `tutorial-${stage.id}`;
-    if (completedTutorialStages.has(key)) return;
-    completedTutorialStages.add(key);
-    try {
-        localStorage.setItem(TUTORIAL_COMPLETION_STORAGE_KEY, JSON.stringify([...completedTutorialStages]));
-    } catch (err) {
-        // 保存できなくても、このセッション中の完了状態は保持する。
+    if (completedTutorialStages.has(key)) {
+        if (pendingTutorialCompletions.size) void tutorialCompletionWriter.flush();
+        return;
     }
+    completedTutorialStages.add(key);
+    pendingTutorialCompletions.add(key);
+    void tutorialCompletionWriter.flush();
     updateTutorialCompletionDisplay();
 }
 
@@ -1172,9 +1205,16 @@ function renderExerciseCards() {
     chromaticPatternPicker?.destroy();
     chromaticPatternPicker = initChromaticPatternPicker(chromaticExerciseGrid, CHROMATIC_STAGES,
         (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
-    chordPractice?.destroy();
-    chordPractice = initChordPractice(chordExerciseGrid, CHORD_STAGES, CHORD_FORMS,
+    chromaticHorizontalPractice?.destroy();
+    chromaticHorizontalPractice = initChromaticHorizontalPractice(chromaticHorizontalGrid, CHROMATIC_HORIZONTAL_LESSON,
         stage => openPracticeModal(stage), practiceProgress);
+    chordProgressionPractice?.destroy();
+    chordProgressionPractice = initChordProgressionPractice(chordProgressionGrid, CHORD_PROGRESSION_STAGES,
+        stage => openPracticeModal(stage), practiceProgress);
+    chordSearch?.destroy();
+    chordSearch = initChordSearch(chordSearchRoot, openChordSearchPractice, {
+        disclosure: document.getElementById("chordSearchDisclosure"), legacyRoot: chordExerciseGrid,
+        legacyStages: CHORD_STAGES, legacyForms: CHORD_FORMS, environment: window });
     scalePractice?.destroy();
     scalePractice = initScalePractice(scaleExerciseGrid, SCALE_STAGES,
         (stage, presentation) => openPracticeModal(stage, presentation), practiceProgress);
@@ -1234,6 +1274,13 @@ function renderStageCards(grid, stages, category) {
 // ==========================================
 // ★ 練習ポップアップモーダルの制御 ★
 // ==========================================
+function openChordSearchPractice(name, formId) {
+    const candidate = createChordSearchStage(name, formId);
+    candidate.stage.releaseScore = candidate.revoke;
+    try { openPracticeModal(candidate.stage); }
+    catch (error) { candidate.revoke(); throw error; }
+}
+
 function openPracticeModal(stage, presentation = null) {
     if (!practiceModal.classList.contains("hidden")) closePracticeModal();
     currentStage = stage;
@@ -1570,6 +1617,7 @@ function closePracticeModal() {
     activeScoreRenderGeneration = 0;
     scoreRenderGeneration++;
     setScoreLoadState("idle");
+    if (currentStage?.practiceType === "chord-search") currentStage.releaseScore?.();
 
     if (modalOpenTimerId) {
         clearTimeout(modalOpenTimerId);
@@ -2404,7 +2452,7 @@ if (infoModal) infoModal.addEventListener("click", (e) => { if (e.target === inf
 // --- アプリケーション起動時の初期描画 ---
 initVolumeControl();
 initTutorialCompletion();
-const practiceProgress = createPracticeProgress({ chromatic: CHROMATIC_STAGES, chords: CHORD_STAGES,
+const practiceProgress = createPracticeProgress({ chromatic: CHROMATIC_STAGES, chromaticHorizontal: CHROMATIC_HORIZONTAL_STAGES, chords: CHORD_STAGES, chordProgressions: CHORD_PROGRESSION_STAGES,
     scales: SCALE_STAGES.flatMap(stage => stage.variants.map(v => getScaleVariant(stage, v.keyId, v.positionId))),
     chordTones: CHORD_TONE_STAGES.flatMap(stage => stage.variants.map(v => getChordToneVariant(stage, v.rootId, v.positionId))) }, () => localStorage);
 renderExerciseCards();

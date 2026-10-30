@@ -1,4 +1,6 @@
 // Presentation groups are separate from lesson IDs, variant identities and score data.
+import { renderPracticeCount, renderPracticeTotal } from "./practiceCountDisplay.js";
+
 export function groupPracticeStages(stages, typeId, typeName) {
     const groups = [];
     for (const stage of stages) {
@@ -23,7 +25,7 @@ export function createPracticeTypeCards(root, stages, openStage, progress, adapt
     for (const group of groups) {
         const suffix = group.id, prefix = adapter.kind === "scale" ? "scale" : "chordTone", data = adapter.kind;
         const article = document.createElement("article"), id = adapter.category + "-type-" + suffix;
-        article.className = "practice-type-card"; article.id = id;
+        article.className = "practice-type-card practice-count-card"; article.id = id;
         article.setAttribute("data-practice-type-card", suffix); article.setAttribute("aria-labelledby", id + "-title");
         article.innerHTML = '<header class="practice-type-header"><h3 id="' + id + '-title">' + group.displayCode + ' ' + group.name + '</h3><span class="practice-type-total" data-type-total></span></header>'
             + '<div class="practice-type-form"><div><label for="' + id + '-form">フォーム</label><small id="' + id + '-summary" data-form-summary></small></div>'
@@ -32,6 +34,8 @@ export function createPracticeTypeCards(root, stages, openStage, progress, adapt
         root.appendChild(article);
         const select = article.querySelector("select"), summary = article.querySelector("[data-form-summary]"), total = article.querySelector("[data-type-total]");
         const card = { group, element: article, view: null }; cards.push(card);
+        let currentCount = null;
+        summary.hidden = true; summary.setAttribute("aria-hidden", "true"); select.removeAttribute("aria-describedby");
         let positionSelect = null, availablePositions = [], selectedPosition = null, choosePosition = null;
         const presentation = {
             suffix, displayCode: group.displayCode, compactPositions: true,
@@ -44,18 +48,19 @@ export function createPracticeTypeCards(root, stages, openStage, progress, adapt
                 const label = body.querySelector(".scale-key-label"), count = body.querySelector(".practice-key-summary"), toggle = body.querySelector(".practice-key-toggle");
                 label.firstChild.textContent = adapter.kind === "scale" ? "キー：" : "コード：";
                 const row = document.createElement("div"), chosen = document.createElement("div"); row.className = "practice-type-key-row";
-                details.insertBefore(row, label); row.appendChild(chosen); chosen.appendChild(label); chosen.appendChild(count); const actions = document.createElement("div"); actions.className = "practice-type-key-actions";
+                details.insertBefore(row, label); row.appendChild(chosen); chosen.appendChild(label); currentCount = count; count.classList.add("practice-current-count"); const actions = document.createElement("div"); actions.className = "practice-type-key-actions";
                 row.appendChild(actions); actions.appendChild(toggle);
                 positionSelect = document.createElement("select"); positionSelect.className = "practice-position-select";
                 positionSelect.hidden = true; positionSelect.setAttribute("aria-label", group.name + "のポジション");
                 const range = body.querySelector("[data-" + data + "-range]"); range.id = id + "-range";
-                positionSelect.setAttribute("aria-describedby", range.id); actions.appendChild(positionSelect);
+                positionSelect.setAttribute("aria-describedby", range.id); actions.insertBefore(positionSelect, toggle);
                 positionSelect.addEventListener("change", () => {
                     if (!destroyed && availablePositions.some(v => (v.positionId || "standard") === positionSelect.value)) choosePosition(positionSelect.value);
                     else positionSelect.value = selectedPosition;
                 });
                 const meta = body.querySelector(".scale-selection-meta"), start = body.querySelector("#" + prefix + "StartBtn-" + suffix);
                 details.insertBefore(meta, start);
+                details.insertBefore(count, meta);
             },
             positions(current, available, choose) {
                 const signature = available.map(v => v.positionId || "standard").join("/");
@@ -68,14 +73,15 @@ export function createPracticeTypeCards(root, stages, openStage, progress, adapt
                 availablePositions = available; choosePosition = choose; selectedPosition = current.positionId || "standard";
                 positionSelect.value = selectedPosition; positionSelect.hidden = available.length < 2;
             },
-            counts(stage) {
+            counts(stage, current) {
                 const selectedSummary = adapter.summary(stage);
                 summary.textContent = "計" + selectedSummary.total + "回・" + (selectedSummary.practicedKeys ?? selectedSummary.practicedCodes) + "/12" + (adapter.kind === "scale" ? "キー" : "コード");
                 const sum = getPracticeTypeTotal(group.stages, adapter.summary);
-                total.textContent = "種類計" + sum + "回";
+                renderPracticeTotal(total, sum, "このカードの全フォーム・全キー／コード・全ポジションの練習合計");
+                renderPracticeCount(currentCount, progress?.getCount(current) || 0);
                 for (const [index, variant] of availablePositions.entries()) {
                     const name = variant.positionId === "low" ? "ロー" : !variant.positionId || variant.positionId === "standard" ? "標準" : variant.positionLabel;
-                    positionSelect.options[index].textContent = name + "（" + (progress?.getCount(adapter.positionVariant(stage, variant)) || 0) + "回）";
+                    positionSelect.options[index].textContent = name;
                 }
             },
             selection(stage) { select.value = String(stage.id); if (!initializing) active = card; },
