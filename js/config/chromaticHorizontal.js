@@ -7,8 +7,8 @@ export const CHROMATIC_HORIZONTAL_STAGES = Object.freeze(CHROMATIC_STAGES.flatMa
         id: 2, code: "EX02", lessonId: "chromatic-horizontal", practiceType: "chromatic-horizontal",
         patternType: "horizontal", fingering, patternNumber, stringNumber,
         progressId: "chromatic-horizontal-" + fingering + "-string-" + stringNumber,
-        stageBadge: "クロマチック練習 EX02・" + stringNumber + "弦",
-        title: "EX02：クロマチック横移動練習・No." + String(patternNumber).padStart(2, "0") + " | " + fingering + "・" + stringNumber + "弦",
+        stageBadge: "クロマチック練習② EX02・" + stringNumber + "弦",
+        title: "EX02：クロマチック練習②・No." + String(patternNumber).padStart(2, "0") + " | " + fingering + "・" + stringNumber + "弦",
         desc: stringNumber + "弦だけを使い、4フレットの運指を1フレットずつずらして、1〜12フレットを往復します。",
         fretOrder: Object.freeze([...fingering].map(Number)),
         bpm: 80, timeSignature: Object.freeze([4, 4]), countInBars: 1, practiceBars: 18,
@@ -26,6 +26,6 @@ export const CHROMATIC_HORIZONTAL_STAGES = Object.freeze(CHROMATIC_STAGES.flatMa
     }))));
 
 export const CHROMATIC_HORIZONTAL_LESSON = Object.freeze({
-    id: 2, code: "EX02", title: "EX02 クロマチック横移動練習",
+    id: 2, code: "EX02", title: "EX02 クロマチック練習②",
     file: CHROMATIC_HORIZONTAL_STAGES[0].file, variants: CHROMATIC_HORIZONTAL_STAGES
 });

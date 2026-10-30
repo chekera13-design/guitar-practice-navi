@@ -153,7 +153,7 @@ export function initChordTonePractice(root, stages, openStage, progress = null, 
 export function initChordTonePracticeCards(root, stages, openStage, progress = null) {
     return createPracticeTypeCards(root, stages, openStage, progress, {
         kind: "chord-tone", category: "chord-tones", typeId: s => s.chordTypeId,
-        typeName: s => (CHORD_TONE_TYPES[s.chordTypeId].practiceLabel || CHORD_TONE_TYPES[s.chordTypeId].label) + "コードトーン",
+        typeName: s => "□" + (CHORD_TONE_TYPES[s.chordTypeId].practiceLabel || CHORD_TONE_TYPES[s.chordTypeId].label) + "コードトーン",
         summary: s => progress?.getChordToneSummary(s) || { total: "0", practicedCodes: 0 },
         keys: s => getChordToneRoots(s).map(k => k.id),
         keyId: v => v.rootId, keyLabel: v => v.chordLabel,

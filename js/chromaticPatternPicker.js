@@ -104,7 +104,7 @@ export function initChromaticPracticeCard(root, stages, openStage, progress = nu
             grid.hidden = true; grid.setAttribute("aria-hidden", "true");
             const card = document.createElement("article"); card.className = "practice-type-card chromatic-practice-card practice-count-card"; card.id = "chromatic-type-card";
             card.setAttribute("data-chromatic-card", "single"); card.setAttribute("aria-labelledby", "chromaticCardTitle");
-            card.innerHTML = '<header class="practice-type-header"><h3 id="chromaticCardTitle">EX01 クロマチック練習</h3><span class="practice-type-total" data-chromatic-total></span></header>'
+            card.innerHTML = '<header class="practice-type-header"><h3 id="chromaticCardTitle">EX01 クロマチック練習①</h3><span class="practice-type-total" data-chromatic-total></span></header>'
                 + '<label class="chromatic-pattern-label" for="chromaticPatternSelect">練習内容</label><div class="chromatic-navigation" role="group" aria-label="運指の切り替え"><button type="button" class="chromatic-step" data-chromatic-previous aria-label="前の運指" aria-controls="chromaticPatternSelect"><span aria-hidden="true">←</span></button><select id="chromaticPatternSelect" data-chromatic-select aria-controls="chromaticSelection">'
                 + singles.map((s, index) => '<option value="' + s.id + '">No.' + String(index + 1).padStart(2, '0') + ' | ' + s.fingering + '</option>').join("") + '</select><button type="button" class="chromatic-step" data-chromatic-next aria-label="次の運指" aria-controls="chromaticPatternSelect"><span aria-hidden="true">→</span></button></div>';
             body.insertBefore(card, grid); card.appendChild(grid); card.appendChild(detail); card.appendChild(status);
@@ -139,7 +139,7 @@ export function initChromaticPracticeCard(root, stages, openStage, progress = nu
             renderPracticeTotal(total, sum, "このカードの24運指全体の練習合計");
         },
         modal(stage) {
-            return { stageBadge: "クロマチック練習 EX01", title: "EX01：クロマチック練習・運指" + stage.fingering + "（" + stage.code + "）" };
+            return { stageBadge: "クロマチック練習① EX01", title: "EX01：クロマチック練習①・運指" + stage.fingering + "（" + stage.code + "）" };
         }
     };
     controller = initChromaticPatternPicker(root, stages, openStage, progress, presentation);
